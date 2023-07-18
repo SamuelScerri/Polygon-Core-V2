@@ -51,9 +51,24 @@ func (m1 *Matrix) multiplyMatrix(m2 *Matrix) (result Matrix) {
 func createProjectionMatrix(fov, aspect, near, far float32) Matrix {
 	var tangent float32 = math32.Tan(fov / 2)
 
-	return Matrix{}
+	return Matrix{
+		{1 / (tangent * aspect), 0, 0, 0},
+		{0, 1 / tangent, 0, 0},
+		{0, 0, (far + near) / (near - far), -1},
+		{0, 0, (near * far * 2) / (near - far), 0},
+	}
 }
 
 func main() {
 	fmt.Println("Initializing Polygon Core")
+
+	var width, height uint16 = 640, 360
+	var aspect float32 = float32(width) / float32(height)
+
+	var projectionMatrix Matrix = createProjectionMatrix(90, aspect, .1, 1000)
+	var position Vertex3D = Vertex3D{1, 1, 4, 1}
+
+	var positionConverted Matrix = position.convertToMatrix()
+
+	fmt.Println(projectionMatrix.multiplyMatrix(&positionConverted))
 }

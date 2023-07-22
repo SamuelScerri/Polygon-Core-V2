@@ -27,7 +27,7 @@ var screenBuffer Buffer
 //var depthBuffer Buffer
 
 var basicTriangle Triangle
-var width, height int = 640, 360
+var width, height int = 320, 180
 var aspectRatio float32 = float32(width) / float32(height)
 
 var cobble *ebiten.Image
@@ -130,6 +130,15 @@ func (v *Vertex4D) convertToNormalized() {
 	v.z /= v.w
 }
 
+func (v1 *Vertex4D) interpolate(v2 *Vertex4D, factor float32) Vertex4D {
+	return Vertex4D{
+		v1.x*(1-factor) + v2.x*factor,
+		v1.y*(1-factor) + v2.y*factor,
+		v1.z*(1-factor) + v2.z*factor,
+		v1.w*(1-factor) + v2.w*factor,
+	}
+}
+
 func (triangle *Triangle) convertToNormalizedCoordinates() {
 	triangle.vertices[0].convertToNormalized()
 	triangle.vertices[1].convertToNormalized()
@@ -154,47 +163,180 @@ func (triangle *Triangle) renderToScreen(buffer *Buffer, texture *Buffer, image 
 
 	var minX, minY, maxX, maxY = triangle.bounds()
 
-	for x := minX; x < maxX; x++ {
-		for y := minY; y < maxY; y++ {
-			var convertedX, convertedY float32 = float32(x), float32(y)
+	if span != 0 {
+		for x := minX; x < maxX; x++ {
+			for y := minY; y < maxY; y++ {
+				var convertedX, convertedY float32 = float32(x), float32(y)
 
-			var s, t, w float32 = triangle.barycentricCoordinates(&vs1, &vs2, &convertedX, &convertedY, &span)
+				var s, t, w float32 = triangle.barycentricCoordinates(&vs1, &vs2, &convertedX, &convertedY, &span)
 
-			if s >= 0 && t >= 0 && s+t <= 1 {
-				var location int = (y*width + x) * 4
+				if s >= 0 && t >= 0 && s+t <= 1 {
+					var location int = (y*width + x) * 4
 
-				var at Vertex4D = Vertex4D{0, 0, 1, triangle.vertices[0].w}
-				var bt Vertex4D = Vertex4D{2, 0, 1, triangle.vertices[1].w}
-				var ct Vertex4D = Vertex4D{2, 2, 1, triangle.vertices[2].w}
+					var at Vertex4D = Vertex4D{0, 0, 1, triangle.vertices[0].w}
+					var bt Vertex4D = Vertex4D{2, 0, 1, triangle.vertices[1].w}
+					var ct Vertex4D = Vertex4D{2, 2, 1, triangle.vertices[2].w}
 
-				at.convertToNormalized()
-				bt.convertToNormalized()
-				ct.convertToNormalized()
+					at.convertToNormalized()
+					bt.convertToNormalized()
+					ct.convertToNormalized()
 
-				var wt float32 = w*at.z + s*bt.z + t*ct.z
+					var wt float32 = w*at.z + s*bt.z + t*ct.z
 
-				var uvX float32 = (w*at.x + s*bt.x + t*ct.x) / wt
-				var uvY float32 = (w*at.y + s*bt.y + t*ct.y) / wt
+					var uvX float32 = (w*at.x + s*bt.x + t*ct.x) / wt
+					var uvY float32 = (w*at.y + s*bt.y + t*ct.y) / wt
 
-				var tx int = int(uvX * float32(image.Bounds().Dx()))
-				var ty int = int(uvY * float32(image.Bounds().Dy()))
+					var tx int = int(uvX * float32(image.Bounds().Dx()))
+					var ty int = int(uvY * float32(image.Bounds().Dy()))
 
-				var colorLocation int = ((ty*image.Bounds().Dx() + tx) * 4) % (image.Bounds().Dx() * image.Bounds().Dy() * 4)
+					var colorLocation int = ((ty*image.Bounds().Dx() + tx) * 4) % (image.Bounds().Dx() * image.Bounds().Dy() * 4)
 
-				(*buffer)[location] = (*texture)[colorLocation]
-				(*buffer)[location+1] = (*texture)[colorLocation+1]
-				(*buffer)[location+2] = (*texture)[colorLocation+2]
+					(*buffer)[location] = (*texture)[colorLocation]
+					(*buffer)[location+1] = (*texture)[colorLocation+1]
+					(*buffer)[location+2] = (*texture)[colorLocation+2]
+				}
 			}
 		}
 	}
+
+}
+
+func clip_axis(vertices []Vertex4D, opposite, yAxis bool) (data []Vertex4D) {
+	previousVertex := vertices[len(vertices)-1]
+	previousInside := 0
+
+	previousComponent := previousVertex.x
+
+	if yAxis {
+		previousComponent = previousVertex.y
+	}
+
+	if opposite {
+		if previousComponent >= -previousVertex.w {
+			previousInside = 1
+		}
+	} else {
+		if previousComponent <= previousVertex.w {
+			previousInside = 1
+		}
+	}
+
+	for v := 0; v < len(vertices); v++ {
+		currentVertex := vertices[v]
+		currentInside := 0
+
+		currentComponent := currentVertex.x
+
+		if yAxis {
+			currentComponent = currentVertex.y
+			previousComponent = previousVertex.y
+		} else {
+			previousComponent = previousVertex.x
+		}
+
+		if opposite {
+			if currentComponent >= -currentVertex.w {
+				currentInside = 1
+			}
+		} else {
+			if currentComponent <= currentVertex.w {
+				currentInside = 1
+			}
+		}
+
+		if (currentInside ^ previousInside) == 1 {
+			var factor float32
+
+			if opposite {
+				factor = (previousVertex.w + previousComponent) / ((previousVertex.w + previousComponent) - (currentVertex.w + currentComponent))
+			} else {
+				factor = (previousVertex.w - previousComponent) / ((previousVertex.w - previousComponent) - (currentVertex.w - currentComponent))
+			}
+
+			data = append(data, previousVertex.interpolate(&currentVertex, factor))
+		}
+
+		if currentInside == 1 {
+			data = append(data, currentVertex)
+		}
+
+		previousVertex = currentVertex
+		previousInside = currentInside
+	}
+
+	return
+}
+
+func (t *Triangle) clip() (triangles []Triangle) {
+	var vertices []Vertex4D = []Vertex4D{t.vertices[0], t.vertices[1], t.vertices[2]}
+
+	vertices = clip_axis(vertices, false, false)
+
+	if len(vertices) > 0 {
+		vertices = clip_axis(vertices, true, false)
+
+		if len(vertices) > 0 {
+			vertices = clip_axis(vertices, false, true)
+
+			if len(vertices) > 0 {
+				vertices = clip_axis(vertices, true, true)
+			}
+		}
+	}
+
+	if len(vertices) > 0 {
+		for index := 0; index < len(vertices)-2; index++ {
+			triangles = append(triangles, Triangle{vertices: [3]Vertex4D{
+				vertices[0], vertices[index+1], vertices[index+2],
+			}})
+		}
+	}
+
+	return
 }
 
 type Game struct{}
 
 func (g *Game) Update() error {
-	basicTriangle.vertices[0].z -= .001
-	basicTriangle.vertices[1].z -= .001
-	basicTriangle.vertices[2].z -= .001
+	//basicTriangle.vertices[0].z -= .001
+	//basicTriangle.vertices[1].z -= .001
+	//basicTriangle.vertices[2].z -= .001
+
+	if ebiten.IsKeyPressed(ebiten.KeyRight) {
+		basicTriangle.vertices[0].x += .001
+		basicTriangle.vertices[1].x += .001
+		basicTriangle.vertices[2].x += .001
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
+		basicTriangle.vertices[0].x -= .001
+		basicTriangle.vertices[1].x -= .001
+		basicTriangle.vertices[2].x -= .001
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyUp) {
+		basicTriangle.vertices[0].y += .001
+		//basicTriangle.vertices[1].y += .001
+		//basicTriangle.vertices[2].y += .001
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyDown) {
+		basicTriangle.vertices[0].y -= .001
+		basicTriangle.vertices[1].y -= .001
+		basicTriangle.vertices[2].y -= .001
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyW) {
+		basicTriangle.vertices[0].z -= .01
+		basicTriangle.vertices[1].z -= .01
+		basicTriangle.vertices[2].z -= .01
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyS) {
+		basicTriangle.vertices[0].z += .01
+		basicTriangle.vertices[1].z += .01
+		basicTriangle.vertices[2].z += .01
+	}
 
 	return nil
 }
@@ -206,16 +348,21 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	var convertedTriangle Triangle = basicTriangle.multiplyMatrix(&projectionMatrix)
+	var clippedTriangles []Triangle = convertedTriangle.clip()
 
-	convertedTriangle.convertToNormalizedCoordinates()
-	convertedTriangle.convertToScreenSpace()
+	//fmt.Println(convertedTriangle)
 
-	convertedTriangle.renderToScreen(&screenBuffer, &cobble_buffer, cobble)
+	for _, triangle := range clippedTriangles {
+		triangle.convertToNormalizedCoordinates()
+		triangle.convertToScreenSpace()
+
+		triangle.renderToScreen(&screenBuffer, &cobble_buffer, cobble)
+	}
+
 	screen.WritePixels(screenBuffer)
 	screenBuffer.clearScreen()
 
 	ebitenutil.DebugPrint(screen, strconv.Itoa(int(ebiten.ActualFPS())))
-
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -229,7 +376,6 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 }
 
 func main() {
@@ -250,8 +396,8 @@ func main() {
 
 	projectionMatrix = createProjectionMatrix(90, aspectRatio, .1, 1000)
 
-	basicTriangle.vertices[0] = Vertex4D{0, .5, -8, 1}
-	basicTriangle.vertices[1] = Vertex4D{-.5, -.5, -8, 1}
+	basicTriangle.vertices[0] = Vertex4D{0, .5, -2, 1}
+	basicTriangle.vertices[1] = Vertex4D{-.5, -.5, -2, 1}
 	basicTriangle.vertices[2] = Vertex4D{.5, -.5, -2, 1}
 
 	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {

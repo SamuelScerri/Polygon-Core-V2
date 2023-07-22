@@ -42,12 +42,7 @@ func (v1 *Vertex4D) crossProduct(v2 *Vertex4D) float32 {
 }
 
 func (vertex *Vertex4D) convertToMatrix() Matrix {
-	return Matrix{
-		{vertex.x},
-		{vertex.y},
-		{vertex.z},
-		{vertex.w},
-	}
+	return Matrix{{vertex.x, vertex.y, vertex.z, vertex.w}}
 }
 
 func (m1 *Matrix) multiplyMatrix(m2 *Matrix) (result Matrix) {
@@ -67,7 +62,7 @@ func (m1 *Matrix) multiplyMatrix(m2 *Matrix) (result Matrix) {
 }
 
 func (matrix *Matrix) convertToVertex() Vertex4D {
-	return Vertex4D{(*matrix)[0][0], (*matrix)[1][0], (*matrix)[2][0], (*matrix)[3][0]}
+	return Vertex4D{(*matrix)[0][0], (*matrix)[0][1], (*matrix)[0][2], (*matrix)[0][3]}
 }
 
 func (triangle *Triangle) multiplyMatrix(m2 *Matrix) (result Triangle) {
@@ -87,8 +82,8 @@ func createProjectionMatrix(fov, aspect, near, far float32) Matrix {
 	return Matrix{
 		{1 / (tangent * aspect), 0, 0, 0},
 		{0, 1 / tangent, 0, 0},
-		{0, 0, (far + near) / (near - far), -1},
-		{0, 0, (near * far * 2) / (near - far), 0},
+		{0, 0, (far + near) / (near - far), (near * far * 2) / (near - far)},
+		{0, 0, -1, 0},
 	}
 }
 
@@ -127,7 +122,9 @@ func (triangle *Triangle) convertToScreenSpace() {
 }
 
 func (v *Vertex4D) convertToNormalized() {
-	fmt.Println(v.w)
+	v.x /= v.w
+	v.y /= v.w
+	v.z /= v.w
 }
 
 func (triangle *Triangle) convertToNormalizedCoordinates() {
@@ -174,28 +171,28 @@ func (triangle *Triangle) renderToScreen(buffer *Buffer) {
 type Game struct{}
 
 func (g *Game) Update() error {
-	basicTriangle.vertices[0].z += 1
-	basicTriangle.vertices[1].z += 1
-	basicTriangle.vertices[2].z += 1
+	basicTriangle.vertices[0].z -= .001
+	basicTriangle.vertices[1].z -= .001
+	basicTriangle.vertices[2].z -= .001
 
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+
 	var convertedTriangle Triangle = basicTriangle.multiplyMatrix(&projectionMatrix)
 
 	fmt.Println(convertedTriangle)
 
 	convertedTriangle.convertToNormalizedCoordinates()
-
 	convertedTriangle.convertToScreenSpace()
 
 	convertedTriangle.renderToScreen(&screenBuffer)
 	screen.WritePixels(screenBuffer)
+	screenBuffer.clearScreen()
 
 	ebitenutil.DebugPrint(screen, strconv.Itoa(int(ebiten.ActualFPS())))
 
-	screenBuffer.clearScreen()
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -207,7 +204,7 @@ func main() {
 
 	ebiten.SetWindowSize(640, 360)
 	ebiten.SetWindowTitle("Polygon Core - V2")
-	ebiten.SetVsyncEnabled(false)
+	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 
 	screenBuffer = make(Buffer, 320*180*4)
@@ -218,11 +215,11 @@ func main() {
 
 	projectionMatrix = createProjectionMatrix(90, aspectScreenSpace, .1, 1000)
 
-	basicTriangle.vertices[0] = Vertex4D{0, .5, 3, 1}
-	basicTriangle.vertices[1] = Vertex4D{-.5, -.5, 3, 1}
-	basicTriangle.vertices[2] = Vertex4D{.5, -.5, 3, 1}
+	basicTriangle.vertices[0] = Vertex4D{0, .5, -2, 1}
+	basicTriangle.vertices[1] = Vertex4D{-.5, -.5, -2, 1}
+	basicTriangle.vertices[2] = Vertex4D{.5, -.5, -2, 1}
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

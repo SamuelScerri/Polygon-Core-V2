@@ -2,17 +2,13 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"strconv"
 
 	"github.com/chewxy/math32"
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
-
-type Vertex2D struct {
-	x, y float32
-}
-
-type Vertex3D struct {
-	x, y, z float32
-}
 
 type Vertex4D struct {
 	x, y, z, w float32
@@ -22,16 +18,26 @@ type Triangle struct {
 	vertices [3]Vertex4D
 }
 
+type Buffer []byte
 type Matrix [][]float32
 
-func (vertex *Vertex2D) convertToScreenSpace(width, height *uint16) Vertex2D {
-	return Vertex2D{
-		((vertex.x*float32(*height)/float32(*width) + 1) * float32(*width)) / 2,
-		((-vertex.y + 1) * float32(*height)) / 2,
-	}
+var screenBuffer Buffer
+
+//var depthBuffer Buffer
+
+var basicTriangle Triangle
+var width, height uint16 = 320, 180
+var aspectScreenSpace float32 = float32(height) / float32(width)
+var aspectRatio float32 = float32(width) / float32(height)
+
+var projectionMatrix Matrix
+
+func (vertex *Vertex4D) convertToScreenSpace(width, height *uint16, aspect *float32) {
+	vertex.x = ((vertex.x*(*aspect) + 1) * float32(*width)) / 2
+	vertex.y = ((-vertex.y + 1) * float32(*height)) / 2
 }
 
-func (v1 *Vertex2D) crossProduct(v2 *Vertex2D) float32 {
+func (v1 *Vertex4D) crossProduct(v2 *Vertex4D) float32 {
 	return (v1.x * v2.y) - (v1.y * v2.x)
 }
 
@@ -60,6 +66,21 @@ func (m1 *Matrix) multiplyMatrix(m2 *Matrix) (result Matrix) {
 	return
 }
 
+func (matrix *Matrix) convertToVertex() Vertex4D {
+	return Vertex4D{(*matrix)[0][0], (*matrix)[1][0], (*matrix)[2][0], (*matrix)[3][0]}
+}
+
+func (triangle *Triangle) multiplyMatrix(m2 *Matrix) (result Triangle) {
+	var tm1, tm2, tm3 Matrix = triangle.vertices[0].convertToMatrix(), triangle.vertices[1].convertToMatrix(), triangle.vertices[2].convertToMatrix()
+	tm1, tm2, tm3 = tm1.multiplyMatrix(m2), tm2.multiplyMatrix(m2), tm3.multiplyMatrix(m2)
+
+	result.vertices[0] = tm1.convertToVertex()
+	result.vertices[1] = tm2.convertToVertex()
+	result.vertices[2] = tm3.convertToVertex()
+
+	return
+}
+
 func createProjectionMatrix(fov, aspect, near, far float32) Matrix {
 	var tangent float32 = math32.Tan(fov / 2)
 
@@ -71,15 +92,25 @@ func createProjectionMatrix(fov, aspect, near, far float32) Matrix {
 	}
 }
 
-func (triangle *Triangle) spanningVectors() (vs1, vs2 Vertex2D) {
-	vs1 = Vertex2D{triangle.vertices[1].x - triangle.vertices[0].x, triangle.vertices[1].y - triangle.vertices[0].y}
-	vs2 = Vertex2D{triangle.vertices[2].x - triangle.vertices[0].x, triangle.vertices[2].y - triangle.vertices[0].y}
+func (triangle *Triangle) spanningVectors() (vs1, vs2 Vertex4D) {
+	vs1 = Vertex4D{triangle.vertices[1].x - triangle.vertices[0].x, triangle.vertices[1].y - triangle.vertices[0].y, 0, 1}
+	vs2 = Vertex4D{triangle.vertices[2].x - triangle.vertices[0].x, triangle.vertices[2].y - triangle.vertices[0].y, 0, 1}
 
 	return
 }
 
-func (triangle *Triangle) barycentricCoordinates(vs1, vs2 *Vertex2D, x, y, span *float32) (s, t, w float32) {
-	var q Vertex2D = Vertex2D{*x - triangle.vertices[0].x, *y - triangle.vertices[0].y}
+func (triangle *Triangle) bounds() (minX, minY, maxX, maxY uint32) {
+	maxX = uint32(math32.Max(triangle.vertices[0].x, math32.Max(triangle.vertices[1].x, triangle.vertices[2].x)))
+	maxY = uint32(math32.Max(triangle.vertices[0].y, math32.Max(triangle.vertices[1].y, triangle.vertices[2].y)))
+
+	minX = uint32(math32.Min(triangle.vertices[0].x, math32.Min(triangle.vertices[1].x, triangle.vertices[2].x)))
+	minY = uint32(math32.Min(triangle.vertices[0].y, math32.Min(triangle.vertices[1].y, triangle.vertices[2].y)))
+
+	return
+}
+
+func (triangle *Triangle) barycentricCoordinates(vs1, vs2 *Vertex4D, x, y, span *float32) (s, t, w float32) {
+	var q Vertex4D = Vertex4D{*x - triangle.vertices[0].x, *y - triangle.vertices[0].y, 0, 1}
 
 	s = q.crossProduct(vs2) / *span
 	t = vs1.crossProduct(&q) / *span
@@ -89,15 +120,109 @@ func (triangle *Triangle) barycentricCoordinates(vs1, vs2 *Vertex2D, x, y, span 
 	return
 }
 
+func (triangle *Triangle) convertToScreenSpace() {
+	triangle.vertices[0].convertToScreenSpace(&width, &height, &aspectScreenSpace)
+	triangle.vertices[1].convertToScreenSpace(&width, &height, &aspectScreenSpace)
+	triangle.vertices[2].convertToScreenSpace(&width, &height, &aspectScreenSpace)
+}
+
+func (v *Vertex4D) convertToNormalized() {
+	fmt.Println(v.w)
+}
+
+func (triangle *Triangle) convertToNormalizedCoordinates() {
+	triangle.vertices[0].convertToNormalized()
+	triangle.vertices[1].convertToNormalized()
+	triangle.vertices[2].convertToNormalized()
+}
+
+func (buffer *Buffer) clearScreen() {
+	for x := 0; x < 320; x++ {
+		for y := 0; y < 180; y++ {
+			var location int = (y*320 + x) * 4
+
+			(*buffer)[location] = 0
+			(*buffer)[location+1] = 0
+			(*buffer)[location+2] = 0
+		}
+	}
+}
+
+func (triangle *Triangle) renderToScreen(buffer *Buffer) {
+	var vs1, vs2 Vertex4D = triangle.spanningVectors()
+	var span float32 = vs1.crossProduct(&vs2)
+
+	var minX, minY, maxX, maxY = triangle.bounds()
+
+	for x := minX; x < maxX; x++ {
+		for y := minY; y < maxY; y++ {
+			var convertedX, convertedY float32 = float32(x), float32(y)
+
+			var s, t, w float32 = triangle.barycentricCoordinates(&vs1, &vs2, &convertedX, &convertedY, &span)
+
+			if s >= 0 && t >= 0 && s+t <= 1 {
+				var location uint32 = (y*320 + x) * 4
+
+				(*buffer)[location] = byte(s * 255)
+				(*buffer)[location+1] = byte(t * 255)
+				(*buffer)[location+2] = byte(w * 255)
+			}
+		}
+	}
+}
+
+type Game struct{}
+
+func (g *Game) Update() error {
+	basicTriangle.vertices[0].z += 1
+	basicTriangle.vertices[1].z += 1
+	basicTriangle.vertices[2].z += 1
+
+	return nil
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	var convertedTriangle Triangle = basicTriangle.multiplyMatrix(&projectionMatrix)
+
+	fmt.Println(convertedTriangle)
+
+	convertedTriangle.convertToNormalizedCoordinates()
+
+	convertedTriangle.convertToScreenSpace()
+
+	convertedTriangle.renderToScreen(&screenBuffer)
+	screen.WritePixels(screenBuffer)
+
+	ebitenutil.DebugPrint(screen, strconv.Itoa(int(ebiten.ActualFPS())))
+
+	screenBuffer.clearScreen()
+}
+
+func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+	return 320, 180
+}
+
 func main() {
 	fmt.Println("Initializing Polygon Core")
 
-	var width, height uint16 = 640, 360
-	var aspect float32 = float32(width) / float32(height)
-	var projectionMatrix Matrix = createProjectionMatrix(90, aspect, .1, 1000)
-	var position Vertex4D = Vertex4D{1, 1, 4, 1}
+	ebiten.SetWindowSize(640, 360)
+	ebiten.SetWindowTitle("Polygon Core - V2")
+	ebiten.SetVsyncEnabled(false)
+	ebiten.SetTPS(ebiten.SyncWithFPS)
 
-	var positionConverted Matrix = position.convertToMatrix()
+	screenBuffer = make(Buffer, 320*180*4)
+	fmt.Println("Screen Buffer Initialized")
 
-	fmt.Println(projectionMatrix.multiplyMatrix(&positionConverted))
+	//depthBuffer = make(Buffer, 320*180)
+	//fmt.Println("Depth Buffer Initialized")
+
+	projectionMatrix = createProjectionMatrix(90, aspectScreenSpace, .1, 1000)
+
+	basicTriangle.vertices[0] = Vertex4D{0, .5, 3, 1}
+	basicTriangle.vertices[1] = Vertex4D{-.5, -.5, 3, 1}
+	basicTriangle.vertices[2] = Vertex4D{.5, -.5, 3, 1}
+
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+		log.Fatal(err)
+	}
 }

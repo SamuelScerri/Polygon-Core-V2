@@ -4,6 +4,7 @@ import (
 	"fmt"
 	_ "image/png"
 	"log"
+	"math"
 	"strconv"
 
 	"github.com/chewxy/math32"
@@ -37,6 +38,7 @@ var aspectRatio float32 = float32(width) / float32(height)
 
 var cobble *ebiten.Image
 var cobble_buffer Buffer
+var fov float32 = 120
 
 var projectionMatrix Matrix
 
@@ -87,7 +89,7 @@ func (triangle *Triangle) multiplyMatrix(m2 *Matrix) (result Triangle) {
 }
 
 func createProjectionMatrix(fov, aspect, near, far float32) Matrix {
-	var tangent float32 = math32.Tan(fov / 2)
+	var tangent float32 = math32.Tan((fov * (math.Pi / 180)) / 2)
 
 	return Matrix{
 		{1 / (tangent * aspect), 0, 0, 0},
@@ -171,52 +173,46 @@ func (buffer *Buffer) clearScreen() {
 	}
 }
 
-func clamp(value, min, max int) int {
-	return int(math32.Max(math32.Min(float32(value), float32(max)), float32(min)))
-}
-
 func (triangle *Triangle) renderToScreen(buffer *Buffer, texture *Buffer, image *ebiten.Image) {
 	var vs1, vs2 Vertex4D = triangle.spanningVectors()
 	var span float32 = vs1.crossProduct(&vs2)
 
-	var minX, minY, maxX, maxY = triangle.bounds()
+	var minX, minY, maxX, maxY int = triangle.bounds()
 
-	if span != 0 {
-		for x := clamp(minX, 0, width); x < clamp(maxX, 0, width); x++ {
-			for y := clamp(minY, 0, height); y < clamp(maxY, 0, height); y++ {
-				var convertedX, convertedY float32 = float32(x), float32(y)
+	for x := minX; x <= maxX; x++ {
+		for y := minY; y <= maxY; y++ {
+			var convertedX, convertedY float32 = float32(x), float32(y)
 
-				var s, t, w float32 = triangle.barycentricCoordinates(&vs1, &vs2, &convertedX, &convertedY, &span)
+			var s, t, w float32 = triangle.barycentricCoordinates(&vs1, &vs2, &convertedX, &convertedY, &span)
 
-				if s >= 0 && t >= 0 && s+t <= 1 {
-					var location int = (y*width + x) * 4
+			if s >= 0 && t >= 0 && s+t <= 1 {
+				//Quick Way To Ensure We Don't Go Outside Array
+				var location int = (((y*width+x)*4)%230400 + 230400) % 230400
 
-					var at Vertex4D = Vertex4D{triangle.uv[0].x, triangle.uv[0].y, 1, triangle.vertices[0].w}
-					var bt Vertex4D = Vertex4D{triangle.uv[1].x, triangle.uv[1].y, 1, triangle.vertices[1].w}
-					var ct Vertex4D = Vertex4D{triangle.uv[2].x, triangle.uv[2].y, 1, triangle.vertices[2].w}
+				var at Vertex4D = Vertex4D{triangle.uv[0].x, triangle.uv[0].y, 1, triangle.vertices[0].w}
+				var bt Vertex4D = Vertex4D{triangle.uv[1].x, triangle.uv[1].y, 1, triangle.vertices[1].w}
+				var ct Vertex4D = Vertex4D{triangle.uv[2].x, triangle.uv[2].y, 1, triangle.vertices[2].w}
 
-					at.convertToNormalized()
-					bt.convertToNormalized()
-					ct.convertToNormalized()
+				at.convertToNormalized()
+				bt.convertToNormalized()
+				ct.convertToNormalized()
 
-					var wt float32 = w*at.z + s*bt.z + t*ct.z
+				var wt float32 = w*at.z + s*bt.z + t*ct.z
 
-					var uvX float32 = (w*at.x + s*bt.x + t*ct.x) / wt
-					var uvY float32 = (w*at.y + s*bt.y + t*ct.y) / wt
+				var uvX float32 = (w*at.x + s*bt.x + t*ct.x) / wt
+				var uvY float32 = (w*at.y + s*bt.y + t*ct.y) / wt
 
-					var tx int = int(uvX * float32(image.Bounds().Dx()))
-					var ty int = int(uvY * float32(image.Bounds().Dy()))
+				var tx int = int(uvX * float32(image.Bounds().Dx()))
+				var ty int = int(uvY * float32(image.Bounds().Dy()))
 
-					var colorLocation int = ((ty*image.Bounds().Dx() + tx) * 4)
+				var colorLocation int = (((ty*image.Bounds().Dx()+tx)*4)%(image.Bounds().Dx()*image.Bounds().Dy()*4) + (image.Bounds().Dx() * image.Bounds().Dy() * 4)) % (image.Bounds().Dx() * image.Bounds().Dy() * 4)
 
-					(*buffer)[location] = (*texture)[colorLocation]
-					(*buffer)[location+1] = (*texture)[colorLocation+1]
-					(*buffer)[location+2] = (*texture)[colorLocation+2]
-				}
+				(*buffer)[location] = (*texture)[colorLocation]
+				(*buffer)[location+1] = (*texture)[colorLocation+1]
+				(*buffer)[location+2] = (*texture)[colorLocation+2]
 			}
 		}
 	}
-
 }
 
 func clip_axis(vertices []Vertex4D, uv []Vertex2D, opposite, yAxis bool) (data []Vertex4D, uvData []Vertex2D) {
@@ -296,8 +292,6 @@ func (t *Triangle) clip() (triangles []Triangle) {
 	var vertices []Vertex4D = []Vertex4D{t.vertices[0], t.vertices[1], t.vertices[2]}
 	var uvdat []Vertex2D = []Vertex2D{t.uv[0], t.uv[1], t.uv[2]}
 
-	fmt.Println(uvdat)
-
 	vertices, uvdat = clip_axis(vertices, uvdat, false, false)
 
 	if len(vertices) > 0 {
@@ -362,6 +356,16 @@ func (g *Game) Update() error {
 		basicTriangle.vertices[2].z += .01
 	}
 
+	if ebiten.IsKeyPressed(ebiten.KeyD) {
+		basicTriangle.vertices[1].z += .01
+		basicTriangle.vertices[2].z += .01
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyA) {
+		basicTriangle.vertices[1].z -= .01
+		basicTriangle.vertices[2].z -= .01
+	}
+
 	return nil
 }
 
@@ -418,15 +422,15 @@ func main() {
 	//depthBuffer = make(Buffer, width*height)
 	//fmt.Println("Depth Buffer Initialized")
 
-	projectionMatrix = createProjectionMatrix(90, aspectRatio, .1, 1000)
+	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 1000)
 
-	basicTriangle.vertices[0] = Vertex4D{0, -.5, -2, 1}
-	basicTriangle.vertices[1] = Vertex4D{-.5, .5, -2, 1}
-	basicTriangle.vertices[2] = Vertex4D{.5, .5, -2, 1}
+	basicTriangle.vertices[0] = Vertex4D{0, -.5, 2, 1}
+	basicTriangle.vertices[1] = Vertex4D{-.5, .5, 2, 1}
+	basicTriangle.vertices[2] = Vertex4D{.5, .5, 2, 1}
 
 	basicTriangle.uv[0] = Vertex2D{0, 0}
-	basicTriangle.uv[1] = Vertex2D{1, 0}
-	basicTriangle.uv[2] = Vertex2D{1, 1}
+	basicTriangle.uv[1] = Vertex2D{2, 0}
+	basicTriangle.uv[2] = Vertex2D{2, 2}
 
 	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)

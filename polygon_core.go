@@ -43,7 +43,7 @@ var screenBuffer Buffer
 //var depthBuffer Buffer
 
 var basicTriangle Triangle
-var width, height int = 640, 360
+var width, height int = 320, 180
 var aspectRatio float32 = float32(width) / float32(height)
 
 var cobble *ebiten.Image
@@ -117,13 +117,17 @@ func (triangle *ComputedTriangle) spanningVectors() (vs1, vs2 Vertex4D) {
 }
 
 func (triangle *ComputedTriangle) bounds() (minX, minY, maxX, maxY int) {
-	maxX = int(math32.Max(triangle.vertices[0].x, math32.Max(triangle.vertices[1].x, triangle.vertices[2].x)))
-	maxY = int(math32.Max(triangle.vertices[0].y, math32.Max(triangle.vertices[1].y, triangle.vertices[2].y)))
+	maxX = clamp(math32.Max(triangle.vertices[0].x, math32.Max(triangle.vertices[1].x, triangle.vertices[2].x)), 0, float32(width-1))
+	maxY = clamp(math32.Max(triangle.vertices[0].y, math32.Max(triangle.vertices[1].y, triangle.vertices[2].y)), 0, float32(height-1))
 
-	minX = int(math32.Min(triangle.vertices[0].x, math32.Min(triangle.vertices[1].x, triangle.vertices[2].x)))
-	minY = int(math32.Min(triangle.vertices[0].y, math32.Min(triangle.vertices[1].y, triangle.vertices[2].y)))
+	minX = clamp(math32.Min(triangle.vertices[0].x, math32.Min(triangle.vertices[1].x, triangle.vertices[2].x)), 0, float32(width-1))
+	minY = clamp(math32.Min(triangle.vertices[0].y, math32.Min(triangle.vertices[1].y, triangle.vertices[2].y)), 0, float32(height-1))
 
 	return
+}
+
+func clamp(value, min, max float32) int {
+	return int(math32.Max(math32.Min(value, max), min))
 }
 
 func (triangle *ComputedTriangle) barycentricCoordinates(vs1, vs2 *Vertex4D, x, y *int, span *float32) (s, t, w float32) {
@@ -192,8 +196,7 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, texture *Buffer
 			var s, t, w float32 = triangle.barycentricCoordinates(&vs1, &vs2, &x, &y, &span)
 
 			if s >= 0 && t >= 0 && s+t <= 1 {
-				//Quick Way To Ensure We Don't Go Outside Array
-				var location int = (((y*width+x)*4)%(width*height*4) + (width * height * 4)) % (width * height * 4)
+				var location int = (y*width + x) * 4
 
 				var wt float32 = w*at.z + s*bt.z + t*ct.z
 
@@ -213,10 +216,6 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, texture *Buffer
 	}
 }
 
-func clamp(value, min, max int) int {
-	return int(math.Max(float64(min), math.Min(float64(value), float64(max))))
-}
-
 func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, opposite bool, axis int) (data []Vertex4D, uvData []Vertex2D) {
 	var previousVertex *Vertex4D = &(*vertices)[len(*vertices)-1]
 	var previousUV *Vertex2D = &(*uv)[len(*uv)-1]
@@ -224,11 +223,12 @@ func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, opposite bool, axis int) (d
 	var previousComponent *float32
 	var previousInside bool
 
-	if axis == 0 {
+	switch axis {
+	case 0:
 		previousComponent = &previousVertex.x
-	} else if axis == 1 {
+	case 1:
 		previousComponent = &previousVertex.y
-	} else if axis == 2 {
+	case 2:
 		previousComponent = &previousVertex.z
 	}
 
@@ -249,15 +249,16 @@ func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, opposite bool, axis int) (d
 		var currentComponent *float32
 		var currentInside bool
 
-		if axis == 0 {
+		switch axis {
+		case 0:
 			currentComponent = &currentVertex.x
 			previousComponent = &previousVertex.x
-		} else if axis == 1 {
+		case 1:
 			currentComponent = &currentVertex.y
 			previousComponent = &previousVertex.y
-		} else if axis == 2 {
-			currentComponent = &currentVertex.z
-			previousComponent = &previousVertex.z
+		case 2:
+			currentComponent = &currentVertex.y
+			previousComponent = &previousVertex.y
 		}
 
 		if opposite {
@@ -301,17 +302,17 @@ func (t *ComputedTriangle) clip() (triangles []ComputedTriangle) {
 	var uvdat []Vertex2D = t.uv[:]
 
 	for i := 0; i < 2; i++ {
-		if len(vertices) == 0 {
+		if len(vertices) > 0 {
+			vertices, uvdat = clip_axis(&vertices, &uvdat, true, i)
+
+			if len(vertices) > 0 {
+				vertices, uvdat = clip_axis(&vertices, &uvdat, false, i)
+			} else {
+				break
+			}
+		} else {
 			break
 		}
-
-		vertices, uvdat = clip_axis(&vertices, &uvdat, true, i)
-
-		if len(vertices) == 0 {
-			break
-		}
-
-		vertices, uvdat = clip_axis(&vertices, &uvdat, false, i)
 	}
 
 	if len(vertices) > 0 {
@@ -386,11 +387,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	var convertedTriangle ComputedTriangle = basicTriangle.multiplyMatrix(&projectionMatrix)
 	var clippedTriangles []ComputedTriangle = convertedTriangle.clip()
 
-	for _, triangle := range clippedTriangles {
-		triangle.convertToNormalizedCoordinates()
-		triangle.convertToScreenSpace()
+	for i := 0; i < len(clippedTriangles); i++ {
+		clippedTriangles[i].convertToNormalizedCoordinates()
+		clippedTriangles[i].convertToScreenSpace()
 
-		triangle.renderToScreen(&screenBuffer, &cobble_buffer, cobble)
+		clippedTriangles[i].renderToScreen(&screenBuffer, &cobble_buffer, cobble)
 	}
 
 	screen.WritePixels(screenBuffer)
@@ -405,7 +406,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("muddy_ground.jpeg")
+	cobble, _, err = ebitenutil.NewImageFromFile("lava.jpg")
 
 	if err != nil {
 		log.Fatal(err)
@@ -435,7 +436,7 @@ func main() {
 	basicTriangle.uv[1] = Vertex2D{1, 0}
 	basicTriangle.uv[2] = Vertex2D{1, 1}
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -13,15 +13,24 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-type Vertex4D struct {
-	x, y, z, w float32
-}
-
 type Vertex2D struct {
 	x, y float32
 }
 
+type Vertex3D struct {
+	x, y, z float32
+}
+
+type Vertex4D struct {
+	x, y, z, w float32
+}
+
 type Triangle struct {
+	vertices [3]Vertex3D
+	uv       [3]Vertex2D
+}
+
+type ComputedTriangle struct {
 	vertices [3]Vertex4D
 	uv       [3]Vertex2D
 }
@@ -52,8 +61,8 @@ func (v1 *Vertex4D) crossProduct(v2 *Vertex4D) float32 {
 	return (v1.x * v2.y) - (v1.y * v2.x)
 }
 
-func (vertex *Vertex4D) convertToMatrix() Matrix {
-	return Matrix{{vertex.x, vertex.y, vertex.z, vertex.w}}
+func (vertex *Vertex3D) convertToMatrix() Matrix {
+	return Matrix{{vertex.x, vertex.y, vertex.z, 1}}
 }
 
 func (m1 *Matrix) multiplyMatrix(m2 *Matrix) (result Matrix) {
@@ -76,7 +85,7 @@ func (matrix *Matrix) convertToVertex() Vertex4D {
 	return Vertex4D{(*matrix)[0][0], (*matrix)[0][1], (*matrix)[0][2], (*matrix)[0][3]}
 }
 
-func (triangle *Triangle) multiplyMatrix(m2 *Matrix) (result Triangle) {
+func (triangle *Triangle) multiplyMatrix(m2 *Matrix) (result ComputedTriangle) {
 	var tm1, tm2, tm3 Matrix = triangle.vertices[0].convertToMatrix(), triangle.vertices[1].convertToMatrix(), triangle.vertices[2].convertToMatrix()
 	tm1, tm2, tm3 = tm1.multiplyMatrix(m2), tm2.multiplyMatrix(m2), tm3.multiplyMatrix(m2)
 
@@ -100,14 +109,14 @@ func createProjectionMatrix(fov, aspect, near, far float32) Matrix {
 	}
 }
 
-func (triangle *Triangle) spanningVectors() (vs1, vs2 Vertex4D) {
+func (triangle *ComputedTriangle) spanningVectors() (vs1, vs2 Vertex4D) {
 	vs1 = Vertex4D{triangle.vertices[1].x - triangle.vertices[0].x, triangle.vertices[1].y - triangle.vertices[0].y, 0, 1}
 	vs2 = Vertex4D{triangle.vertices[2].x - triangle.vertices[0].x, triangle.vertices[2].y - triangle.vertices[0].y, 0, 1}
 
 	return
 }
 
-func (triangle *Triangle) bounds() (minX, minY, maxX, maxY int) {
+func (triangle *ComputedTriangle) bounds() (minX, minY, maxX, maxY int) {
 	maxX = int(math32.Max(triangle.vertices[0].x, math32.Max(triangle.vertices[1].x, triangle.vertices[2].x)))
 	maxY = int(math32.Max(triangle.vertices[0].y, math32.Max(triangle.vertices[1].y, triangle.vertices[2].y)))
 
@@ -117,8 +126,8 @@ func (triangle *Triangle) bounds() (minX, minY, maxX, maxY int) {
 	return
 }
 
-func (triangle *Triangle) barycentricCoordinates(vs1, vs2 *Vertex4D, x, y, span *float32) (s, t, w float32) {
-	var q Vertex4D = Vertex4D{*x - triangle.vertices[0].x, *y - triangle.vertices[0].y, 0, 1}
+func (triangle *ComputedTriangle) barycentricCoordinates(vs1, vs2 *Vertex4D, x, y *int, span *float32) (s, t, w float32) {
+	var q Vertex4D = Vertex4D{float32(*x) - triangle.vertices[0].x, float32(*y) - triangle.vertices[0].y, 0, 1}
 
 	s = q.crossProduct(vs2) / *span
 	t = vs1.crossProduct(&q) / *span
@@ -128,7 +137,7 @@ func (triangle *Triangle) barycentricCoordinates(vs1, vs2 *Vertex4D, x, y, span 
 	return
 }
 
-func (triangle *Triangle) convertToScreenSpace() {
+func (triangle *ComputedTriangle) convertToScreenSpace() {
 	triangle.vertices[0].convertToScreenSpace()
 	triangle.vertices[1].convertToScreenSpace()
 	triangle.vertices[2].convertToScreenSpace()
@@ -156,7 +165,7 @@ func (v1 *Vertex2D) interpolate(v2 *Vertex2D, factor float32) Vertex2D {
 	}
 }
 
-func (triangle *Triangle) convertToNormalizedCoordinates() {
+func (triangle *ComputedTriangle) convertToNormalizedCoordinates() {
 	triangle.vertices[0].convertToNormalized()
 	triangle.vertices[1].convertToNormalized()
 	triangle.vertices[2].convertToNormalized()
@@ -168,29 +177,23 @@ func (buffer *Buffer) clearScreen() {
 	}
 }
 
-func (triangle *Triangle) renderToScreen(buffer *Buffer, texture *Buffer, image *ebiten.Image) {
+func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, texture *Buffer, image *ebiten.Image) {
 	var vs1, vs2 Vertex4D = triangle.spanningVectors()
 	var span float32 = vs1.crossProduct(&vs2)
 
 	var minX, minY, maxX, maxY int = triangle.bounds()
 
+	var at Vertex3D = Vertex3D{triangle.uv[0].x / triangle.vertices[0].w, triangle.uv[0].y / triangle.vertices[0].w, 1 / triangle.vertices[0].w}
+	var bt Vertex3D = Vertex3D{triangle.uv[1].x / triangle.vertices[1].w, triangle.uv[1].y / triangle.vertices[1].w, 1 / triangle.vertices[1].w}
+	var ct Vertex3D = Vertex3D{triangle.uv[2].x / triangle.vertices[2].w, triangle.uv[2].y / triangle.vertices[2].w, 1 / triangle.vertices[2].w}
+
 	for x := minX; x <= maxX; x++ {
 		for y := minY; y <= maxY; y++ {
-			var convertedX, convertedY float32 = float32(x), float32(y)
-
-			var s, t, w float32 = triangle.barycentricCoordinates(&vs1, &vs2, &convertedX, &convertedY, &span)
+			var s, t, w float32 = triangle.barycentricCoordinates(&vs1, &vs2, &x, &y, &span)
 
 			if s >= 0 && t >= 0 && s+t <= 1 {
 				//Quick Way To Ensure We Don't Go Outside Array
 				var location int = (((y*width+x)*4)%(width*height*4) + (width * height * 4)) % (width * height * 4)
-
-				var at Vertex4D = Vertex4D{triangle.uv[0].x, triangle.uv[0].y, 1, triangle.vertices[0].w}
-				var bt Vertex4D = Vertex4D{triangle.uv[1].x, triangle.uv[1].y, 1, triangle.vertices[1].w}
-				var ct Vertex4D = Vertex4D{triangle.uv[2].x, triangle.uv[2].y, 1, triangle.vertices[2].w}
-
-				at.convertToNormalized()
-				bt.convertToNormalized()
-				ct.convertToNormalized()
 
 				var wt float32 = w*at.z + s*bt.z + t*ct.z
 
@@ -293,7 +296,7 @@ func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, opposite bool, axis int) (d
 	return
 }
 
-func (t *Triangle) clip() (triangles []Triangle) {
+func (t *ComputedTriangle) clip() (triangles []ComputedTriangle) {
 	var vertices []Vertex4D = t.vertices[:]
 	var uvdat []Vertex2D = t.uv[:]
 
@@ -313,7 +316,7 @@ func (t *Triangle) clip() (triangles []Triangle) {
 
 	if len(vertices) > 0 {
 		for index := 0; index < len(vertices)-2; index++ {
-			triangles = append(triangles, Triangle{
+			triangles = append(triangles, ComputedTriangle{
 				[3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
 				[3]Vertex2D{uvdat[0], uvdat[index+1], uvdat[index+2]}})
 		}
@@ -380,8 +383,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		cobble.ReadPixels(cobble_buffer)
 	}
 
-	var convertedTriangle Triangle = basicTriangle.multiplyMatrix(&projectionMatrix)
-	var clippedTriangles []Triangle = convertedTriangle.clip()
+	var convertedTriangle ComputedTriangle = basicTriangle.multiplyMatrix(&projectionMatrix)
+	var clippedTriangles []ComputedTriangle = convertedTriangle.clip()
 
 	for _, triangle := range clippedTriangles {
 		triangle.convertToNormalizedCoordinates()
@@ -424,9 +427,9 @@ func main() {
 
 	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 1000)
 
-	basicTriangle.vertices[0] = Vertex4D{0, .5, -2, 1}
-	basicTriangle.vertices[1] = Vertex4D{-.5, -.5, -2, 1}
-	basicTriangle.vertices[2] = Vertex4D{.5, -.5, -2, 1}
+	basicTriangle.vertices[0] = Vertex3D{0, .5, -2}
+	basicTriangle.vertices[1] = Vertex3D{-.5, -.5, -2}
+	basicTriangle.vertices[2] = Vertex3D{.5, -.5, -2}
 
 	basicTriangle.uv[0] = Vertex2D{0, 0}
 	basicTriangle.uv[1] = Vertex2D{1, 0}

@@ -163,14 +163,8 @@ func (triangle *Triangle) convertToNormalizedCoordinates() {
 }
 
 func (buffer *Buffer) clearScreen() {
-	for x := 0; x < width; x++ {
-		for y := 0; y < height; y++ {
-			var location int = (y*width + x) * 4
-
-			(*buffer)[location] = 64
-			(*buffer)[location+1] = 64
-			(*buffer)[location+2] = 64
-		}
+	for x := 0; x < len(*buffer); x++ {
+		(*buffer)[x] = 0
 	}
 }
 
@@ -216,69 +210,79 @@ func (triangle *Triangle) renderToScreen(buffer *Buffer, texture *Buffer, image 
 	}
 }
 
-func clip_axis(vertices []Vertex4D, uv []Vertex2D, opposite, yAxis bool) (data []Vertex4D, uvData []Vertex2D) {
-	previousVertex := vertices[len(vertices)-1]
-	previousUV := uv[len(uv)-1]
-	previousInside := 0
+func clamp(value, min, max int) int {
+	return int(math.Max(float64(min), math.Min(float64(value), float64(max))))
+}
 
-	previousComponent := previousVertex.x
+func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, opposite bool, axis int) (data []Vertex4D, uvData []Vertex2D) {
+	var previousVertex *Vertex4D = &(*vertices)[len(*vertices)-1]
+	var previousUV *Vertex2D = &(*uv)[len(*uv)-1]
 
-	if yAxis {
-		previousComponent = previousVertex.y
+	var previousComponent *float32
+	var previousInside bool
+
+	if axis == 0 {
+		previousComponent = &previousVertex.x
+	} else if axis == 1 {
+		previousComponent = &previousVertex.y
+	} else if axis == 2 {
+		previousComponent = &previousVertex.z
 	}
 
 	if opposite {
-		if previousComponent > -previousVertex.w {
-			previousInside = 1
+		if *previousComponent >= -previousVertex.w {
+			previousInside = true
 		}
 	} else {
-		if previousComponent < previousVertex.w {
-			previousInside = 1
+		if *previousComponent <= previousVertex.w {
+			previousInside = true
 		}
 	}
 
-	for v := 0; v < len(vertices); v++ {
-		currentVertex := vertices[v]
-		currentUV := uv[v]
-		currentInside := 0
+	for v := 0; v < len(*vertices); v++ {
+		var currentVertex *Vertex4D = &(*vertices)[v]
+		var currentUV *Vertex2D = &(*uv)[v]
 
-		currentComponent := currentVertex.x
+		var currentComponent *float32
+		var currentInside bool
 
-		if yAxis {
-			currentComponent = currentVertex.y
-			previousComponent = previousVertex.y
-		} else {
-			previousComponent = previousVertex.x
+		if axis == 0 {
+			currentComponent = &currentVertex.x
+			previousComponent = &previousVertex.x
+		} else if axis == 1 {
+			currentComponent = &currentVertex.y
+			previousComponent = &previousVertex.y
+		} else if axis == 2 {
+			currentComponent = &currentVertex.z
+			previousComponent = &previousVertex.z
 		}
 
 		if opposite {
-			if currentComponent > -currentVertex.w {
-				currentInside = 1
+			if *currentComponent >= -currentVertex.w {
+				currentInside = true
 			}
 		} else {
-			if currentComponent < currentVertex.w {
-				currentInside = 1
+			if *currentComponent <= currentVertex.w {
+				currentInside = true
 			}
 		}
 
-		if (currentInside ^ previousInside) == 1 {
+		if currentInside != previousInside {
 			var factor float32
 
 			if opposite {
-				factor = (previousVertex.w + previousComponent) / ((previousVertex.w + previousComponent) - (currentVertex.w + currentComponent))
+				factor = (previousVertex.w + *previousComponent) / ((previousVertex.w + *previousComponent) - (currentVertex.w + *currentComponent))
 			} else {
-				factor = (previousVertex.w - previousComponent) / ((previousVertex.w - previousComponent) - (currentVertex.w - currentComponent))
+				factor = (previousVertex.w - *previousComponent) / ((previousVertex.w - *previousComponent) - (currentVertex.w - *currentComponent))
 			}
 
-			data = append(data, previousVertex.interpolate(&currentVertex, factor))
-			uvData = append(uvData, previousUV.interpolate(&currentUV, factor))
-
-			//fmt.Println(uvData)
+			data = append(data, previousVertex.interpolate(currentVertex, factor))
+			uvData = append(uvData, previousUV.interpolate(currentUV, factor))
 		}
 
-		if currentInside == 1 {
-			data = append(data, currentVertex)
-			uvData = append(uvData, currentUV)
+		if currentInside {
+			data = append(data, *currentVertex)
+			uvData = append(uvData, *currentUV)
 		}
 
 		previousVertex = currentVertex
@@ -290,28 +294,28 @@ func clip_axis(vertices []Vertex4D, uv []Vertex2D, opposite, yAxis bool) (data [
 }
 
 func (t *Triangle) clip() (triangles []Triangle) {
-	var vertices []Vertex4D = []Vertex4D{t.vertices[0], t.vertices[1], t.vertices[2]}
-	var uvdat []Vertex2D = []Vertex2D{t.uv[0], t.uv[1], t.uv[2]}
+	var vertices []Vertex4D = t.vertices[:]
+	var uvdat []Vertex2D = t.uv[:]
 
-	vertices, uvdat = clip_axis(vertices, uvdat, false, false)
-
-	if len(vertices) > 0 {
-		vertices, uvdat = clip_axis(vertices, uvdat, true, false)
-
-		if len(vertices) > 0 {
-			vertices, uvdat = clip_axis(vertices, uvdat, false, true)
-
-			if len(vertices) > 0 {
-				vertices, uvdat = clip_axis(vertices, uvdat, true, true)
-			}
+	for i := 0; i < 2; i++ {
+		if len(vertices) == 0 {
+			break
 		}
+
+		vertices, uvdat = clip_axis(&vertices, &uvdat, true, i)
+
+		if len(vertices) == 0 {
+			break
+		}
+
+		vertices, uvdat = clip_axis(&vertices, &uvdat, false, i)
 	}
 
 	if len(vertices) > 0 {
 		for index := 0; index < len(vertices)-2; index++ {
 			triangles = append(triangles, Triangle{
-				vertices: [3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
-				uv:       [3]Vertex2D{uvdat[0], uvdat[index+1], uvdat[index+2]}})
+				[3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
+				[3]Vertex2D{uvdat[0], uvdat[index+1], uvdat[index+2]}})
 		}
 	}
 
@@ -379,8 +383,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	var convertedTriangle Triangle = basicTriangle.multiplyMatrix(&projectionMatrix)
 	var clippedTriangles []Triangle = convertedTriangle.clip()
 
-	//fmt.Println(convertedTriangle)
-
 	for _, triangle := range clippedTriangles {
 		triangle.convertToNormalizedCoordinates()
 		triangle.convertToScreenSpace()
@@ -420,20 +422,17 @@ func main() {
 	screenBuffer = make(Buffer, width*height*4)
 	fmt.Println("Screen Buffer Initialized")
 
-	//depthBuffer = make(Buffer, width*height)
-	//fmt.Println("Depth Buffer Initialized")
-
 	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 1000)
 
-	basicTriangle.vertices[0] = Vertex4D{0, -.5, -2, 1}
-	basicTriangle.vertices[1] = Vertex4D{-.5, .5, -2, 1}
-	basicTriangle.vertices[2] = Vertex4D{.5, .5, -2, 1}
+	basicTriangle.vertices[0] = Vertex4D{0, .5, -2, 1}
+	basicTriangle.vertices[1] = Vertex4D{-.5, -.5, -2, 1}
+	basicTriangle.vertices[2] = Vertex4D{.5, -.5, -2, 1}
 
 	basicTriangle.uv[0] = Vertex2D{0, 0}
-	basicTriangle.uv[1] = Vertex2D{2, 0}
-	basicTriangle.uv[2] = Vertex2D{2, 2}
+	basicTriangle.uv[1] = Vertex2D{1, 0}
+	basicTriangle.uv[2] = Vertex2D{1, 1}
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

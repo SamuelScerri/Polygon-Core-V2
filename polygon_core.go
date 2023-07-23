@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	_ "image/jpeg"
 	_ "image/png"
 	"log"
 	"math"
@@ -33,7 +34,7 @@ var screenBuffer Buffer
 //var depthBuffer Buffer
 
 var basicTriangle Triangle
-var width, height int = 320, 180
+var width, height int = 640, 360
 var aspectRatio float32 = float32(width) / float32(height)
 
 var cobble *ebiten.Image
@@ -187,7 +188,7 @@ func (triangle *Triangle) renderToScreen(buffer *Buffer, texture *Buffer, image 
 
 			if s >= 0 && t >= 0 && s+t <= 1 {
 				//Quick Way To Ensure We Don't Go Outside Array
-				var location int = (((y*width+x)*4)%230400 + 230400) % 230400
+				var location int = (((y*width+x)*4)%(width*height*4) + (width * height * 4)) % (width * height * 4)
 
 				var at Vertex4D = Vertex4D{triangle.uv[0].x, triangle.uv[0].y, 1, triangle.vertices[0].w}
 				var bt Vertex4D = Vertex4D{triangle.uv[1].x, triangle.uv[1].y, 1, triangle.vertices[1].w}
@@ -399,7 +400,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("checkerboard.png")
+	cobble, _, err = ebitenutil.NewImageFromFile("muddy_ground.jpeg")
 
 	if err != nil {
 		log.Fatal(err)
@@ -424,9 +425,9 @@ func main() {
 
 	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 1000)
 
-	basicTriangle.vertices[0] = Vertex4D{0, -.5, 2, 1}
-	basicTriangle.vertices[1] = Vertex4D{-.5, .5, 2, 1}
-	basicTriangle.vertices[2] = Vertex4D{.5, .5, 2, 1}
+	basicTriangle.vertices[0] = Vertex4D{0, -.5, -2, 1}
+	basicTriangle.vertices[1] = Vertex4D{-.5, .5, -2, 1}
+	basicTriangle.vertices[2] = Vertex4D{.5, .5, -2, 1}
 
 	basicTriangle.uv[0] = Vertex2D{0, 0}
 	basicTriangle.uv[1] = Vertex2D{2, 0}

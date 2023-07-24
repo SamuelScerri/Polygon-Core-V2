@@ -216,69 +216,47 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, texture *Buffer
 	}
 }
 
-func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, opposite bool, axis int) (data []Vertex4D, uvData []Vertex2D) {
+func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, factor float32, axis int) (data []Vertex4D, uvData []Vertex2D) {
 	var previousVertex *Vertex4D = &(*vertices)[len(*vertices)-1]
 	var previousUV *Vertex2D = &(*uv)[len(*uv)-1]
 
-	var previousComponent *float32
+	var previousComponent float32 = factor
 	var previousInside bool
 
 	switch axis {
 	case 0:
-		previousComponent = &previousVertex.x
+		previousComponent *= previousVertex.x
 	case 1:
-		previousComponent = &previousVertex.y
+		previousComponent *= previousVertex.y
 	case 2:
-		previousComponent = &previousVertex.z
+		previousComponent *= previousVertex.z
 	}
 
-	if opposite {
-		if *previousComponent >= -previousVertex.w {
-			previousInside = true
-		}
-	} else {
-		if *previousComponent <= previousVertex.w {
-			previousInside = true
-		}
+	if previousComponent <= previousVertex.w {
+		previousInside = true
 	}
 
 	for v := 0; v < len(*vertices); v++ {
 		var currentVertex *Vertex4D = &(*vertices)[v]
 		var currentUV *Vertex2D = &(*uv)[v]
 
-		var currentComponent *float32
+		var currentComponent float32 = factor
 		var currentInside bool
 
 		switch axis {
 		case 0:
-			currentComponent = &currentVertex.x
-			previousComponent = &previousVertex.x
+			currentComponent *= currentVertex.x
 		case 1:
-			currentComponent = &currentVertex.y
-			previousComponent = &previousVertex.y
+			currentComponent *= currentVertex.y
 		case 2:
-			currentComponent = &currentVertex.y
-			previousComponent = &previousVertex.y
+			currentComponent *= currentVertex.y
 		}
-
-		if opposite {
-			if *currentComponent >= -currentVertex.w {
-				currentInside = true
-			}
-		} else {
-			if *currentComponent <= currentVertex.w {
-				currentInside = true
-			}
+		if currentComponent <= currentVertex.w {
+			currentInside = true
 		}
 
 		if currentInside != previousInside {
-			var factor float32
-
-			if opposite {
-				factor = (previousVertex.w + *previousComponent) / ((previousVertex.w + *previousComponent) - (currentVertex.w + *currentComponent))
-			} else {
-				factor = (previousVertex.w - *previousComponent) / ((previousVertex.w - *previousComponent) - (currentVertex.w - *currentComponent))
-			}
+			var factor float32 = (previousVertex.w - previousComponent) / ((previousVertex.w - previousComponent) - (currentVertex.w - currentComponent))
 
 			data = append(data, previousVertex.interpolate(currentVertex, factor))
 			uvData = append(uvData, previousUV.interpolate(currentUV, factor))
@@ -290,6 +268,7 @@ func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, opposite bool, axis int) (d
 		}
 
 		previousVertex = currentVertex
+		previousComponent = currentComponent
 		previousInside = currentInside
 		previousUV = currentUV
 	}
@@ -303,10 +282,10 @@ func (t *ComputedTriangle) clip() (triangles []ComputedTriangle) {
 
 	for i := 0; i < 2; i++ {
 		if len(vertices) > 0 {
-			vertices, uvdat = clip_axis(&vertices, &uvdat, true, i)
+			vertices, uvdat = clip_axis(&vertices, &uvdat, 1, i)
 
 			if len(vertices) > 0 {
-				vertices, uvdat = clip_axis(&vertices, &uvdat, false, i)
+				vertices, uvdat = clip_axis(&vertices, &uvdat, -1, i)
 			} else {
 				break
 			}

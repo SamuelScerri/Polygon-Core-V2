@@ -53,8 +53,8 @@ var fov float32 = 120
 var projectionMatrix Matrix
 
 func (vertex *Vertex4D) convertToScreenSpace() {
-	vertex.x = ((vertex.x + 1) * float32(width)) / 2
-	vertex.y = ((-vertex.y + 1) * float32(height)) / 2
+	vertex.x = ((vertex.x + 1) * float32(width + 1)) / 2
+	vertex.y = ((-vertex.y + 1) * float32(height + 1)) / 2
 }
 
 func (v1 *Vertex4D) crossProduct(v2 *Vertex4D) float32 {
@@ -133,8 +133,8 @@ func clamp(value, min, max float32) int {
 func (triangle *ComputedTriangle) barycentricCoordinates(vs1, vs2 *Vertex4D, x, y *int, span *float32) (s, t, w float32) {
 	var q Vertex4D = Vertex4D{float32(*x) - triangle.vertices[0].x, float32(*y) - triangle.vertices[0].y, 0, 1}
 
-	s = q.crossProduct(vs2) / *span
-	t = vs1.crossProduct(&q) / *span
+	s = q.crossProduct(vs2) * (1.0 / *span)
+	t = vs1.crossProduct(&q) * (1.0 / *span)
 
 	w = 1 - s - t
 
@@ -185,18 +185,20 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, texture *Buffer
 	var vs1, vs2 Vertex4D = triangle.spanningVectors()
 	var span float32 = vs1.crossProduct(&vs2)
 
-	var minX, minY, maxX, maxY int = triangle.bounds()
+	//var minX, minY, maxX, maxY int = triangle.bounds()
 
 	var at Vertex3D = Vertex3D{triangle.uv[0].x / triangle.vertices[0].w, triangle.uv[0].y / triangle.vertices[0].w, 1 / triangle.vertices[0].w}
 	var bt Vertex3D = Vertex3D{triangle.uv[1].x / triangle.vertices[1].w, triangle.uv[1].y / triangle.vertices[1].w, 1 / triangle.vertices[1].w}
 	var ct Vertex3D = Vertex3D{triangle.uv[2].x / triangle.vertices[2].w, triangle.uv[2].y / triangle.vertices[2].w, 1 / triangle.vertices[2].w}
 
-	for x := minX; x <= maxX; x++ {
-		for y := minY; y <= maxY; y++ {
+	//We Offset To Avoid Numerical Precision Errors & Get Correct Results Near The Boundary Box
+	for x := 1; x <= width; x++ {
+		for y := 1; y <= height; y++ {
 			var s, t, w float32 = triangle.barycentricCoordinates(&vs1, &vs2, &x, &y, &span)
 
 			if s >= 0 && t >= 0 && s+t <= 1 {
-				var location int = (y*width + x) * 4
+				//We Remove The Offset
+				var location int = ((y - 1)*width + (x - 1)) * 4
 
 				var wt float32 = w*at.z + s*bt.z + t*ct.z
 
@@ -249,7 +251,7 @@ func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, factor float32, axis int) (
 		case 1:
 			currentComponent *= currentVertex.y
 		case 2:
-			currentComponent *= currentVertex.y
+			currentComponent *= currentVertex.z
 		}
 		if currentComponent <= currentVertex.w {
 			currentInside = true
@@ -266,6 +268,7 @@ func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, factor float32, axis int) (
 			data = append(data, *currentVertex)
 			uvData = append(uvData, *currentUV)
 		}
+
 
 		previousVertex = currentVertex
 		previousComponent = currentComponent
@@ -367,6 +370,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	var clippedTriangles []ComputedTriangle = convertedTriangle.clip()
 
 	for i := 0; i < len(clippedTriangles); i++ {
+		
+
 		clippedTriangles[i].convertToNormalizedCoordinates()
 		clippedTriangles[i].convertToScreenSpace()
 

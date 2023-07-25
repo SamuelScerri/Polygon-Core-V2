@@ -59,8 +59,8 @@ var fov float32 = 120
 var projectionMatrix Matrix
 
 func (vertex *Vertex4D) convertToScreenSpace() {
-	vertex.x = (((vertex.x + 1) * float32(width+1)) / 2)
-	vertex.y = (((-vertex.y + 1) * float32(height+1)) / 2)
+	vertex.x = (((vertex.x + 1) * float32(width)) / 2)
+	vertex.y = (((-vertex.y + 1) * float32(height)) / 2)
 }
 
 func (v1 *Vertex4D) crossProduct(v2 *Vertex4D) float32 {
@@ -123,11 +123,11 @@ func (triangle *ComputedTriangle) spanningVectors() (vs1, vs2 Vertex4D) {
 }
 
 func (triangle *ComputedTriangle) bounds() (minX, minY, maxX, maxY int) {
-	maxX = int(math32.Max(triangle.vertices[0].x, math32.Max(triangle.vertices[1].x, triangle.vertices[2].x)))
-	maxY = int(math32.Max(triangle.vertices[0].y, math32.Max(triangle.vertices[1].y, triangle.vertices[2].y)))
+	maxX = clamp(int(math32.Max(triangle.vertices[0].x, math32.Max(triangle.vertices[1].x, triangle.vertices[2].x))), 0, width)
+	maxY = clamp(int(math32.Max(triangle.vertices[0].y, math32.Max(triangle.vertices[1].y, triangle.vertices[2].y))), 0, height)
 
-	minX = int(math32.Min(triangle.vertices[0].x, math32.Min(triangle.vertices[1].x, triangle.vertices[2].x)))
-	minY = int(math32.Min(triangle.vertices[0].y, math32.Min(triangle.vertices[1].y, triangle.vertices[2].y)))
+	minX = clamp(int(math32.Min(triangle.vertices[0].x, math32.Min(triangle.vertices[1].x, triangle.vertices[2].x))), 0, width)
+	minY = clamp(int(math32.Min(triangle.vertices[0].y, math32.Min(triangle.vertices[1].y, triangle.vertices[2].y))), 0, height)
 
 	return
 }
@@ -141,12 +141,6 @@ func (triangle *ComputedTriangle) barycentricCoordinates(vs1, vs2 *Vertex4D, x, 
 	w = 1 - s - t
 
 	return
-}
-
-func (triangle *ComputedTriangle) convertToScreenSpace() {
-	triangle.vertices[0].convertToScreenSpace()
-	triangle.vertices[1].convertToScreenSpace()
-	triangle.vertices[2].convertToScreenSpace()
 }
 
 func (v *Vertex4D) convertToNormalized() {
@@ -171,10 +165,14 @@ func (v1 *Vertex2D) interpolate(v2 *Vertex2D, factor float32) Vertex2D {
 	}
 }
 
-func (triangle *ComputedTriangle) convertToNormalizedCoordinates() {
-	triangle.vertices[0].convertToNormalized()
-	triangle.vertices[1].convertToNormalized()
-	triangle.vertices[2].convertToNormalized()
+func clamp(value, min, max int) int {
+	if value < min {
+		return min
+	}
+	if value > max {
+		return max
+	}
+	return value
 }
 
 func (buffer *Buffer) clearScreen() {
@@ -199,46 +197,42 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 	var bt Vertex3D = Vertex3D{triangle.uv[1].x / triangle.vertices[1].w, triangle.uv[1].y / triangle.vertices[1].w, 1 / triangle.vertices[1].w}
 	var ct Vertex3D = Vertex3D{triangle.uv[2].x / triangle.vertices[2].w, triangle.uv[2].y / triangle.vertices[2].w, 1 / triangle.vertices[2].w}
 
-	//var xAmount int = maxX - minX
-	//var yAmount int = maxY - minY
+	var xAmount int = maxX - minX
+	var yAmount int = maxY - minY
 
-	var chunkSize int = (width * height) / cores
-
-	//fmt.Println(maxX - minX)
+	var chunkSize int = (xAmount * yAmount) / cores
 
 	for i := 0; i < cores; i++ {
 		wg.Add(1)
 
 		go func(section int) {
 			for p := section * chunkSize; p < section*chunkSize+chunkSize; p++ {
-				var x int = 1 + p%(width)
-				var y int = 1 + (p/(width))%(height)
+				var x int = p%xAmount + minX
+				var y int = p/xAmount + minY
 
-				if x >= minX && x <= maxX && y >= minY && y <= maxY {
-					var s, t, w float32 = triangle.barycentricCoordinates(&vs1, &vs2, &x, &y, &span)
+				var s, t, w float32 = triangle.barycentricCoordinates(&vs1, &vs2, &x, &y, &span)
 
-					if s >= 0 && t >= 0 && s+t <= 1 {
-						var depth float32 = s*triangle.vertices[0].z + t*triangle.vertices[1].z + w*triangle.vertices[2].z
+				if s >= 0 && t >= 0 && s+t <= 1 {
+					var depth float32 = s*triangle.vertices[0].z + t*triangle.vertices[1].z + w*triangle.vertices[2].z
 
-						if depth <= (*depthBuffer)[((y-1)*width+(x-1))] {
-							var location int = ((y-1)*width + (x - 1)) * 4
+					if depth <= (*depthBuffer)[(y*width+x)] {
+						var location int = (y*width + x) * 4
 
-							var wt float32 = w*at.z + s*bt.z + t*ct.z
+						var wt float32 = w*at.z + s*bt.z + t*ct.z
 
-							var uvX float32 = (w*at.x + s*bt.x + t*ct.x) / wt
-							var uvY float32 = (w*at.y + s*bt.y + t*ct.y) / wt
+						var uvX float32 = (w*at.x + s*bt.x + t*ct.x) / wt
+						var uvY float32 = (w*at.y + s*bt.y + t*ct.y) / wt
 
-							var tx int = int(uvX * float32(image.Bounds().Dx()))
-							var ty int = int(uvY * float32(image.Bounds().Dy()))
+						var tx int = int(uvX * float32(image.Bounds().Dx()))
+						var ty int = int(uvY * float32(image.Bounds().Dy()))
 
-							var colorLocation int = ((ty*image.Bounds().Dx() + tx) * 4) % (image.Bounds().Dx() * image.Bounds().Dy() * 4)
+						var colorLocation int = ((ty*image.Bounds().Dx() + tx) * 4) % (image.Bounds().Dx() * image.Bounds().Dy() * 4)
 
-							(*depthBuffer)[((y-1)*width + (x - 1))] = depth
+						(*depthBuffer)[(y*width + x)] = depth
 
-							(*buffer)[location] = (*texture)[colorLocation]
-							(*buffer)[location+1] = (*texture)[colorLocation+1]
-							(*buffer)[location+2] = (*texture)[colorLocation+2]
-						}
+						(*buffer)[location] = (*texture)[colorLocation]
+						(*buffer)[location+1] = (*texture)[colorLocation+1]
+						(*buffer)[location+2] = (*texture)[colorLocation+2]
 					}
 				}
 
@@ -334,6 +328,11 @@ func (t *ComputedTriangle) clip() (triangles []ComputedTriangle) {
 	}
 
 	if len(vertices) > 0 {
+		for i := 0; i < len(vertices); i++ {
+			vertices[i].convertToNormalized()
+			vertices[i].convertToScreenSpace()
+		}
+
 		for index := 0; index < len(vertices)-2; index++ {
 			triangles = append(triangles, ComputedTriangle{
 				[3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
@@ -406,23 +405,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	var clippedTriangles []ComputedTriangle = convertedTriangle.clip()
 
 	for i := 0; i < len(clippedTriangles); i++ {
-
-		clippedTriangles[i].convertToNormalizedCoordinates()
-		clippedTriangles[i].convertToScreenSpace()
-
 		clippedTriangles[i].renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble)
-		wg.Wait()
-	}
-
-	var convertedTriangle2 ComputedTriangle = basicTriangle2.multiplyMatrix(&projectionMatrix)
-	var clippedTriangles2 []ComputedTriangle = convertedTriangle2.clip()
-
-	for i := 0; i < len(clippedTriangles2); i++ {
-
-		clippedTriangles2[i].convertToNormalizedCoordinates()
-		clippedTriangles2[i].convertToScreenSpace()
-
-		clippedTriangles2[i].renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble)
 		wg.Wait()
 	}
 
@@ -439,7 +422,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("muddy_ground.jpeg")
+	cobble, _, err = ebitenutil.NewImageFromFile("cobble.png")
 
 	if err != nil {
 		log.Fatal(err)

@@ -190,16 +190,21 @@ func (buffer *FloatBuffer) clearDepth() {
 }
 
 func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *FloatBuffer, texture *Buffer, image *ebiten.Image) {
-	var minX, minY, maxX, maxY int = triangle.bounds()
-
 	var vs1, vs2 Vertex4D = triangle.spanningVectors()
 	var span float32 = vs1.crossProduct(&vs2)
+
+	var minX, minY, maxX, maxY int = triangle.bounds()
 
 	var at Vertex3D = Vertex3D{triangle.uv[0].x / triangle.vertices[0].w, triangle.uv[0].y / triangle.vertices[0].w, 1 / triangle.vertices[0].w}
 	var bt Vertex3D = Vertex3D{triangle.uv[1].x / triangle.vertices[1].w, triangle.uv[1].y / triangle.vertices[1].w, 1 / triangle.vertices[1].w}
 	var ct Vertex3D = Vertex3D{triangle.uv[2].x / triangle.vertices[2].w, triangle.uv[2].y / triangle.vertices[2].w, 1 / triangle.vertices[2].w}
 
+	//var xAmount int = maxX - minX
+	//var yAmount int = maxY - minY
+
 	var chunkSize int = (width * height) / cores
+
+	//fmt.Println(maxX - minX)
 
 	for i := 0; i < cores; i++ {
 		wg.Add(1)
@@ -236,11 +241,14 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 						}
 					}
 				}
+
 			}
 
 			wg.Done()
 		}(i)
+
 	}
+
 }
 
 func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, factor float32, axis int) {
@@ -303,8 +311,8 @@ func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, factor float32, axis int) {
 		previousUV = currentUV
 	}
 
-	vertices = &data
-	uv = &uvData
+	*vertices = data
+	*uv = uvData
 }
 
 func (t *ComputedTriangle) clip() (triangles []ComputedTriangle) {

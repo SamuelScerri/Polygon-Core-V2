@@ -43,7 +43,7 @@ type Matrix [][]float32
 
 var screenBuffer Buffer
 var depthBuffer FloatBuffer
-var cores int
+var cores, chunkSize, chunkSizeDepth int
 
 //var depthBuffer Buffer
 
@@ -59,8 +59,8 @@ var fov float32 = 120
 var projectionMatrix Matrix
 
 func (vertex *Vertex4D) convertToScreenSpace() {
-	vertex.x = (((vertex.x + 1) * float32(width)) / 2)
-	vertex.y = (((-vertex.y + 1) * float32(height)) / 2)
+	vertex.x = (((vertex.x + 1) * float32(width+1)) / 2)
+	vertex.y = (((-vertex.y + 1) * float32(height+1)) / 2)
 }
 
 func (v1 *Vertex4D) crossProduct(v2 *Vertex4D) float32 {
@@ -123,11 +123,11 @@ func (triangle *ComputedTriangle) spanningVectors() (vs1, vs2 Vertex4D) {
 }
 
 func (triangle *ComputedTriangle) bounds() (minX, minY, maxX, maxY int) {
-	maxX = clamp(int(math32.Max(triangle.vertices[0].x, math32.Max(triangle.vertices[1].x, triangle.vertices[2].x))), 0, width)
-	maxY = clamp(int(math32.Max(triangle.vertices[0].y, math32.Max(triangle.vertices[1].y, triangle.vertices[2].y))), 0, height)
+	maxX = clamp(int(math32.Max(triangle.vertices[0].x, math32.Max(triangle.vertices[1].x, triangle.vertices[2].x))), 1, width+1)
+	maxY = clamp(int(math32.Max(triangle.vertices[0].y, math32.Max(triangle.vertices[1].y, triangle.vertices[2].y))), 1, height+1)
 
-	minX = clamp(int(math32.Min(triangle.vertices[0].x, math32.Min(triangle.vertices[1].x, triangle.vertices[2].x))), 0, width)
-	minY = clamp(int(math32.Min(triangle.vertices[0].y, math32.Min(triangle.vertices[1].y, triangle.vertices[2].y))), 0, height)
+	minX = clamp(int(math32.Min(triangle.vertices[0].x, math32.Min(triangle.vertices[1].x, triangle.vertices[2].x))), 1, width+1)
+	minY = clamp(int(math32.Min(triangle.vertices[0].y, math32.Min(triangle.vertices[1].y, triangle.vertices[2].y))), 1, height+1)
 
 	return
 }
@@ -176,15 +176,35 @@ func clamp(value, min, max int) int {
 }
 
 func (buffer *Buffer) clearScreen() {
-	for x := 0; x < len(*buffer); x++ {
-		(*buffer)[x] = 0
+	for i := 0; i < cores; i++ {
+		wg.Add(1)
+
+		go func(section int) {
+			for p := section * chunkSize; p < section*chunkSize+chunkSize; p++ {
+				(*buffer)[p] = 0
+			}
+
+			wg.Done()
+		}(i)
 	}
+
+	wg.Wait()
 }
 
 func (buffer *FloatBuffer) clearDepth() {
-	for x := 0; x < len(*buffer); x++ {
-		(*buffer)[x] = math32.MaxFloat32
+	for i := 0; i < cores; i++ {
+		wg.Add(1)
+
+		go func(section int) {
+			for p := section * chunkSizeDepth; p < section*chunkSizeDepth+chunkSizeDepth; p++ {
+				(*buffer)[p] = math32.MaxFloat32
+			}
+
+			wg.Done()
+		}(i)
 	}
+
+	wg.Wait()
 }
 
 func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *FloatBuffer, texture *Buffer, image *ebiten.Image) {
@@ -215,8 +235,8 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 				if s >= 0 && t >= 0 && s+t <= 1 {
 					var depth float32 = s*triangle.vertices[0].z + t*triangle.vertices[1].z + w*triangle.vertices[2].z
 
-					if depth <= (*depthBuffer)[(y*width+x)] {
-						var location int = (y*width + x) * 4
+					if depth <= (*depthBuffer)[(y-1)*width+(x-1)] {
+						var location int = ((y-1)*width + (x - 1)) * 4
 
 						var wt float32 = w*at.z + s*bt.z + t*ct.z
 
@@ -228,7 +248,7 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 						var colorLocation int = ((ty*image.Bounds().Dx() + tx) * 4) % (image.Bounds().Dx() * image.Bounds().Dy() * 4)
 
-						(*depthBuffer)[(y*width + x)] = depth
+						(*depthBuffer)[(y-1)*width+(x-1)] = depth
 
 						(*buffer)[location] = (*texture)[colorLocation]
 						(*buffer)[location+1] = (*texture)[colorLocation+1]
@@ -243,6 +263,7 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 	}
 
+	wg.Wait()
 }
 
 func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, factor float32, axis int) {
@@ -406,11 +427,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	for i := 0; i < len(clippedTriangles); i++ {
 		clippedTriangles[i].renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble)
-		wg.Wait()
 	}
 
 	screen.WritePixels(screenBuffer)
 	screenBuffer.clearScreen()
+
 	depthBuffer.clearDepth()
 
 	ebitenutil.DebugPrint(screen, strconv.Itoa(int(ebiten.ActualFPS())))
@@ -432,7 +453,7 @@ func init() {
 func main() {
 	fmt.Println("Initializing Polygon Core")
 
-	ebiten.SetWindowSize(320, 180)
+	ebiten.SetWindowSize(640, 360)
 	ebiten.SetWindowTitle("Polygon Core - V2")
 	ebiten.SetVsyncEnabled(false)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
@@ -441,7 +462,10 @@ func main() {
 
 	screenBuffer = make(Buffer, width*height*4)
 	depthBuffer = make(FloatBuffer, width*height)
-	cores = runtime.NumCPU()
+	cores = runtime.NumCPU() - 1
+	chunkSize = (width * height * 4) / cores
+	chunkSizeDepth = (width * height) / cores
+
 	fmt.Println("Screen Buffer Initialized")
 
 	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 1000)
@@ -459,10 +483,10 @@ func main() {
 	basicTriangle.uv[2] = Vertex2D{2, 2}
 
 	basicTriangle2.uv[0] = Vertex2D{0, 0}
-	basicTriangle2.uv[1] = Vertex2D{2, 0}
-	basicTriangle2.uv[2] = Vertex2D{2, 2}
+	basicTriangle2.uv[1] = Vertex2D{1, 0}
+	basicTriangle2.uv[2] = Vertex2D{1, 1}
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

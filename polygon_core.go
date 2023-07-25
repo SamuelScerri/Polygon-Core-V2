@@ -251,7 +251,10 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 }
 
-func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, factor float32, axis int) (data []Vertex4D, uvData []Vertex2D) {
+func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, factor float32, axis int) {
+	var data []Vertex4D
+	var uvData []Vertex2D
+
 	var previousVertex *Vertex4D = &(*vertices)[len(*vertices)-1]
 	var previousUV *Vertex2D = &(*uv)[len(*uv)-1]
 
@@ -308,7 +311,8 @@ func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, factor float32, axis int) (
 		previousUV = currentUV
 	}
 
-	return
+	*vertices = data
+	*uv = uvData
 }
 
 func (t *ComputedTriangle) clip() (triangles []ComputedTriangle) {
@@ -317,10 +321,10 @@ func (t *ComputedTriangle) clip() (triangles []ComputedTriangle) {
 
 	for i := 0; i < 2; i++ {
 		if len(vertices) > 0 {
-			vertices, uvdat = clip_axis(&vertices, &uvdat, 1, i)
+			clip_axis(&vertices, &uvdat, 1, i)
 
 			if len(vertices) > 0 {
-				vertices, uvdat = clip_axis(&vertices, &uvdat, -1, i)
+				clip_axis(&vertices, &uvdat, -1, i)
 			} else {
 				break
 			}
@@ -435,7 +439,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("cobble.png")
+	cobble, _, err = ebitenutil.NewImageFromFile("muddy_ground.jpeg")
 
 	if err != nil {
 		log.Fatal(err)
@@ -445,7 +449,7 @@ func init() {
 func main() {
 	fmt.Println("Initializing Polygon Core")
 
-	ebiten.SetWindowSize(1280, 720)
+	ebiten.SetWindowSize(320, 180)
 	ebiten.SetWindowTitle("Polygon Core - V2")
 	ebiten.SetVsyncEnabled(false)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
@@ -454,7 +458,7 @@ func main() {
 
 	screenBuffer = make(Buffer, width*height*4)
 	depthBuffer = make(FloatBuffer, width*height)
-	cores = runtime.NumCPU() - 1
+	cores = runtime.NumCPU()
 	fmt.Println("Screen Buffer Initialized")
 
 	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 1000)

@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"image"
 
 	"github.com/chewxy/math32"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -41,6 +42,7 @@ type Buffer []byte
 type FloatBuffer []float32
 type Matrix [][]float32
 
+var subImage image.Image
 var screenBuffer Buffer
 var depthBuffer FloatBuffer
 var cores, chunkSize, chunkSizeDepth int
@@ -53,14 +55,17 @@ var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 
 var cobble *ebiten.Image
+var gpuBuffer *ebiten.Image
+var scissoredBuffer *ebiten.Image
+
 var cobble_buffer Buffer
 var fov float32 = 120
 
 var projectionMatrix Matrix
 
 func (vertex *Vertex4D) convertToScreenSpace() {
-	vertex.x = (((vertex.x + 1) * float32(width+1)) / 2)
-	vertex.y = (((-vertex.y + 1) * float32(height+1)) / 2)
+	vertex.x = (((vertex.x + 1) * float32(width + 2)) / 2)
+	vertex.y = (((-vertex.y + 1) * float32(height + 2)) / 2)
 }
 
 func (v1 *Vertex4D) crossProduct(v2 *Vertex4D) float32 {
@@ -123,11 +128,11 @@ func (triangle *ComputedTriangle) spanningVectors() (vs1, vs2 Vertex4D) {
 }
 
 func (triangle *ComputedTriangle) bounds() (minX, minY, maxX, maxY int) {
-	maxX = clamp(int(math32.Max(triangle.vertices[0].x, math32.Max(triangle.vertices[1].x, triangle.vertices[2].x))), 1, width+1)
-	maxY = clamp(int(math32.Max(triangle.vertices[0].y, math32.Max(triangle.vertices[1].y, triangle.vertices[2].y))), 1, height+1)
+	maxX = clamp(int(math32.Max(triangle.vertices[0].x, math32.Max(triangle.vertices[1].x, triangle.vertices[2].x))), 1, width + 1)
+	maxY = clamp(int(math32.Max(triangle.vertices[0].y, math32.Max(triangle.vertices[1].y, triangle.vertices[2].y))), 1, height + 1)
 
-	minX = clamp(int(math32.Min(triangle.vertices[0].x, math32.Min(triangle.vertices[1].x, triangle.vertices[2].x))), 1, width+1)
-	minY = clamp(int(math32.Min(triangle.vertices[0].y, math32.Min(triangle.vertices[1].y, triangle.vertices[2].y))), 1, height+1)
+	minX = clamp(int(math32.Min(triangle.vertices[0].x, math32.Min(triangle.vertices[1].x, triangle.vertices[2].x))), 1, width + 1)
+	minY = clamp(int(math32.Min(triangle.vertices[0].y, math32.Min(triangle.vertices[1].y, triangle.vertices[2].y))), 1, height + 1)
 
 	return
 }
@@ -197,7 +202,7 @@ func (buffer *FloatBuffer) clearDepth() {
 
 		go func(section int) {
 			for p := section * chunkSizeDepth; p < section*chunkSizeDepth+chunkSizeDepth; p++ {
-				(*buffer)[p] = math32.MaxFloat32
+				(*buffer)[p] = 9999
 			}
 
 			wg.Done()
@@ -217,26 +222,27 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 	var bt Vertex3D = Vertex3D{triangle.uv[1].x / triangle.vertices[1].w, triangle.uv[1].y / triangle.vertices[1].w, 1 / triangle.vertices[1].w}
 	var ct Vertex3D = Vertex3D{triangle.uv[2].x / triangle.vertices[2].w, triangle.uv[2].y / triangle.vertices[2].w, 1 / triangle.vertices[2].w}
 
-	var xAmount int = maxX - minX
-	var yAmount int = maxY - minY
+	var xAmount int = (maxX - minX)
+	var yAmount int = (maxY - minY)
 
-	var chunkSize int = (xAmount * yAmount) / cores
+	var trianglechunkSize int = (xAmount * yAmount) / cores
+	var remainingChunks int = (xAmount * yAmount) % cores
 
 	for i := 0; i < cores; i++ {
 		wg.Add(1)
 
 		go func(section int) {
-			for p := section * chunkSize; p < section*chunkSize+chunkSize; p++ {
-				var x int = p%xAmount + minX
-				var y int = p/xAmount + minY
+			for p := section * trianglechunkSize; p < section*trianglechunkSize+trianglechunkSize; p++ {
+				var x int = (p%xAmount + minX)
+				var y int = (p/xAmount + minY)
 
 				var s, t, w float32 = triangle.barycentricCoordinates(&vs1, &vs2, &x, &y, &span)
 
 				if s >= 0 && t >= 0 && s+t <= 1 {
 					var depth float32 = s*triangle.vertices[0].z + t*triangle.vertices[1].z + w*triangle.vertices[2].z
 
-					if depth <= (*depthBuffer)[(y-1)*width+(x-1)] {
-						var location int = ((y-1)*width + (x - 1)) * 4
+					if depth <= (*depthBuffer)[(y - 1)*(width) +(x - 1)] {
+						var location int = ((y - 1)*(width) + (x - 1)) * 4
 
 						var wt float32 = w*at.z + s*bt.z + t*ct.z
 
@@ -248,7 +254,7 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 						var colorLocation int = ((ty*image.Bounds().Dx() + tx) * 4) % (image.Bounds().Dx() * image.Bounds().Dy() * 4)
 
-						(*depthBuffer)[(y-1)*width+(x-1)] = depth
+						(*depthBuffer)[(y - 1)*(width)+(x - 1)] = depth
 
 						(*buffer)[location] = (*texture)[colorLocation]
 						(*buffer)[location+1] = (*texture)[colorLocation+1]
@@ -261,6 +267,36 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 			wg.Done()
 		}(i)
 
+		for p := (cores - 1) * trianglechunkSize + trianglechunkSize; p < (cores - 1)*trianglechunkSize+trianglechunkSize + remainingChunks; p++ {
+			var x int = (p%xAmount + minX)
+			var y int = (p/xAmount + minY)
+
+			var s, t, w float32 = triangle.barycentricCoordinates(&vs1, &vs2, &x, &y, &span)
+
+			if s >= 0 && t >= 0 && s+t <= 1 {
+				var depth float32 = s*triangle.vertices[0].z + t*triangle.vertices[1].z + w*triangle.vertices[2].z
+
+				if depth <= (*depthBuffer)[(y - 1)*(width) +(x - 1)] {
+					var location int = ((y - 1)*(width) + (x - 1)) * 4
+
+					var wt float32 = w*at.z + s*bt.z + t*ct.z
+
+					var uvX float32 = (w*at.x + s*bt.x + t*ct.x) / wt
+					var uvY float32 = (w*at.y + s*bt.y + t*ct.y) / wt
+
+					var tx int = int(uvX * float32(image.Bounds().Dx()))
+					var ty int = int(uvY * float32(image.Bounds().Dy()))
+
+					var colorLocation int = ((ty*image.Bounds().Dx() + tx) * 4) % (image.Bounds().Dx() * image.Bounds().Dy() * 4)
+
+					(*depthBuffer)[(y - 1)*(width)+(x - 1)] = depth
+
+					(*buffer)[location] = (*texture)[colorLocation]
+					(*buffer)[location+1] = (*texture)[colorLocation+1]
+					(*buffer)[location+2] = (*texture)[colorLocation+2]
+				}
+			}
+		}
 	}
 
 	wg.Wait()
@@ -335,17 +371,17 @@ func (t *ComputedTriangle) clip() (triangles []ComputedTriangle) {
 	var uvdat []Vertex2D = t.uv[:]
 
 	for i := 0; i < 2; i++ {
-		if len(vertices) > 0 {
-			clip_axis(&vertices, &uvdat, 1, i)
-
-			if len(vertices) > 0 {
-				clip_axis(&vertices, &uvdat, -1, i)
-			} else {
-				break
-			}
-		} else {
+		if len(vertices) == 0 {
 			break
 		}
+
+		clip_axis(&vertices, &uvdat, 1, i)
+
+		if len(vertices) == 0 {
+			break
+		}
+
+		clip_axis(&vertices, &uvdat, -1, i)
 	}
 
 	if len(vertices) > 0 {
@@ -429,9 +465,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		clippedTriangles[i].renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble)
 	}
 
-	screen.WritePixels(screenBuffer)
-	screenBuffer.clearScreen()
+	var convertedTriangle2 ComputedTriangle = basicTriangle2.multiplyMatrix(&projectionMatrix)
+	var clippedTriangles2 []ComputedTriangle = convertedTriangle2.clip()
 
+	for i := 0; i < len(clippedTriangles2); i++ {
+		clippedTriangles2[i].renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble)
+	}
+
+	options := ebiten.DrawImageOptions{}
+	options.GeoM.Translate(-1, -1)
+
+	screen.WritePixels(screenBuffer)
+	//screen.DrawImage(gpuBuffer, &options)
+
+	screenBuffer.clearScreen()
 	depthBuffer.clearDepth()
 
 	ebitenutil.DebugPrint(screen, strconv.Itoa(int(ebiten.ActualFPS())))
@@ -460,12 +507,18 @@ func main() {
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
-	screenBuffer = make(Buffer, width*height*4)
-	depthBuffer = make(FloatBuffer, width*height)
-	cores = runtime.NumCPU() - 1
-	chunkSize = (width * height * 4) / cores
-	chunkSizeDepth = (width * height) / cores
+	screenBuffer = make(Buffer, (width)*(height)*4)
+	depthBuffer = make(FloatBuffer, (width)*(height))
+	cores = (runtime.NumCPU() - 1)
+	chunkSize = ((width) * (height) * 4) / cores
+	chunkSizeDepth = ((width) * (height)) / cores
+	//imageOptions := ebiten.NewImageOptions{false}
 
+	//gpuBuffer = ebiten.NewImageWithOptions(image.Rect(0, 0, width+2, height+2), &imageOptions)
+	//subImage = gpuBuffer.SubImage(image.Rect(0, 0, width, height))
+	//scissoredBuffer = ebiten.NewImageFromImage(subImage)
+
+	fmt.Println((width * height) % cores)
 	fmt.Println("Screen Buffer Initialized")
 
 	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 1000)
@@ -486,7 +539,7 @@ func main() {
 	basicTriangle2.uv[1] = Vertex2D{1, 0}
 	basicTriangle2.uv[2] = Vertex2D{1, 1}
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

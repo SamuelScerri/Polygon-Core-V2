@@ -18,6 +18,7 @@ The Second Version Of Polygon Core, Now Using Go &amp; Goroutines!
 - Wavefront OBJ Support
 
 # Features That MIGHT Be Added:
+- Occlusion Culling
 - Basic Diffuse Lighting
 - Basic Shadow Mapping
 - Normal Mapping

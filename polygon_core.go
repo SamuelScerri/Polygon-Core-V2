@@ -49,7 +49,7 @@ var depthBuffer FloatBuffer
 var cores, chunkSize, chunkSizeDepth, chunkSizeRemaining, chunkSizeDepthRemaining int
 
 var basicTriangle, basicTriangle2 Triangle
-var basicTrianglePosition Vertex3D
+var basicTrianglePosition Vertex3D = Vertex3D{0, 0, -2}
 
 var width, height int = 320, 180
 var aspectRatio float32 = float32(width) / float32(height)
@@ -139,9 +139,9 @@ func createProjectionMatrix(fov, aspect, near, far float32) Matrix {
 
 func createTransformationMatrix(position Vertex3D, r Vertex4D) Matrix {
 	return Matrix{
-		{1 - (2 * r.y * r.y + r.z * r.z), 2 * r.x * r.y + 2 * r.z * r.w, 2 * r.x * r.z - 2 * r.y * r.w, 0},
-		{2 * r.x * r.y - 2 * r.w * r.z, 1 - (2 * r.x * r.x + 2 * r.z * r.z), 2 * r.y * r.z + 2 * r.w * r.x, 0},
-		{2 * r.x * r.z + 2 * r.w * r.y, 2 * r.y * r.z - 2 * r.w * r.x, 1 - (2 * r.x * r.x + 2 * r.y * r.y), 0},
+		{1 - 2*r.y*r.y - 2*r.z*r.z, 2*r.x*r.y + 2*r.z*r.w, 2*r.x*r.z - 2*r.y*r.w, 0},
+		{2*r.x*r.y - 2*r.z*r.w, 1 - 2*r.x*r.x - 2*r.z*r.z, 2*r.y*r.z + 2*r.w*r.x, 0},
+		{2*r.x*r.z + 2*r.y*r.w, 2*r.y*r.z - 2*r.w*r.x, 1 - 2*r.x*r.x - 2*r.y*r.y, 0},
 		{position.x, position.y, position.z, 1},
 	}
 }
@@ -416,10 +416,11 @@ func (v *Vertex3D) convertToQuaternion() Vertex4D {
 	cosYawHalf := math32.Cos(yawHalf)
 	sinYawHalf := math32.Sin(yawHalf)
 
-	w := cosYawHalf * cosPitchHalf * cosRollHalf + sinYawHalf * sinPitchHalf * sinRollHalf
-	x := cosYawHalf * cosPitchHalf * sinRollHalf - sinYawHalf * sinPitchHalf * cosRollHalf
-	y := cosYawHalf * sinPitchHalf * cosRollHalf + sinYawHalf * cosPitchHalf * sinRollHalf
-	z := sinYawHalf * cosPitchHalf * cosRollHalf - cosYawHalf * sinPitchHalf * sinRollHalf
+	// The order of quaternion components is different in this convention (XYZ order).
+	x := sinRollHalf*cosPitchHalf*cosYawHalf - cosRollHalf*sinPitchHalf*sinYawHalf
+	y := cosRollHalf*sinPitchHalf*cosYawHalf + sinRollHalf*cosPitchHalf*sinYawHalf
+	z := cosRollHalf*cosPitchHalf*sinYawHalf - sinRollHalf*sinPitchHalf*cosYawHalf
+	w := cosRollHalf*cosPitchHalf*cosYawHalf + sinRollHalf*sinPitchHalf*sinYawHalf
 
 	return Vertex4D{x, y, z, w}
 }
@@ -496,6 +497,7 @@ func (g *Game) Update() error {
 }
 
 var rotationDegrees Vertex3D
+var smallRotation Vertex3D
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	if cobble_buffer == nil {
@@ -509,8 +511,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	//r += .01
 
-	rotationDegrees.y += 1
-	rotationDegrees.z -= 1
+	//rotationDegrees.y += 1
+	//rotationDegrees.z -= 1
+
+	smallRotation.z -= 1
 
 	transformationMatrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
 
@@ -528,7 +532,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for v:= 0; v < 1; v++ {
 		vertexCount++
 
-		var convertedTriangle2 = basicTriangle2.multiplyMatrix(&projectionMatrix)
+		var transformation2Matrix = createTransformationMatrix(Vertex3D{0, 0, -2}, smallRotation.convertToQuaternion())
+
+		var convertedTriangle2 = basicTriangle2.multiplyMatrix(&transformation2Matrix)
+		convertedTriangle2 = convertedTriangle2.multiplyMatrix(&projectionMatrix)
+
 		var clippedTriangles2 []ComputedTriangle = convertedTriangle2.clip()
 
 		for i := 0; i < len(clippedTriangles2); i++ {
@@ -602,9 +610,9 @@ func main() {
 	basicTriangle.vertices[1] = Vertex3D{-.5, -.5, 0}
 	basicTriangle.vertices[2] = Vertex3D{.5, -.5, 0}
 
-	basicTriangle2.vertices[0] = Vertex3D{0, .125, -2}
-	basicTriangle2.vertices[1] = Vertex3D{-.125, -.125, -2}
-	basicTriangle2.vertices[2] = Vertex3D{.125, -.125, -2}
+	basicTriangle2.vertices[0] = Vertex3D{0, .125, 0}
+	basicTriangle2.vertices[1] = Vertex3D{-.125, -.125, 0}
+	basicTriangle2.vertices[2] = Vertex3D{.125, -.125, 0}
 
 	basicTriangle.uv[0] = Vertex2D{1, 0}
 	basicTriangle.uv[1] = Vertex2D{0, 2}

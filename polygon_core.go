@@ -41,6 +41,8 @@ type ComputedTriangle struct {
 	vs1, vs2   Vertex4D
 
 	span float32
+
+	minX, maxX, minY, maxY int
 }
 
 type Buffer []byte
@@ -67,7 +69,7 @@ var cobble *ebiten.Image
 var cobble_buffer Buffer
 var fov float32 = 120
 
-var generatedPositions [4000]Vertex3D
+var generatedPositions [2000]Vertex3D
 
 var projectionMatrix Matrix
 
@@ -255,18 +257,18 @@ func (buffer *FloatBuffer) clearDepth() {
 }
 
 func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *FloatBuffer, texture *Buffer, image *ebiten.Image, xPos, yPos int) {
-	var minX, minY, maxX, maxY int = triangle.bounds()
+	//var minX, minY, maxX, maxY int = triangle.bounds()
 
 	var tileSizeX int = width / 4
 	var tileSizeY int = height / 2
 
-	minX = clamp(minX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
-	minY = clamp(minY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
-	maxX = clamp(maxX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
-	maxY = clamp(maxY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
+	var minX = clamp(triangle.minX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
+	var minY = clamp(triangle.minY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
+	var maxX = clamp(triangle.maxX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
+	var maxY = clamp(triangle.maxY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
 
-	for x := minX; x < maxX; x++ {
-		for y := minY; y < maxY; y++ {
+	for x := minX; x <= maxX; x++ {
+		for y := minY; y <= maxY; y++ {
 			var s, t, w float32 = triangle.barycentricCoordinates(&triangle.vs1, &triangle.vs2, &x, &y, &triangle.span)
 
 			if s >= 0 && t >= 0 && s+t <= 1 {
@@ -423,20 +425,20 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 							Vertex3D{uvdat[index+2].x / vertices[index+2].w, uvdat[index+2].y / vertices[index+2].w, 1 / vertices[index+2].w},
 
 							Vertex4D{}, Vertex4D{}, 0,
+
+							0, 0, 0, 0,
 						}
 
-						//tileGrid[0][0] = append(tileGrid[0][0], newTriangle)
-
-						var minX, minY, maxX, maxY int = newTriangle.bounds()
+						newTriangle.minX, newTriangle.minY, newTriangle.maxX, newTriangle.maxY = newTriangle.bounds()
 
 						var tileSizeX int = (width) / len(tileGrid)
 						var tileSizeY int = (height) / len(tileGrid[0])
 
-						var tilePositionMaxX int = clamp(int(math32.Round(float32(maxX/tileSizeX))), 0, 3)
-						var tilePositionMaxY int = clamp(int(math32.Round(float32(maxY/tileSizeY))), 0, 1)
+						var tilePositionMaxX int = clamp(int(math32.Round(float32(newTriangle.maxX/tileSizeX))), 0, 3)
+						var tilePositionMaxY int = clamp(int(math32.Round(float32(newTriangle.maxY/tileSizeY))), 0, 1)
 
-						var tilePositionMinX int = clamp(int(math32.Round(float32(minX/tileSizeX))), 0, 3)
-						var tilePositionMinY int = clamp(int(math32.Round(float32(minY/tileSizeY))), 0, 1)
+						var tilePositionMinX int = clamp(int(math32.Round(float32(newTriangle.minX/tileSizeX))), 0, 3)
+						var tilePositionMinY int = clamp(int(math32.Round(float32(newTriangle.minY/tileSizeY))), 0, 1)
 
 						newTriangle.vs1, newTriangle.vs2 = newTriangle.spanningVectors()
 						newTriangle.span = newTriangle.vs1.crossProduct(&newTriangle.vs2)
@@ -494,6 +496,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	smallRotation.z += .1
 	var tileGrid TileGrid
+
+	var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
+
+	var convertedTriangle = basicTriangle.multiplyMatrix(&transformationMatrix)
+	convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
+
+	convertedTriangle.clip(&tileGrid)
 
 	for p := 0; p < len(generatedPositions); p++ {
 		var transformation2Matrix = createTransformationMatrix(generatedPositions[p], smallRotation.convertToQuaternion())

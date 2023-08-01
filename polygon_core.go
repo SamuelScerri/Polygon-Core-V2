@@ -4,9 +4,11 @@ import (
 	"fmt"
 	_ "image/jpeg"
 	_ "image/png"
+	"io"
 	"log"
 	"math"
 	"math/rand"
+	"os"
 	"runtime"
 	"strconv"
 	"sync"
@@ -15,6 +17,114 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
+
+type Model struct {
+	// For the v, vt and vn in the obj file.
+	Normals, Vecs []Vertex3D
+	Uvs           []Vertex2D
+
+	// For the fun "f" in the obj file.
+	VecIndices, NormalIndices, UvIndices []int
+}
+
+// NewModel will read an OBJ model file and create a Model from its contents
+func NewModel(file string) Model {
+	// Open the file for reading and check for errors.
+	objFile, err := os.Open(file)
+	if err != nil {
+		panic(err)
+	}
+
+	// Don't forget to close the file reader.
+	defer objFile.Close()
+
+	// Create a model to store stuff.
+	model := Model{}
+
+	// Read the file and get it's contents.
+	for {
+		var lineType string
+
+		// Scan the type field.
+		_, err := fmt.Fscanf(objFile, "%s", &lineType)
+
+		// Check if it's the end of the file
+		// and break out of the loop.
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+		}
+
+		// Check the type.
+		switch lineType {
+		// VERTICES.
+		case "v":
+			// Create a vec to assign digits to.
+			vec := Vertex3D{}
+
+			// Get the digits from the file.
+			fmt.Fscanf(objFile, "%f %f %f\n", &vec.x, &vec.y, &vec.z)
+
+			// Add the vector to the model.
+			model.Vecs = append(model.Vecs, vec)
+
+		// NORMALS.
+		case "vn":
+			// Create a vec to assign digits to.
+			vec := Vertex3D{}
+
+			// Get the digits from the file.
+			fmt.Fscanf(objFile, "%f %f %f\n", &vec.x, &vec.y, &vec.z)
+
+			// Add the vector to the model.
+			model.Normals = append(model.Normals, vec)
+
+		// TEXTURE VERTICES.
+		case "vt":
+			// Create a Uv pair.
+			vec := Vertex2D{}
+
+			// Get the digits from the file.
+			fmt.Fscanf(objFile, "%f %f\n", &vec.x, &vec.y)
+
+			// Add the uv to the model.
+			model.Uvs = append(model.Uvs, vec)
+
+		// INDICES.
+		case "f":
+			// Create a vec to assign digits to.
+			norm := make([]int, 3)
+			vec := make([]int, 3)
+			uv := make([]int, 3)
+
+			// Get the digits from the file.
+			matches, _ := fmt.Fscanf(objFile, "%d/%d/%d %d/%d/%d %d/%d/%d\n", &vec[0], &uv[0], &norm[0], &vec[1], &uv[1], &norm[1], &vec[2], &uv[2], &norm[2])
+
+			if matches != 9 {
+				panic("Cannot read your file")
+			}
+
+			// Add the numbers to the model.
+			model.NormalIndices = append(model.NormalIndices, norm[0])
+			model.NormalIndices = append(model.NormalIndices, norm[1])
+			model.NormalIndices = append(model.NormalIndices, norm[2])
+
+			model.VecIndices = append(model.VecIndices, vec[0])
+			model.VecIndices = append(model.VecIndices, vec[1])
+			model.VecIndices = append(model.VecIndices, vec[2])
+
+			model.UvIndices = append(model.UvIndices, uv[0])
+			model.UvIndices = append(model.UvIndices, uv[1])
+			model.UvIndices = append(model.UvIndices, uv[2])
+		}
+	}
+
+	fmt.Println(model.VecIndices)
+
+	// Return the newly created Model.
+	return model
+}
 
 type Vertex2D struct {
 	x, y float32
@@ -57,9 +167,11 @@ var depthBuffer FloatBuffer
 var cores, chunkSize, chunkSizeDepth, chunkSizeRemaining, chunkSizeDepthRemaining int
 
 var basicTriangle, basicTriangle2 Triangle
-var basicTrianglePosition Vertex3D = Vertex3D{0, 0, -2}
+var basicTrianglePosition Vertex3D = Vertex3D{0, 0, -4}
 
-var width, height int = 320, 180
+var car, teapot Model
+
+var width, height int = 1280, 720
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var transformationMatrix Matrix
@@ -67,9 +179,9 @@ var transformationMatrix Matrix
 var cobble *ebiten.Image
 
 var cobble_buffer Buffer
-var fov float32 = 120
+var fov float32 = 160
 
-var generatedPositions [2000]Vertex3D
+var generatedPositions [1000]Vertex3D
 
 var projectionMatrix Matrix
 
@@ -80,6 +192,24 @@ func (vertex *Vertex4D) convertToScreenSpace() {
 
 func (v1 *Vertex4D) crossProduct(v2 *Vertex4D) float32 {
 	return (v1.x * v2.y) - (v1.y * v2.x)
+}
+
+func (v1 *Vertex4D) cross(v2 *Vertex4D) Vertex4D {
+	return Vertex4D{
+		v1.y*v2.z - v1.z*v2.y,
+		v1.z*v2.x - v1.x*v2.z,
+		v1.x*v2.y - v1.y*v2.x,
+		0,
+	}
+}
+
+func (v1 *Vertex4D) subtract(v2 *Vertex4D) Vertex4D {
+	return Vertex4D{
+		v1.x - v2.x,
+		v1.y - v2.y,
+		v1.z - v2.z,
+		v1.w - v2.w,
+	}
 }
 
 func (vertex *Vertex3D) convertToMatrix() Matrix {
@@ -220,7 +350,7 @@ func (buffer *Buffer) clearScreen() {
 	for i := 0; i < cores; i++ {
 		wg.Add(1)
 
-		go func(section int) {
+		func(section int) {
 			for p := section * chunkSize; p < section*chunkSize+chunkSize; p++ {
 				(*buffer)[p] = 0
 			}
@@ -256,25 +386,29 @@ func (buffer *FloatBuffer) clearDepth() {
 	wg.Wait()
 }
 
-func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *FloatBuffer, texture *Buffer, image *ebiten.Image, xPos, yPos int) {
+func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *FloatBuffer, texture *Buffer, image *ebiten.Image, xPos, yPos int, tileGrid *TileGrid) {
 	//var minX, minY, maxX, maxY int = triangle.bounds()
 
-	var tileSizeX int = width / 4
-	var tileSizeY int = height / 2
+	var tileSizeX int = width / len(tileGrid)
+	var tileSizeY int = height / len(tileGrid[0])
 
 	var minX = clamp(triangle.minX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
 	var minY = clamp(triangle.minY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
 	var maxX = clamp(triangle.maxX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
 	var maxY = clamp(triangle.maxY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
 
+	/*var inverse_va float32 = 1 / triangle.vertices[0].w
+	var inverse_vb float32 = 1 / triangle.vertices[1].w
+	var inverse_vc float32 = 1 / triangle.vertices[2].w*/
+
 	for x := minX; x <= maxX; x++ {
 		for y := minY; y <= maxY; y++ {
 			var s, t, w float32 = triangle.barycentricCoordinates(&triangle.vs1, &triangle.vs2, &x, &y, &triangle.span)
 
 			if s >= 0 && t >= 0 && s+t <= 1 {
-				var depth float32 = s*triangle.vertices[0].z + t*triangle.vertices[1].z + w*triangle.vertices[2].z
+				var depth float32 = w*triangle.vertices[0].z + s*triangle.vertices[1].z + t*triangle.vertices[2].z
 
-				if depth <= (*depthBuffer)[(y-1)*(width)+(x-1)] {
+				if depth < (*depthBuffer)[(y-1)*(width)+(x-1)] {
 					var location int = ((y-1)*(width) + (x - 1)) * 4
 
 					var wt float32 = w*triangle.at.z + s*triangle.bt.z + t*triangle.ct.z
@@ -283,7 +417,7 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 					var uvY float32 = (w*triangle.at.y + s*triangle.bt.y + t*triangle.ct.y) / wt
 
 					var tx int = int(uvX * float32(image.Bounds().Dx()))
-					var ty int = int(uvY * float32(image.Bounds().Dy()))
+					var ty int = int((1 - uvY) * float32(image.Bounds().Dy()))
 
 					var colorLocation int = ((ty*image.Bounds().Dx() + tx) * 4) % (image.Bounds().Dx() * image.Bounds().Dy() * 4)
 
@@ -434,11 +568,11 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 						var tileSizeX int = (width) / len(tileGrid)
 						var tileSizeY int = (height) / len(tileGrid[0])
 
-						var tilePositionMaxX int = clamp(int(math32.Round(float32(newTriangle.maxX/tileSizeX))), 0, 3)
-						var tilePositionMaxY int = clamp(int(math32.Round(float32(newTriangle.maxY/tileSizeY))), 0, 1)
+						var tilePositionMaxX int = clamp(int(math32.Round(float32(newTriangle.maxX/tileSizeX))), 0, len(tileGrid)-1)
+						var tilePositionMaxY int = clamp(int(math32.Round(float32(newTriangle.maxY/tileSizeY))), 0, len(tileGrid[0])-1)
 
-						var tilePositionMinX int = clamp(int(math32.Round(float32(newTriangle.minX/tileSizeX))), 0, 3)
-						var tilePositionMinY int = clamp(int(math32.Round(float32(newTriangle.minY/tileSizeY))), 0, 1)
+						var tilePositionMinX int = clamp(int(math32.Round(float32(newTriangle.minX/tileSizeX))), 0, len(tileGrid)-1)
+						var tilePositionMinY int = clamp(int(math32.Round(float32(newTriangle.minY/tileSizeY))), 0, len(tileGrid[0])-1)
 
 						newTriangle.vs1, newTriangle.vs2 = newTriangle.spanningVectors()
 						newTriangle.span = newTriangle.vs1.crossProduct(&newTriangle.vs2)
@@ -459,27 +593,27 @@ type Game struct{}
 
 func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		basicTrianglePosition.x += .0125
+		basicTrianglePosition.x += .25
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		basicTrianglePosition.x -= .0125
+		basicTrianglePosition.x -= .25
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		basicTrianglePosition.y += .0125
+		basicTrianglePosition.y += .25
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		basicTrianglePosition.y -= .0125
+		basicTrianglePosition.y -= .25
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyW) {
-		basicTrianglePosition.z -= .0125
+		basicTrianglePosition.z -= .25
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyS) {
-		basicTrianglePosition.z += .0125
+		basicTrianglePosition.z += .25
 	}
 
 	return nil
@@ -494,17 +628,42 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		cobble.ReadPixels(cobble_buffer)
 	}
 
-	smallRotation.z += .1
+	smallRotation.z += 1
+	//rotationDegrees.x += 1
+	//rotationDegrees.z -= 1
+	rotationDegrees.y += 1
+
 	var tileGrid TileGrid
 
-	var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
+	for i := 0; i < len(car.VecIndices)/3; i++ {
+		var tri Triangle = Triangle{
+			[3]Vertex3D{car.Vecs[car.VecIndices[i*3]-1], car.Vecs[car.VecIndices[i*3+1]-1], car.Vecs[car.VecIndices[i*3+2]-1]},
+			[3]Vertex2D{car.Uvs[car.UvIndices[i*3]-1], car.Uvs[car.UvIndices[i*3+1]-1], car.Uvs[car.UvIndices[i*3+2]-1]},
+		}
 
-	var convertedTriangle = basicTriangle.multiplyMatrix(&transformationMatrix)
-	convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
+		var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
 
-	convertedTriangle.clip(&tileGrid)
+		var convertedTriangle = tri.multiplyMatrix(&transformationMatrix)
+		convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
 
-	for p := 0; p < len(generatedPositions); p++ {
+		convertedTriangle.clip(&tileGrid)
+	}
+
+	for i := 0; i < len(teapot.VecIndices)/3; i++ {
+		var tri Triangle = Triangle{
+			[3]Vertex3D{teapot.Vecs[teapot.VecIndices[i*3]-1], teapot.Vecs[teapot.VecIndices[i*3+1]-1], teapot.Vecs[teapot.VecIndices[i*3+2]-1]},
+			[3]Vertex2D{teapot.Uvs[teapot.UvIndices[i*3]-1], teapot.Uvs[teapot.UvIndices[i*3+1]-1], teapot.Uvs[teapot.UvIndices[i*3+2]-1]},
+		}
+
+		var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
+
+		var convertedTriangle = tri.multiplyMatrix(&transformationMatrix)
+		convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
+
+		convertedTriangle.clip(&tileGrid)
+	}
+
+	/*for p := 0; p < len(generatedPositions); p++ {
 		var transformation2Matrix = createTransformationMatrix(generatedPositions[p], smallRotation.convertToQuaternion())
 
 		var convertedTriangle2 = basicTriangle2.multiplyMatrix(&transformation2Matrix)
@@ -513,13 +672,27 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		convertedTriangle2.clip(&tileGrid)
 	}
 
+	var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
+
+	var convertedTriangle = basicTriangle.multiplyMatrix(&transformationMatrix)
+	convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
+
+	convertedTriangle.clip(&tileGrid)*/
+
 	for x := 0; x < len(tileGrid); x++ {
 		for y := 0; y < len(tileGrid[0]); y++ {
 			wg.Add(1)
 
 			go func(tileGrid *TileGrid, x, y int) {
 				for _, t := range tileGrid[x][y] {
-					t.renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble, x, y)
+					t1 := t.vertices[1].subtract(&t.vertices[0])
+					t2 := t.vertices[2].subtract(&t.vertices[0])
+
+					crossed := t1.cross(&t2)
+
+					if crossed.z < 0 {
+						t.renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble, x, y, tileGrid)
+					}
 				}
 
 				wg.Done()
@@ -543,7 +716,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("cobble.png")
+	cobble, _, err = ebitenutil.NewImageFromFile("Car.png")
 
 	if err != nil {
 		log.Fatal(err)
@@ -555,12 +728,13 @@ func main() {
 
 	ebiten.SetWindowSize(640, 360)
 	ebiten.SetWindowTitle("Polygon Core - V2")
-	ebiten.SetVsyncEnabled(false)
+	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
 	cores = runtime.NumCPU()
+	//runtime.LockOSThread()
 
 	screenBuffer = make(Buffer, width*height*4)
 	chunkSize = (width * height * 4) / cores
@@ -593,15 +767,18 @@ func main() {
 	basicTriangle2.uv[1] = Vertex2D{1, 0}
 	basicTriangle2.uv[2] = Vertex2D{1, 1}
 
+	car = NewModel("Car.obj")
+	teapot = NewModel("Teapot.obj")
+
 	for v := 0; v < len(generatedPositions); v++ {
-		generatedPositions[v].x = (rand.Float32() - .5) * 2.1
-		generatedPositions[v].y = (rand.Float32() - .5) * 1.1
-		generatedPositions[v].z = -2
+		generatedPositions[v].x = (rand.Float32() - .5) * 4
+		generatedPositions[v].y = (rand.Float32() - .5) * 2
+		generatedPositions[v].z = -4
 	}
 
 	fmt.Println("Triangle Data Initialized")
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

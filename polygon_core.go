@@ -65,7 +65,7 @@ var cobble *ebiten.Image
 var cobble_buffer Buffer
 var fov float32 = 120
 
-var generatedPositions [1000]Vertex3D
+var generatedPositions [4000]Vertex3D
 
 var projectionMatrix Matrix
 
@@ -252,11 +252,19 @@ func (buffer *FloatBuffer) clearDepth() {
 	wg.Wait()
 }
 
-func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *FloatBuffer, texture *Buffer, image *ebiten.Image) {
+func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *FloatBuffer, texture *Buffer, image *ebiten.Image, xPos, yPos int) {
 	var vs1, vs2 Vertex4D = triangle.spanningVectors()
 	var span float32 = vs1.crossProduct(&vs2)
 
 	var minX, minY, maxX, maxY int = triangle.bounds()
+
+	var tileSizeX int = width / 4
+	var tileSizeY int = height / 2
+
+	minX = clamp(minX, xPos*tileSizeX, 9999)
+	minY = clamp(minY, yPos*tileSizeY, 9999)
+	maxX = clamp(maxX, 0, xPos*tileSizeX+tileSizeX)
+	maxY = clamp(maxY, 0, yPos*tileSizeY+tileSizeY)
 
 	var at Vertex3D = Vertex3D{triangle.uv[0].x / triangle.vertices[0].w, triangle.uv[0].y / triangle.vertices[0].w, 1 / triangle.vertices[0].w}
 	var bt Vertex3D = Vertex3D{triangle.uv[1].x / triangle.vertices[1].w, triangle.uv[1].y / triangle.vertices[1].w, 1 / triangle.vertices[1].w}
@@ -418,35 +426,25 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 
 						var minX, minY, maxX, maxY int = newTriangle.bounds()
 
-						var tileSizeX float32 = (float32(width) / float32(len(tileGrid)-1))
-						var tileSizeY float32 = (float32(height) / float32(len(tileGrid[0])-1))
+						var tileSizeX int = (width) / len(tileGrid)
+						var tileSizeY int = (height) / len(tileGrid[0])
 
-						var tilePositionMaxX int = int(math32.Round(float32(maxX) / tileSizeX))
-						var tilePositionMaxY int = int(math32.Round(float32(maxY) / tileSizeY))
+						var tilePositionMaxX int = clamp(int(math32.Round(float32(maxX/tileSizeX))), 0, 3)
+						var tilePositionMaxY int = clamp(int(math32.Round(float32(maxY/tileSizeY))), 0, 1)
 
-						var tilePositionMinX int = int(math32.Round(float32(minX) / tileSizeX))
-						var tilePositionMinY int = int(math32.Round(float32(minY) / tileSizeY))
+						var tilePositionMinX int = clamp(int(math32.Round(float32(minX/tileSizeX))), 0, 3)
+						var tilePositionMinY int = clamp(int(math32.Round(float32(minY/tileSizeY))), 0, 1)
 
-						fmt.Println(tilePositionMinX, tilePositionMaxX, tilePositionMinY, tilePositionMaxY)
+						//fmt.Println(tilePositionMinX, tilePositionMaxX, tilePositionMinY, tilePositionMaxY)
 
-						tileGrid[tilePositionMinX][tilePositionMinY] = append(tileGrid[tilePositionMinX][tilePositionMinY], newTriangle)
+						//tileGrid[tilePositionMinX][tilePositionMinY] = append(tileGrid[tilePositionMinX][tilePositionMinY], newTriangle)
+						//tileGrid[tilePositionMaxX][tilePositionMaxY] = append(tileGrid[tilePositionMinX][tilePositionMinY], newTriangle)
 
 						for x := tilePositionMinX; x <= tilePositionMaxX; x++ {
 							for y := tilePositionMinY; y <= tilePositionMaxY; y++ {
 								tileGrid[x][y] = append(tileGrid[x][y], newTriangle)
 							}
 						}
-
-						//tileGrid[tilePosition][0]
-
-						//fmt.Println(math32.Round(float32(maxX) / tileSize))
-
-						//fmt.Println(float32(minX))
-
-						//triangles = append(triangles, ComputedTriangle{
-						//		[3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
-						//		[3]Vertex2D{uvdat[0], uvdat[index+1], uvdat[index+2]}})
-
 					}
 				}
 			}
@@ -512,10 +510,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				convertedTriangle2 = convertedTriangle2.multiplyMatrix(&projectionMatrix)
 
 				convertedTriangle2.clip(tileGrid)
-
-				//for i := 0; i < len(clippedTriangles2); i++ {
-				//		clippedTriangles2[i].renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble)
-				//		}
 			}
 
 			wg.Done()
@@ -526,13 +520,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	//fmt.Println(tileGrid)
 
-	for x := 0; x < 3; x++ {
-		for y := 0; y < 1; y++ {
+	for x := 0; x < len(tileGrid); x++ {
+		for y := 0; y < len(tileGrid[0]); y++ {
 			wg.Add(1)
 
 			go func(tileGrid *TileGrid, x, y int) {
 				for _, t := range tileGrid[x][y] {
-					t.renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble)
+					t.renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble, x, y)
 				}
 
 				wg.Done()
@@ -573,7 +567,7 @@ func main() {
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
-	cores = 8
+	cores = 1
 
 	screenBuffer = make(Buffer, width*height*4)
 	chunkSize = (width * height * 4) / cores
@@ -607,8 +601,8 @@ func main() {
 	basicTriangle2.uv[2] = Vertex2D{1, 1}
 
 	for v := 0; v < len(generatedPositions); v++ {
-		generatedPositions[v].x = (rand.Float32() - .5)
-		generatedPositions[v].y = (rand.Float32() - .5)
+		generatedPositions[v].x = (rand.Float32() - .5) * 2
+		generatedPositions[v].y = (rand.Float32() - .5) * 1.1
 		generatedPositions[v].z = -2
 	}
 

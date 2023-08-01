@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"runtime"
 	"strconv"
 	"sync"
 
@@ -66,7 +67,7 @@ var cobble *ebiten.Image
 var cobble_buffer Buffer
 var fov float32 = 120
 
-var generatedPositions [500]Vertex3D
+var generatedPositions [4000]Vertex3D
 
 var projectionMatrix Matrix
 
@@ -259,10 +260,10 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 	var tileSizeX int = width / 4
 	var tileSizeY int = height / 2
 
-	minX = clamp(minX, xPos*tileSizeX, 9999)
-	minY = clamp(minY, yPos*tileSizeY, 9999)
-	maxX = clamp(maxX, 0, xPos*tileSizeX+tileSizeX)
-	maxY = clamp(maxY, 0, yPos*tileSizeY+tileSizeY)
+	minX = clamp(minX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
+	minY = clamp(minY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
+	maxX = clamp(maxX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
+	maxY = clamp(maxY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
 
 	for x := minX; x < maxX; x++ {
 		for y := minY; y < maxY; y++ {
@@ -492,31 +493,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	smallRotation.z += .1
-
-	var processChunk int = len(generatedPositions) / cores
-
 	var tileGrid TileGrid
 
-	for i := 0; i < cores; i++ {
-		wg.Add(1)
+	for p := 0; p < len(generatedPositions); p++ {
+		var transformation2Matrix = createTransformationMatrix(generatedPositions[p], smallRotation.convertToQuaternion())
 
-		func(section int, tileGrid *TileGrid) {
-			for p := processChunk * section; p < section*processChunk+processChunk; p++ {
-				var transformation2Matrix = createTransformationMatrix(generatedPositions[p], smallRotation.convertToQuaternion())
+		var convertedTriangle2 = basicTriangle2.multiplyMatrix(&transformation2Matrix)
+		convertedTriangle2 = convertedTriangle2.multiplyMatrix(&projectionMatrix)
 
-				var convertedTriangle2 = basicTriangle2.multiplyMatrix(&transformation2Matrix)
-				convertedTriangle2 = convertedTriangle2.multiplyMatrix(&projectionMatrix)
-
-				convertedTriangle2.clip(tileGrid)
-			}
-
-			wg.Done()
-		}(i, &tileGrid)
+		convertedTriangle2.clip(&tileGrid)
 	}
-
-	wg.Wait()
-
-	//fmt.Println(tileGrid)
 
 	for x := 0; x < len(tileGrid); x++ {
 		for y := 0; y < len(tileGrid[0]); y++ {
@@ -565,7 +551,7 @@ func main() {
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
-	cores = 1
+	cores = runtime.NumCPU()
 
 	screenBuffer = make(Buffer, width*height*4)
 	chunkSize = (width * height * 4) / cores
@@ -599,7 +585,7 @@ func main() {
 	basicTriangle2.uv[2] = Vertex2D{1, 1}
 
 	for v := 0; v < len(generatedPositions); v++ {
-		generatedPositions[v].x = (rand.Float32() - .5) * 2
+		generatedPositions[v].x = (rand.Float32() - .5) * 2.1
 		generatedPositions[v].y = (rand.Float32() - .5) * 1.1
 		generatedPositions[v].z = -2
 	}

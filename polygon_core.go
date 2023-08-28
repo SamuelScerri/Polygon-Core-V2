@@ -22,7 +22,7 @@ type Model struct {
 	// For the v, vt and vn in the obj file.
 	Normals, Vecs []Vertex3D
 	Uvs           []Vertex2D
-	TriangleData      []Triangle
+	TriangleData  []Triangle
 
 	// For the fun "f" in the obj file.
 	VecIndices, NormalIndices, UvIndices []int
@@ -121,7 +121,7 @@ func NewModel(file string) Model {
 		}
 	}
 
-	for i := 0; i < len(model.VecIndices) / 3; i++ {
+	for i := 0; i < len(model.VecIndices)/3; i++ {
 		var tri Triangle = Triangle{
 			[3]Vertex3D{model.Vecs[model.VecIndices[i*3]-1], model.Vecs[model.VecIndices[i*3+1]-1], model.Vecs[model.VecIndices[i*3+2]-1]},
 			[3]Vertex2D{model.Uvs[model.UvIndices[i*3]-1], model.Uvs[model.UvIndices[i*3+1]-1], model.Uvs[model.UvIndices[i*3+2]-1]},
@@ -129,10 +129,9 @@ func NewModel(file string) Model {
 
 		model.TriangleData = append(model.TriangleData, tri)
 	}
-	
-
 
 	//fmt.Println(model.VecIndices)
+	fmt.Println(len(model.TriangleData))
 
 	// Return the newly created Model.
 	return model
@@ -172,7 +171,7 @@ type FloatBuffer []float32
 type Matrix [][]float32
 
 type Tile []ComputedTriangle
-type TileGrid [4][3]Tile
+type TileGrid [4][2]Tile
 
 var screenBuffer Buffer
 var depthBuffer FloatBuffer
@@ -183,7 +182,7 @@ var basicTrianglePosition Vertex3D = Vertex3D{0, 0, -4}
 
 var car, teapot Model
 
-var width, height int = 640, 360
+var width, height int = 1280, 720
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -652,46 +651,31 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	rotationDegrees.y += 1
 
 	var tileGrid TileGrid
-	var wg2 sync.WaitGroup
 
-	/*for i := 0; i < len(car.VecIndices)/3; i++ {
-		var tri Triangle = Triangle{
-			[3]Vertex3D{car.Vecs[car.VecIndices[i*3]-1], car.Vecs[car.VecIndices[i*3+1]-1], car.Vecs[car.VecIndices[i*3+2]-1]},
-			[3]Vertex2D{car.Uvs[car.UvIndices[i*3]-1], car.Uvs[car.UvIndices[i*3+1]-1], car.Uvs[car.UvIndices[i*3+2]-1]},
-		}
-
-		var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
-
-		var convertedTriangle = tri.multiplyMatrix(&transformationMatrix)
-		convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
-
-		convertedTriangle.clip(&tileGrid)
-	}*/
-
-	triData := append(teapot.TriangleData, car.TriangleData...)
+	triData := teapot.TriangleData
 
 	var amount int = len(triData)
-	var amountPerCore int = amount / 12
+	var amountPerCore int = amount / 8
 
-	for p := 0; p < 12; p++ {
-		wg2.Add(1)
+	for p := 0; p < 8; p++ {
+		wg.Add(1)
 
 		go func(chunk int, model *Model, grid *TileGrid) {
-			for t := chunk * amountPerCore; t < chunk * amountPerCore + amountPerCore; t++ {
+			for t := chunk * amountPerCore; t < chunk*amountPerCore+amountPerCore; t++ {
 
 				var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
 
 				var convertedTriangle = triData[t].multiplyMatrix(&transformationMatrix)
 				convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
 
-				convertedTriangle.clip(grid)			
+				convertedTriangle.clip(grid)
 			}
 
-			wg2.Done()
+			wg.Done()
 		}(p, &teapot, &tileGrid)
 	}
 
-	wg2.Wait()
+	wg.Wait()
 
 	for x := 0; x < len(tileGrid); x++ {
 		for y := 0; y < len(tileGrid[0]); y++ {
@@ -730,7 +714,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("Car.png")
+	cobble, _, err = ebitenutil.NewImageFromFile("Skull.jpg")
 
 	if err != nil {
 		log.Fatal(err)
@@ -740,7 +724,7 @@ func init() {
 func main() {
 	fmt.Println("Initializing Polygon Core")
 
-	ebiten.SetWindowSize(640, 360)
+	ebiten.SetWindowSize(1280, 720)
 	ebiten.SetWindowTitle("Polygon Core - V2")
 	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
@@ -782,7 +766,7 @@ func main() {
 	basicTriangle2.uv[2] = Vertex2D{1, 1}
 
 	car = NewModel("Car.obj")
-	teapot = NewModel("Teapot.obj")
+	teapot = NewModel("Skull_HQ.obj")
 
 	for v := 0; v < len(generatedPositions); v++ {
 		generatedPositions[v].x = (rand.Float32() - .5) * 4
@@ -792,7 +776,7 @@ func main() {
 
 	fmt.Println("Triangle Data Initialized")
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

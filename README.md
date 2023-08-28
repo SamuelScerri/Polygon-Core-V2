@@ -16,6 +16,7 @@ The future iterations of Polygon Core will utilize a Super Resolution Model to i
 - Multicore Rendering
 
 # Features That Will Be Added:
+- SDL2 Version
 - Triange Culling
 - Translation & Rotation Support
 - Wavefront OBJ Support

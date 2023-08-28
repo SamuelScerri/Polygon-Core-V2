@@ -22,6 +22,7 @@ type Model struct {
 	// For the v, vt and vn in the obj file.
 	Normals, Vecs []Vertex3D
 	Uvs           []Vertex2D
+	TriangleData      []Triangle
 
 	// For the fun "f" in the obj file.
 	VecIndices, NormalIndices, UvIndices []int
@@ -120,7 +121,18 @@ func NewModel(file string) Model {
 		}
 	}
 
-	fmt.Println(model.VecIndices)
+	for i := 0; i < len(model.VecIndices) / 3; i++ {
+		var tri Triangle = Triangle{
+			[3]Vertex3D{model.Vecs[model.VecIndices[i*3]-1], model.Vecs[model.VecIndices[i*3+1]-1], model.Vecs[model.VecIndices[i*3+2]-1]},
+			[3]Vertex2D{model.Uvs[model.UvIndices[i*3]-1], model.Uvs[model.UvIndices[i*3+1]-1], model.Uvs[model.UvIndices[i*3+2]-1]},
+		}
+
+		model.TriangleData = append(model.TriangleData, tri)
+	}
+	
+
+
+	//fmt.Println(model.VecIndices)
 
 	// Return the newly created Model.
 	return model
@@ -160,7 +172,7 @@ type FloatBuffer []float32
 type Matrix [][]float32
 
 type Tile []ComputedTriangle
-type TileGrid [4][2]Tile
+type TileGrid [4][3]Tile
 
 var screenBuffer Buffer
 var depthBuffer FloatBuffer
@@ -171,9 +183,11 @@ var basicTrianglePosition Vertex3D = Vertex3D{0, 0, -4}
 
 var car, teapot Model
 
-var width, height int = 1280, 720
+var width, height int = 640, 360
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
+var mu sync.Mutex
+
 var transformationMatrix Matrix
 
 var cobble *ebiten.Image
@@ -350,7 +364,7 @@ func (buffer *Buffer) clearScreen() {
 	for i := 0; i < cores; i++ {
 		wg.Add(1)
 
-		func(section int) {
+		go func(section int) {
 			for p := section * chunkSize; p < section*chunkSize+chunkSize; p++ {
 				(*buffer)[p] = 0
 			}
@@ -579,7 +593,11 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 
 						for x := tilePositionMinX; x <= tilePositionMaxX; x++ {
 							for y := tilePositionMinY; y <= tilePositionMaxY; y++ {
+								mu.Lock()
+
 								tileGrid[x][y] = append(tileGrid[x][y], newTriangle)
+
+								mu.Unlock()
 							}
 						}
 					}
@@ -634,8 +652,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	rotationDegrees.y += 1
 
 	var tileGrid TileGrid
+	var wg2 sync.WaitGroup
 
-	for i := 0; i < len(car.VecIndices)/3; i++ {
+	/*for i := 0; i < len(car.VecIndices)/3; i++ {
 		var tri Triangle = Triangle{
 			[3]Vertex3D{car.Vecs[car.VecIndices[i*3]-1], car.Vecs[car.VecIndices[i*3+1]-1], car.Vecs[car.VecIndices[i*3+2]-1]},
 			[3]Vertex2D{car.Uvs[car.UvIndices[i*3]-1], car.Uvs[car.UvIndices[i*3+1]-1], car.Uvs[car.UvIndices[i*3+2]-1]},
@@ -647,37 +666,32 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
 
 		convertedTriangle.clip(&tileGrid)
+	}*/
+
+	triData := append(teapot.TriangleData, car.TriangleData...)
+
+	var amount int = len(triData)
+	var amountPerCore int = amount / 12
+
+	for p := 0; p < 12; p++ {
+		wg2.Add(1)
+
+		go func(chunk int, model *Model, grid *TileGrid) {
+			for t := chunk * amountPerCore; t < chunk * amountPerCore + amountPerCore; t++ {
+
+				var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
+
+				var convertedTriangle = triData[t].multiplyMatrix(&transformationMatrix)
+				convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
+
+				convertedTriangle.clip(grid)			
+			}
+
+			wg2.Done()
+		}(p, &teapot, &tileGrid)
 	}
 
-	for i := 0; i < len(teapot.VecIndices)/3; i++ {
-		var tri Triangle = Triangle{
-			[3]Vertex3D{teapot.Vecs[teapot.VecIndices[i*3]-1], teapot.Vecs[teapot.VecIndices[i*3+1]-1], teapot.Vecs[teapot.VecIndices[i*3+2]-1]},
-			[3]Vertex2D{teapot.Uvs[teapot.UvIndices[i*3]-1], teapot.Uvs[teapot.UvIndices[i*3+1]-1], teapot.Uvs[teapot.UvIndices[i*3+2]-1]},
-		}
-
-		var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
-
-		var convertedTriangle = tri.multiplyMatrix(&transformationMatrix)
-		convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
-
-		convertedTriangle.clip(&tileGrid)
-	}
-
-	/*for p := 0; p < len(generatedPositions); p++ {
-		var transformation2Matrix = createTransformationMatrix(generatedPositions[p], smallRotation.convertToQuaternion())
-
-		var convertedTriangle2 = basicTriangle2.multiplyMatrix(&transformation2Matrix)
-		convertedTriangle2 = convertedTriangle2.multiplyMatrix(&projectionMatrix)
-
-		convertedTriangle2.clip(&tileGrid)
-	}
-
-	var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
-
-	var convertedTriangle = basicTriangle.multiplyMatrix(&transformationMatrix)
-	convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
-
-	convertedTriangle.clip(&tileGrid)*/
+	wg2.Wait()
 
 	for x := 0; x < len(tileGrid); x++ {
 		for y := 0; y < len(tileGrid[0]); y++ {
@@ -778,7 +792,7 @@ func main() {
 
 	fmt.Println("Triangle Data Initialized")
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

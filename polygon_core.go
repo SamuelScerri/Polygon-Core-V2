@@ -765,7 +765,7 @@ func main() {
 	basicTriangle2.uv[1] = Vertex2D{1, 0}
 	basicTriangle2.uv[2] = Vertex2D{1, 1}
 
-	car = NewModel("Car.obj")
+	car = NewModel("Cat.obj")
 	teapot = NewModel("Skull_HQ.obj")
 
 	for v := 0; v < len(generatedPositions); v++ {

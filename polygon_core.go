@@ -182,7 +182,7 @@ var basicTrianglePosition Vertex3D = Vertex3D{0, 0, -4}
 
 var car, teapot Model
 
-var width, height int = 1280, 720
+var width, height int = 640, 360
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -554,55 +554,59 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 			if len(vertices) > 0 {
 				clip_axis(&vertices, &uvdat, -1, 1)
 
-				//We Pre-Convert The Vertices Here To Avoid Doing The Same Calculations Twice On Every Triangle
 				if len(vertices) > 0 {
-					for i := 0; i < len(vertices); i++ {
-						vertices[i].convertToNormalized()
-						vertices[i].convertToScreenSpace()
-					}
+					//clip_axis(&vertices, &uvdat, -1, 2)
 
-					//Finally We Build All The Triangles
-					for index := 0; index < len(vertices)-2; index++ {
-						var newTriangle ComputedTriangle = ComputedTriangle{
-							[3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
-							[3]Vertex2D{uvdat[0], uvdat[index+1], uvdat[index+2]},
-
-							Vertex3D{uvdat[0].x / vertices[0].w, uvdat[0].y / vertices[0].w, 1 / vertices[0].w},
-							Vertex3D{uvdat[index+1].x / vertices[index+1].w, uvdat[index+1].y / vertices[index+1].w, 1 / vertices[index+1].w},
-							Vertex3D{uvdat[index+2].x / vertices[index+2].w, uvdat[index+2].y / vertices[index+2].w, 1 / vertices[index+2].w},
-
-							Vertex4D{}, Vertex4D{}, 0,
-
-							0, 0, 0, 0,
+					//We Pre-Convert The Vertices Here To Avoid Doing The Same Calculations Twice On Every Triangle
+					if len(vertices) > 0 {
+						for i := 0; i < len(vertices); i++ {
+							vertices[i].convertToNormalized()
+							vertices[i].convertToScreenSpace()
 						}
 
-						newTriangle.minX, newTriangle.minY, newTriangle.maxX, newTriangle.maxY = newTriangle.bounds()
+						//Finally We Build All The Triangles
+						for index := 0; index < len(vertices)-2; index++ {
+							var newTriangle ComputedTriangle = ComputedTriangle{
+								[3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
+								[3]Vertex2D{uvdat[0], uvdat[index+1], uvdat[index+2]},
 
-						var tileSizeX int = (width) / len(tileGrid)
-						var tileSizeY int = (height) / len(tileGrid[0])
+								Vertex3D{uvdat[0].x / vertices[0].w, uvdat[0].y / vertices[0].w, 1 / vertices[0].w},
+								Vertex3D{uvdat[index+1].x / vertices[index+1].w, uvdat[index+1].y / vertices[index+1].w, 1 / vertices[index+1].w},
+								Vertex3D{uvdat[index+2].x / vertices[index+2].w, uvdat[index+2].y / vertices[index+2].w, 1 / vertices[index+2].w},
 
-						var tilePositionMaxX int = clamp(int(math32.Round(float32(newTriangle.maxX/tileSizeX))), 0, len(tileGrid)-1)
-						var tilePositionMaxY int = clamp(int(math32.Round(float32(newTriangle.maxY/tileSizeY))), 0, len(tileGrid[0])-1)
+								Vertex4D{}, Vertex4D{}, 0,
+		
+								0, 0, 0, 0,
+							}
 
-						var tilePositionMinX int = clamp(int(math32.Round(float32(newTriangle.minX/tileSizeX))), 0, len(tileGrid)-1)
-						var tilePositionMinY int = clamp(int(math32.Round(float32(newTriangle.minY/tileSizeY))), 0, len(tileGrid[0])-1)
+							newTriangle.minX, newTriangle.minY, newTriangle.maxX, newTriangle.maxY = newTriangle.bounds()
 
-						newTriangle.vs1, newTriangle.vs2 = newTriangle.spanningVectors()
-						newTriangle.span = newTriangle.vs1.crossProduct(&newTriangle.vs2)
+							var tileSizeX int = (width) / len(tileGrid)
+							var tileSizeY int = (height) / len(tileGrid[0])
 
-						for x := tilePositionMinX; x <= tilePositionMaxX; x++ {
-							for y := tilePositionMinY; y <= tilePositionMaxY; y++ {
-								mu.Lock()
+							var tilePositionMaxX int = clamp(int(math32.Round(float32(newTriangle.maxX/tileSizeX))), 0, len(tileGrid)-1)
+							var tilePositionMaxY int = clamp(int(math32.Round(float32(newTriangle.maxY/tileSizeY))), 0, len(tileGrid[0])-1)
 
-								tileGrid[x][y] = append(tileGrid[x][y], newTriangle)
+							var tilePositionMinX int = clamp(int(math32.Round(float32(newTriangle.minX/tileSizeX))), 0, len(tileGrid)-1)
+							var tilePositionMinY int = clamp(int(math32.Round(float32(newTriangle.minY/tileSizeY))), 0, len(tileGrid[0])-1)
 
-								mu.Unlock()
+							newTriangle.vs1, newTriangle.vs2 = newTriangle.spanningVectors()
+							newTriangle.span = newTriangle.vs1.crossProduct(&newTriangle.vs2)
+
+							for x := tilePositionMinX; x <= tilePositionMaxX; x++ {
+								for y := tilePositionMinY; y <= tilePositionMaxY; y++ {
+									mu.Lock()
+
+									tileGrid[x][y] = append(tileGrid[x][y], newTriangle)
+
+									mu.Unlock()
+								}
 							}
 						}
 					}
 				}
 			}
-		}
+		}	
 	}
 }
 
@@ -651,8 +655,19 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	rotationDegrees.y += 1
 
 	var tileGrid TileGrid
+	//var copyTransformMatrix = createTransformationMatrix(basicTrianglePosition, Vertex4D{0, 0, 0, 0})
 
-	triData := teapot.TriangleData
+	//copy := basicTrianglePosition.convertToMatrix()
+	//copy = copy.multiplyMatrix(&copyTransformMatrix)
+	//copy = copy.multiplyMatrix(&projectionMatrix)
+	
+	//test := copy.convertToVertex()
+
+	var triData []Triangle
+
+	//if test.x < test.w && test.x > -test.w && test.y < test.w && test.y > -test.w {
+		triData = append(triData, teapot.TriangleData...)
+	//}
 
 	var amount int = len(triData)
 	var amountPerCore int = amount / 8
@@ -714,7 +729,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("Skull.jpg")
+	cobble, _, err = ebitenutil.NewImageFromFile("Person.jpg")
 
 	if err != nil {
 		log.Fatal(err)
@@ -724,7 +739,7 @@ func init() {
 func main() {
 	fmt.Println("Initializing Polygon Core")
 
-	ebiten.SetWindowSize(1280, 720)
+	ebiten.SetWindowSize(640, 360)
 	ebiten.SetWindowTitle("Polygon Core - V2")
 	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
@@ -746,7 +761,7 @@ func main() {
 
 	fmt.Println("Depth Buffer Initialized")
 
-	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 1000)
+	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 100)
 	fmt.Println("Projection Matrix Initialized")
 
 	basicTriangle.vertices[0] = Vertex3D{0, .5, 0}
@@ -766,7 +781,7 @@ func main() {
 	basicTriangle2.uv[2] = Vertex2D{1, 1}
 
 	car = NewModel("Cat.obj")
-	teapot = NewModel("Skull_HQ.obj")
+	teapot = NewModel("Person.obj")
 
 	for v := 0; v < len(generatedPositions); v++ {
 		generatedPositions[v].x = (rand.Float32() - .5) * 4
@@ -776,7 +791,7 @@ func main() {
 
 	fmt.Println("Triangle Data Initialized")
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

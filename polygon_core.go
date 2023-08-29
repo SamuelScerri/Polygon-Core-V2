@@ -182,7 +182,7 @@ var basicTrianglePosition Vertex3D = Vertex3D{0, 0, -4}
 
 var car, teapot Model
 
-var width, height int = 640, 360
+var width, height int = 1280, 720
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -672,15 +672,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	var amount int = len(triData)
 	var amountPerCore int = amount / 8
+	var amountLeft = amount % 8
 
-	for p := 0; p < 8; p++ {
+	//fmt.Println(amountLeft)
+
+	var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
+
+	for p := 0; p < 7; p++ {
 		wg.Add(1)
 
 		go func(chunk int, model *Model, grid *TileGrid) {
 			for t := chunk * amountPerCore; t < chunk*amountPerCore+amountPerCore; t++ {
-
-				var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
-
 				var convertedTriangle = triData[t].multiplyMatrix(&transformationMatrix)
 				convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
 
@@ -689,6 +691,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 			wg.Done()
 		}(p, &teapot, &tileGrid)
+	}
+
+	for t := 7 * amountPerCore; t < 7 * amountPerCore + amountPerCore + amountLeft; t++ {
+		var convertedTriangle = triData[t].multiplyMatrix(&transformationMatrix)
+		convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
+
+		convertedTriangle.clip(&tileGrid)
 	}
 
 	wg.Wait()

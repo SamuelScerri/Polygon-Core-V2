@@ -209,7 +209,7 @@ var basicTrianglePosition Vertex3D = Vertex3D{0, 0, -4}
 
 var car, teapot Model
 
-var width, height int = 320, 180
+var width, height int = 1280, 720
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -694,7 +694,7 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 type Game struct{}
 
 func (g *Game) Update() error {
-	var speed float32 = .125
+	var speed float32 = .06125/2
 
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		basicTrianglePosition.x += speed
@@ -761,7 +761,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//Bottom Plane: 0 1 2 3
 
 	var amountOfLeftSide, amountOfRightSide, amountOfTopSide, amountOfBottomSide int = 0, 0, 0, 0
-	done := false
 	
 	for i := 0; i < len(convertedVertices); i++ {
 		if convertedVertices[i].isInClipSpaceX(false) {
@@ -781,16 +780,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 	}
 
-	if done == false {
-		if amountOfLeftSide != 0 && amountOfRightSide != 0 && amountOfTopSide != 0 && amountOfBottomSide != 0 {
-			triData = append(triData, teapot.TriangleData...)
-			fmt.Println("Visible")
-		} else {
-			fmt.Println("Culled")
-		}
+	if amountOfLeftSide != 0 && amountOfRightSide != 0 && amountOfTopSide != 0 && amountOfBottomSide != 0 {
+		triData = append(triData, teapot.TriangleData...)
+		fmt.Println("Visible")
+	} else {
+		fmt.Println("Culled")
+	}
 
-		//fmt.Println(amountOfLeftSide, amountOfRightSide, amountOfTopSide, amountOfBottomSide)
-	} 
+	//fmt.Println(amountOfLeftSide, amountOfRightSide, amountOfTopSide, amountOfBottomSide)
 	var amount int = len(triData)
 	var amountPerCore int = amount / 8
 	var amountLeft = amount % 8
@@ -850,7 +847,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("Brick.png")
+	cobble, _, err = ebitenutil.NewImageFromFile("Person.jpg")
 
 	if err != nil {
 		log.Fatal(err)
@@ -902,7 +899,7 @@ func main() {
 	basicTriangle2.uv[2] = Vertex2D{1, 1}
 
 	//car = NewModel("Cat.obj")
-	teapot = NewModel("Crate.obj")
+	teapot = NewModel("Person.obj")
 
 	for v := 0; v < len(generatedPositions); v++ {
 		generatedPositions[v].x = (rand.Float32() - .5) * 4

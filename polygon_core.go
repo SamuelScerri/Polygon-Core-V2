@@ -18,18 +18,24 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
+type AABB struct {
+	position Vertex3D
+	halfExtentX, halfExtentY, halfExtentZ float32
+}
+
 type Model struct {
 	// For the v, vt and vn in the obj file.
 	Normals, Vecs []Vertex3D
 	Uvs           []Vertex2D
 	TriangleData  []Triangle
+	BoundingBox   [8]Vertex3D
 
 	// For the fun "f" in the obj file.
 	VecIndices, NormalIndices, UvIndices []int
 }
 
 // NewModel will read an OBJ model file and create a Model from its contents
-func NewModel(file string) Model {
+func NewModel(file string, boundingBox AABB) Model {
 	// Open the file for reading and check for errors.
 	objFile, err := os.Open(file)
 	if err != nil {
@@ -133,6 +139,8 @@ func NewModel(file string) Model {
 	//fmt.Println(model.VecIndices)
 	fmt.Println(len(model.TriangleData))
 
+	model.BoundingBox = boundingBox.convertToVertices()
+
 	// Return the newly created Model.
 	return model
 }
@@ -182,7 +190,7 @@ var basicTrianglePosition Vertex3D = Vertex3D{0, 0, -4}
 
 var car, teapot Model
 
-var width, height int = 1280, 720
+var width, height int = 320, 180
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -197,6 +205,46 @@ var fov float32 = 165
 var generatedPositions [1000]Vertex3D
 
 var projectionMatrix Matrix
+
+func (vertex *Vertex4D) isInClipSpace() bool {
+	return (vertex.x < vertex.w && vertex.x > -vertex.w && vertex.y < vertex.w && vertex.y > -vertex.w)
+}
+
+func (boundingBox *AABB) convertToVertices() (vertices [8]Vertex3D) {
+	vertices[0].x = boundingBox.position.x + boundingBox.halfExtentX
+	vertices[0].y = boundingBox.position.y + boundingBox.halfExtentY
+	vertices[0].z = boundingBox.position.z + boundingBox.halfExtentZ
+
+	vertices[1].x = boundingBox.position.x - boundingBox.halfExtentX
+	vertices[1].y = boundingBox.position.y + boundingBox.halfExtentY
+	vertices[1].z = boundingBox.position.z + boundingBox.halfExtentZ
+
+	vertices[2].x = boundingBox.position.x - boundingBox.halfExtentX
+	vertices[2].y = boundingBox.position.y - boundingBox.halfExtentY
+	vertices[2].z = boundingBox.position.z + boundingBox.halfExtentZ
+
+	vertices[3].x = boundingBox.position.x - boundingBox.halfExtentX
+	vertices[3].y = boundingBox.position.y - boundingBox.halfExtentY
+	vertices[3].z = boundingBox.position.z - boundingBox.halfExtentZ
+
+	vertices[4].x = boundingBox.position.x + boundingBox.halfExtentX
+	vertices[4].y = boundingBox.position.y - boundingBox.halfExtentY
+	vertices[4].z = boundingBox.position.z - boundingBox.halfExtentZ
+
+	vertices[5].x = boundingBox.position.x + boundingBox.halfExtentX
+	vertices[5].y = boundingBox.position.y + boundingBox.halfExtentY
+	vertices[5].z = boundingBox.position.z - boundingBox.halfExtentZ
+
+	vertices[6].x = boundingBox.position.x + boundingBox.halfExtentX
+	vertices[6].y = boundingBox.position.y - boundingBox.halfExtentY
+	vertices[6].z = boundingBox.position.z + boundingBox.halfExtentZ
+
+	vertices[7].x = boundingBox.position.x - boundingBox.halfExtentX
+	vertices[7].y = boundingBox.position.y + boundingBox.halfExtentY
+	vertices[7].z = boundingBox.position.z - boundingBox.halfExtentZ
+
+	return
+}
 
 func (vertex *Vertex4D) convertToScreenSpace() {
 	vertex.x = (((vertex.x + 1) * float32(width+2)) / 2)
@@ -656,19 +704,31 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	rotationDegrees.y += 1
 
 	var tileGrid TileGrid
-	//var copyTransformMatrix = createTransformationMatrix(basicTrianglePosition, Vertex4D{0, 0, 0, 0})
+	var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
 
-	//copy := basicTrianglePosition.convertToMatrix()
-	//copy = copy.multiplyMatrix(&copyTransformMatrix)
-	//copy = copy.multiplyMatrix(&projectionMatrix)
-	
-	//test := copy.convertToVertex()
+	var convertedVertices [8]Vertex4D
+
+	for i := 0; i < 8; i++ {
+		var transformed Matrix = teapot.BoundingBox[i].convertToMatrix()
+		transformed = transformed.multiplyMatrix(&transformationMatrix)
+		transformed = transformed.multiplyMatrix(&projectionMatrix)
+
+		convertedVertices[i] = transformed.convertToVertex()
+	}
 
 	var triData []Triangle
 
-	//if test.x < test.w && test.x > -test.w && test.y < test.w && test.y > -test.w {
+	if convertedVertices[0].isInClipSpace() ||
+		convertedVertices[1].isInClipSpace() ||
+		convertedVertices[2].isInClipSpace() ||
+		convertedVertices[3].isInClipSpace() ||
+		convertedVertices[4].isInClipSpace() ||
+		convertedVertices[5].isInClipSpace() ||
+		convertedVertices[6].isInClipSpace() ||
+		convertedVertices[7].isInClipSpace() {
+
 		triData = append(triData, teapot.TriangleData...)
-	//}
+	}
 
 	var amount int = len(triData)
 	var amountPerCore int = amount / 8
@@ -676,7 +736,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	//fmt.Println(amountLeft)
 
-	var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
+	
 
 	for p := 0; p < 7; p++ {
 		wg.Add(1)
@@ -783,8 +843,8 @@ func main() {
 	basicTriangle2.uv[1] = Vertex2D{1, 0}
 	basicTriangle2.uv[2] = Vertex2D{1, 1}
 
-	car = NewModel("Cat.obj")
-	teapot = NewModel("Person.obj")
+	//car = NewModel("Cat.obj")
+	teapot = NewModel("Person.obj", AABB{Vertex3D{0, 0, 0}, 1, 1, 2})
 
 	for v := 0; v < len(generatedPositions); v++ {
 		generatedPositions[v].x = (rand.Float32() - .5) * 4

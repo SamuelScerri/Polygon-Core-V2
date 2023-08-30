@@ -226,41 +226,64 @@ var generatedPositions [1000]Vertex3D
 var projectionMatrix Matrix
 
 func (vertex *Vertex4D) isInClipSpace() bool {
-	return (vertex.x < vertex.w && vertex.x > -vertex.w && vertex.y < vertex.w && vertex.y > -vertex.w)
+		return (vertex.x <= vertex.w && vertex.x >= -vertex.w && vertex.y <= vertex.w && vertex.y >= -vertex.w)
+}
+
+func (vertex *Vertex4D) isInClipSpaceX(direction bool) bool {
+		if direction {
+			return vertex.x <= vertex.w
+		} else {
+			return vertex.x >= -vertex.w
+		}
+}
+
+func (vertex *Vertex4D) isInClipSpaceY(direction bool) bool {
+		if direction {
+			return vertex.y <= vertex.w
+		} else {
+			return vertex.y >= -vertex.w
+		}
 }
 
 func (boundingBox *AABB) convertToVertices() (vertices [8]Vertex3D) {
-	vertices[0].x = boundingBox.position.x + boundingBox.halfExtentX
-	vertices[0].y = boundingBox.position.y + boundingBox.halfExtentY
-	vertices[0].z = boundingBox.position.z + boundingBox.halfExtentZ
+	//Left Plane: 0 2 4 6
+	//Right Plane: 1 3 5 7
+	//Front Plane: 0 1 4 5
+	//Back Plane: 2 3 6 7
+	//Top Plane: 4 5 6 7
+	//Bottom Plane: 0 1 2 3
 
-	vertices[1].x = boundingBox.position.x - boundingBox.halfExtentX
+	vertices[0].x = boundingBox.position.x - boundingBox.halfExtentX
+	vertices[0].y = boundingBox.position.y + boundingBox.halfExtentY
+	vertices[0].z = boundingBox.position.z - boundingBox.halfExtentZ
+
+	vertices[1].x = boundingBox.position.x + boundingBox.halfExtentX
 	vertices[1].y = boundingBox.position.y + boundingBox.halfExtentY
-	vertices[1].z = boundingBox.position.z + boundingBox.halfExtentZ
+	vertices[1].z = boundingBox.position.z - boundingBox.halfExtentZ
 
 	vertices[2].x = boundingBox.position.x - boundingBox.halfExtentX
-	vertices[2].y = boundingBox.position.y - boundingBox.halfExtentY
+	vertices[2].y = boundingBox.position.y + boundingBox.halfExtentY
 	vertices[2].z = boundingBox.position.z + boundingBox.halfExtentZ
 
-	vertices[3].x = boundingBox.position.x - boundingBox.halfExtentX
-	vertices[3].y = boundingBox.position.y - boundingBox.halfExtentY
-	vertices[3].z = boundingBox.position.z - boundingBox.halfExtentZ
+	vertices[3].x = boundingBox.position.x + boundingBox.halfExtentX
+	vertices[3].y = boundingBox.position.y + boundingBox.halfExtentY
+	vertices[3].z = boundingBox.position.z + boundingBox.halfExtentZ
 
-	vertices[4].x = boundingBox.position.x + boundingBox.halfExtentX
+	vertices[4].x = boundingBox.position.x - boundingBox.halfExtentX
 	vertices[4].y = boundingBox.position.y - boundingBox.halfExtentY
 	vertices[4].z = boundingBox.position.z - boundingBox.halfExtentZ
 
 	vertices[5].x = boundingBox.position.x + boundingBox.halfExtentX
-	vertices[5].y = boundingBox.position.y + boundingBox.halfExtentY
+	vertices[5].y = boundingBox.position.y - boundingBox.halfExtentY
 	vertices[5].z = boundingBox.position.z - boundingBox.halfExtentZ
 
-	vertices[6].x = boundingBox.position.x + boundingBox.halfExtentX
+	vertices[6].x = boundingBox.position.x - boundingBox.halfExtentX
 	vertices[6].y = boundingBox.position.y - boundingBox.halfExtentY
 	vertices[6].z = boundingBox.position.z + boundingBox.halfExtentZ
-
-	vertices[7].x = boundingBox.position.x - boundingBox.halfExtentX
-	vertices[7].y = boundingBox.position.y + boundingBox.halfExtentY
-	vertices[7].z = boundingBox.position.z - boundingBox.halfExtentZ
+	
+	vertices[7].x = boundingBox.position.x + boundingBox.halfExtentX
+	vertices[7].y = boundingBox.position.y - boundingBox.halfExtentY
+	vertices[7].z = boundingBox.position.z + boundingBox.halfExtentZ
 
 	return
 }
@@ -671,28 +694,30 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 type Game struct{}
 
 func (g *Game) Update() error {
+	var speed float32 = .125
+
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		basicTrianglePosition.x += .25
+		basicTrianglePosition.x += speed
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		basicTrianglePosition.x -= .25
+		basicTrianglePosition.x -= speed
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		basicTrianglePosition.y += .25
+		basicTrianglePosition.y += speed
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		basicTrianglePosition.y -= .25
+		basicTrianglePosition.y -= speed
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyW) {
-		basicTrianglePosition.z -= .25
+		basicTrianglePosition.z -= speed
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyS) {
-		basicTrianglePosition.z += .25
+		basicTrianglePosition.z += speed
 	}
 
 	return nil
@@ -707,8 +732,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		cobble.ReadPixels(cobble_buffer)
 	}
 
-	smallRotation.z += 1
+	//smallRotation.z += 1
 	rotationDegrees.y += 1
+	//rotationDegrees.x += 1
 
 	var tileGrid TileGrid
 	var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
@@ -723,20 +749,48 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		convertedVertices[i] = transformed.convertToVertex()
 	}
 
+	//fmt.Println(convertedVertices[0])
+
 	var triData []Triangle
 
-	if convertedVertices[0].isInClipSpace() ||
-		convertedVertices[1].isInClipSpace() ||
-		convertedVertices[2].isInClipSpace() ||
-		convertedVertices[3].isInClipSpace() ||
-		convertedVertices[4].isInClipSpace() ||
-		convertedVertices[5].isInClipSpace() ||
-		convertedVertices[6].isInClipSpace() ||
-		convertedVertices[7].isInClipSpace() {
+	//Left Plane: 0 2 4 6
+	//Top Plane: 4 5 6 7
+	//Right Plane: 1 3 5 7
+	//Front Plane: 0 1 4 5
+	//Back Plane: 2 3 6 7
+	//Bottom Plane: 0 1 2 3
 
-		triData = append(triData, teapot.TriangleData...)
+	var amountOfLeftSide, amountOfRightSide, amountOfTopSide, amountOfBottomSide int = 0, 0, 0, 0
+	done := false
+	
+	for i := 0; i < len(convertedVertices); i++ {
+		if convertedVertices[i].isInClipSpaceX(false) {
+			amountOfLeftSide ++
+		}
+
+		if convertedVertices[i].isInClipSpaceX(true) {
+			amountOfRightSide ++
+		}
+
+		if convertedVertices[i].isInClipSpaceY(false) {
+			amountOfTopSide ++
+		}
+
+		if convertedVertices[i].isInClipSpaceY(true) {
+			amountOfBottomSide ++
+		}
 	}
 
+	if done == false {
+		if amountOfLeftSide != 0 && amountOfRightSide != 0 && amountOfTopSide != 0 && amountOfBottomSide != 0 {
+			triData = append(triData, teapot.TriangleData...)
+			fmt.Println("Visible")
+		} else {
+			fmt.Println("Culled")
+		}
+
+		//fmt.Println(amountOfLeftSide, amountOfRightSide, amountOfTopSide, amountOfBottomSide)
+	} 
 	var amount int = len(triData)
 	var amountPerCore int = amount / 8
 	var amountLeft = amount % 8
@@ -796,7 +850,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("Person.jpg")
+	cobble, _, err = ebitenutil.NewImageFromFile("Brick.png")
 
 	if err != nil {
 		log.Fatal(err)
@@ -848,7 +902,7 @@ func main() {
 	basicTriangle2.uv[2] = Vertex2D{1, 1}
 
 	//car = NewModel("Cat.obj")
-	teapot = NewModel("Skull_HQ.obj")
+	teapot = NewModel("Crate.obj")
 
 	for v := 0; v < len(generatedPositions); v++ {
 		generatedPositions[v].x = (rand.Float32() - .5) * 4

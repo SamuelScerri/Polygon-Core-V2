@@ -35,7 +35,7 @@ type Model struct {
 }
 
 // NewModel will read an OBJ model file and create a Model from its contents
-func NewModel(file string, boundingBox AABB) Model {
+func NewModel(file string) Model {
 	// Open the file for reading and check for errors.
 	objFile, err := os.Open(file)
 	if err != nil {
@@ -127,6 +127,25 @@ func NewModel(file string, boundingBox AABB) Model {
 		}
 	}
 
+	var longestX, longestY, longestZ float32 = math32.Abs(model.Vecs[0].x), math32.Abs(model.Vecs[0].y), math32.Abs(model.Vecs[0].z)
+
+	for i := 1; i < len(model.Vecs); i++ {
+		if math32.Abs(model.Vecs[i].x) > longestX {
+			longestX = math32.Abs(model.Vecs[i].x)
+		}
+
+		if math32.Abs(model.Vecs[i].y) > longestY {
+			longestY = math32.Abs(model.Vecs[i].y)
+		}
+
+		if math32.Abs(model.Vecs[i].z) > longestZ {
+			longestZ = math32.Abs(model.Vecs[i].z)
+		}
+	}
+
+	var newBoundingBox AABB = AABB{Vertex3D{0, 0, 0}, longestX, longestY, longestZ}
+	fmt.Println(longestX, longestY, longestZ)
+
 	for i := 0; i < len(model.VecIndices)/3; i++ {
 		var tri Triangle = Triangle{
 			[3]Vertex3D{model.Vecs[model.VecIndices[i*3]-1], model.Vecs[model.VecIndices[i*3+1]-1], model.Vecs[model.VecIndices[i*3+2]-1]},
@@ -139,7 +158,7 @@ func NewModel(file string, boundingBox AABB) Model {
 	//fmt.Println(model.VecIndices)
 	fmt.Println(len(model.TriangleData))
 
-	model.BoundingBox = boundingBox.convertToVertices()
+	model.BoundingBox = newBoundingBox.convertToVertices()
 
 	// Return the newly created Model.
 	return model
@@ -420,10 +439,6 @@ func (buffer *Buffer) clearScreen() {
 		}(i)
 	}
 
-	/*for p := (cores-1)*chunkSize + chunkSize; p < (cores-1)*chunkSize+chunkSize+chunkSizeRemaining; p++ {
-		(*buffer)[p] = 0
-	}*/
-
 	wg.Wait()
 }
 
@@ -439,12 +454,6 @@ func (buffer *FloatBuffer) clearDepth() {
 			wg.Done()
 		}(i)
 	}
-
-	/*for p := (cores-1)*chunkSizeDepth + chunkSizeDepth; p < (cores-1)*chunkSizeDepth+chunkSizeDepth+chunkSizeDepthRemaining; p++ {
-		(*buffer)[p] = math32.MaxFloat32
-	}*/
-
-	wg.Wait()
 }
 
 func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *FloatBuffer, texture *Buffer, image *ebiten.Image, xPos, yPos int, tileGrid *TileGrid) {
@@ -699,8 +708,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	smallRotation.z += 1
-	//rotationDegrees.x += 1
-	//rotationDegrees.z -= 1
 	rotationDegrees.y += 1
 
 	var tileGrid TileGrid
@@ -733,10 +740,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	var amount int = len(triData)
 	var amountPerCore int = amount / 8
 	var amountLeft = amount % 8
-
-	//fmt.Println(amountLeft)
-
-	
 
 	for p := 0; p < 7; p++ {
 		wg.Add(1)
@@ -778,10 +781,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	wg.Wait()
 
+	depthBuffer.clearDepth()
 	screen.WritePixels(screenBuffer)
 
+	wg.Wait()
 	screenBuffer.clearScreen()
-	depthBuffer.clearDepth()
 
 	ebitenutil.DebugPrint(screen, strconv.Itoa(int(ebiten.ActualFPS())))
 }
@@ -844,7 +848,7 @@ func main() {
 	basicTriangle2.uv[2] = Vertex2D{1, 1}
 
 	//car = NewModel("Cat.obj")
-	teapot = NewModel("Person.obj", AABB{Vertex3D{0, 0, 0}, 1, 1, 2})
+	teapot = NewModel("Skull_HQ.obj")
 
 	for v := 0; v < len(generatedPositions); v++ {
 		generatedPositions[v].x = (rand.Float32() - .5) * 4

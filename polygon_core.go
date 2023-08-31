@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"math"
-	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
@@ -207,9 +206,9 @@ var cores, chunkSize, chunkSizeDepth, chunkSizeRemaining, chunkSizeDepthRemainin
 var basicTriangle, basicTriangle2 Triangle
 var basicTrianglePosition Vertex3D = Vertex3D{0, 0, -4}
 
-var car, teapot Model
+var car, teapot, skull, monkey, person, cat Model
 
-var width, height int = 1280, 720
+var width, height int = 320, 180
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -221,13 +220,7 @@ var cobble *ebiten.Image
 var cobble_buffer Buffer
 var fov float32 = 165
 
-var generatedPositions [1000]Vertex3D
-
 var projectionMatrix Matrix
-
-func (vertex *Vertex4D) isInClipSpace() bool {
-		return (vertex.x <= vertex.w && vertex.x >= -vertex.w && vertex.y <= vertex.w && vertex.y >= -vertex.w)
-}
 
 func (vertex *Vertex4D) isInClipSpaceX(direction bool) bool {
 		if direction {
@@ -694,7 +687,7 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 type Game struct{}
 
 func (g *Game) Update() error {
-	var speed float32 = .06125/2
+	var speed float32 = .125
 
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		basicTrianglePosition.x += speed
@@ -726,6 +719,38 @@ func (g *Game) Update() error {
 var rotationDegrees Vertex3D
 var smallRotation Vertex3D
 
+func (m *Model) processModel(modelMatrix *Matrix, projectionMatrix *Matrix, buffer *[]Triangle) {
+	var amountOfLeftSide, amountOfRightSide, amountOfTopSide, amountOfBottomSide int = 0, 0, 0, 0
+
+	for i := 0; i < 8; i++ {
+		var transformed Matrix = m.BoundingBox[i].convertToMatrix()
+		transformed = transformed.multiplyMatrix(modelMatrix)
+		transformed = transformed.multiplyMatrix(projectionMatrix)
+
+		var vertex Vertex4D = transformed.convertToVertex()
+
+		if vertex.isInClipSpaceX(false) {
+			amountOfLeftSide ++
+		}
+
+		if vertex.isInClipSpaceX(true) {
+			amountOfRightSide ++
+		}
+
+		if vertex.isInClipSpaceY(false) {
+			amountOfTopSide ++
+		}
+
+		if vertex.isInClipSpaceY(true) {
+			amountOfBottomSide ++
+		}
+	}
+
+	if amountOfLeftSide != 0 && amountOfRightSide != 0 && amountOfTopSide != 0 && amountOfBottomSide != 0 {
+		*buffer = append(*buffer, m.TriangleData...)
+	}
+}
+
 func (g *Game) Draw(screen *ebiten.Image) {
 	if cobble_buffer == nil {
 		cobble_buffer = make(Buffer, cobble.Bounds().Dx()*cobble.Bounds().Dy()*4)
@@ -739,55 +764,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	var tileGrid TileGrid
 	var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
 
-	var convertedVertices [8]Vertex4D
-
-	for i := 0; i < 8; i++ {
-		var transformed Matrix = teapot.BoundingBox[i].convertToMatrix()
-		transformed = transformed.multiplyMatrix(&transformationMatrix)
-		transformed = transformed.multiplyMatrix(&projectionMatrix)
-
-		convertedVertices[i] = transformed.convertToVertex()
-	}
-
-	//fmt.Println(convertedVertices[0])
-
 	var triData []Triangle
 
-	//Left Plane: 0 2 4 6
-	//Top Plane: 4 5 6 7
-	//Right Plane: 1 3 5 7
-	//Front Plane: 0 1 4 5
-	//Back Plane: 2 3 6 7
-	//Bottom Plane: 0 1 2 3
+	teapot.processModel(&transformationMatrix, &projectionMatrix, &triData)
+	car.processModel(&transformationMatrix, &projectionMatrix, &triData)
+	skull.processModel(&transformationMatrix, &projectionMatrix, &triData)
+	monkey.processModel(&transformationMatrix, &projectionMatrix, &triData)
+	//person.processModel(&transformationMatrix, &projectionMatrix, &triData)
+	//cat.processModel(&transformationMatrix, &projectionMatrix, &triData)
 
-	var amountOfLeftSide, amountOfRightSide, amountOfTopSide, amountOfBottomSide int = 0, 0, 0, 0
-	
-	for i := 0; i < len(convertedVertices); i++ {
-		if convertedVertices[i].isInClipSpaceX(false) {
-			amountOfLeftSide ++
-		}
+	//fmt.Println(len(triData))
 
-		if convertedVertices[i].isInClipSpaceX(true) {
-			amountOfRightSide ++
-		}
-
-		if convertedVertices[i].isInClipSpaceY(false) {
-			amountOfTopSide ++
-		}
-
-		if convertedVertices[i].isInClipSpaceY(true) {
-			amountOfBottomSide ++
-		}
-	}
-
-	if amountOfLeftSide != 0 && amountOfRightSide != 0 && amountOfTopSide != 0 && amountOfBottomSide != 0 {
-		triData = append(triData, teapot.TriangleData...)
-		fmt.Println("Visible")
-	} else {
-		fmt.Println("Culled")
-	}
-
-	//fmt.Println(amountOfLeftSide, amountOfRightSide, amountOfTopSide, amountOfBottomSide)
 	var amount int = len(triData)
 	var amountPerCore int = amount / 8
 	var amountLeft = amount % 8
@@ -807,7 +794,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}(p, &teapot, &tileGrid)
 	}
 
-	for t := 7 * amountPerCore; t < 7 * amountPerCore + amountPerCore + amountLeft; t++ {
+	for t := 7 * amountPerCore; t < 8 * amountPerCore + amountLeft; t++ {
 		var convertedTriangle = triData[t].multiplyMatrix(&transformationMatrix)
 		convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
 
@@ -847,7 +834,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("Person.jpg")
+	cobble, _, err = ebitenutil.NewImageFromFile("Car.png")
 
 	if err != nil {
 		log.Fatal(err)
@@ -898,14 +885,12 @@ func main() {
 	basicTriangle2.uv[1] = Vertex2D{1, 0}
 	basicTriangle2.uv[2] = Vertex2D{1, 1}
 
-	//car = NewModel("Cat.obj")
-	teapot = NewModel("Person.obj")
-
-	for v := 0; v < len(generatedPositions); v++ {
-		generatedPositions[v].x = (rand.Float32() - .5) * 4
-		generatedPositions[v].y = (rand.Float32() - .5) * 2
-		generatedPositions[v].z = -4
-	}
+	car = NewModel("Car.obj")
+	teapot = NewModel("Teapot.obj")
+	skull = NewModel("Skull_HQ.obj")
+	monkey = NewModel("Monkey.obj")
+	person = NewModel("Person.obj")
+	cat = NewModel("Cat.obj")
 
 	fmt.Println("Triangle Data Initialized")
 

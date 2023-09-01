@@ -203,12 +203,9 @@ var screenBuffer Buffer
 var depthBuffer FloatBuffer
 var cores, chunkSize, chunkSizeDepth, chunkSizeRemaining, chunkSizeDepthRemaining int
 
-var basicTriangle, basicTriangle2 Triangle
-var basicTrianglePosition Vertex3D = Vertex3D{0, 0, 0}
+var car, teapot, skull, monkey, person, cat, level Model
 
-var car, teapot, skull, monkey, person, cat Model
-
-var width, height int = 1280, 720
+var width, height int = 320, 180
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -773,7 +770,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	//smallRotation.z += 1
-	rotationDegrees.y += 1
+	//rotationDegrees.y += 1
 	//rotationDegrees.x += 1
 
 	//var rotation Vertex3D
@@ -790,7 +787,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	var emptyRotation Vertex3D
 
 	var cameraMatrix Matrix = createTransformationMatrix(cameraPosition, emptyRotation.convertToQuaternion())
-	var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
+	var transformationMatrix Matrix = createTransformationMatrix(emptyRotation, rotationDegrees.convertToQuaternion())
 	transformationMatrix = transformationMatrix.multiplyMatrix(&cameraMatrix)
 	transformationMatrix = transformationMatrix.multiplyMatrix(&rotationMatrixY)
 	transformationMatrix = transformationMatrix.multiplyMatrix(&rotationMatrixX)
@@ -803,8 +800,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//car.processModel(&transformationMatrix, &triData)
 	//skull.processModel(&transformationMatrix, &triData)
 	//monkey.processModel(&transformationMatrix, &triData)
-	person.processModel(&transformationMatrix, &triData)
+	//person.processModel(&transformationMatrix, &triData)
 	//cat.processModel(&transformationMatrix, &triData)
+	level.processModel(&transformationMatrix, &triData)
 
 	//fmt.Println(len(triData))
 
@@ -865,7 +863,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("Person.jpg")
+	cobble, _, err = ebitenutil.NewImageFromFile("Autumn.png")
 
 	if err != nil {
 		log.Fatal(err)
@@ -900,28 +898,13 @@ func main() {
 	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 100)
 	fmt.Println("Projection Matrix Initialized")
 
-	basicTriangle.vertices[0] = Vertex3D{0, .5, 0}
-	basicTriangle.vertices[1] = Vertex3D{-.5, -.5, 0}
-	basicTriangle.vertices[2] = Vertex3D{.5, -.5, 0}
-
-	basicTriangle2.vertices[0] = Vertex3D{0, .125, 0}
-	basicTriangle2.vertices[1] = Vertex3D{-.125, -.125, 0}
-	basicTriangle2.vertices[2] = Vertex3D{.125, -.125, 0}
-
-	basicTriangle.uv[0] = Vertex2D{1, 0}
-	basicTriangle.uv[1] = Vertex2D{0, 2}
-	basicTriangle.uv[2] = Vertex2D{2, 2}
-
-	basicTriangle2.uv[0] = Vertex2D{0, 0}
-	basicTriangle2.uv[1] = Vertex2D{1, 0}
-	basicTriangle2.uv[2] = Vertex2D{1, 1}
-
 	car = NewModel("Car.obj")
 	teapot = NewModel("Teapot.obj")
 	skull = NewModel("Skull_HQ.obj")
 	monkey = NewModel("Monkey.obj")
 	person = NewModel("Person.obj")
 	cat = NewModel("Cat.obj")
+	level = NewModel("Autumn.obj")
 
 	fmt.Println("Triangle Data Initialized")
 

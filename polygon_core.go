@@ -204,11 +204,11 @@ var depthBuffer FloatBuffer
 var cores, chunkSize, chunkSizeDepth, chunkSizeRemaining, chunkSizeDepthRemaining int
 
 var basicTriangle, basicTriangle2 Triangle
-var basicTrianglePosition Vertex3D = Vertex3D{0, 0, -4}
+var basicTrianglePosition Vertex3D = Vertex3D{0, 0, 0}
 
 var car, teapot, skull, monkey, person, cat Model
 
-var width, height int = 320, 180
+var width, height int = 1280, 720
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -216,6 +216,7 @@ var mu sync.Mutex
 var transformationMatrix Matrix
 
 var cobble *ebiten.Image
+var cameraPosition, cameraRotation Vertex3D
 
 var cobble_buffer Buffer
 var fov float32 = 165
@@ -687,30 +688,45 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 type Game struct{}
 
 func (g *Game) Update() error {
-	var speed float32 = .125
+	var speed float32 = 2
 
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		basicTrianglePosition.x += speed
+		cameraRotation.y += speed
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		basicTrianglePosition.x -= speed
+		cameraRotation.y -= speed
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		basicTrianglePosition.y += speed
+		cameraRotation.x -= speed
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		basicTrianglePosition.y -= speed
+		cameraRotation.x += speed
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyW) {
-		basicTrianglePosition.z -= speed
+		cameraPosition.x += math32.Cos((cameraRotation.y + 90) * (math.Pi / 180)) * math32.Cos(cameraRotation.x * (math.Pi / 180))
+		cameraPosition.z += math32.Sin((cameraRotation.y + 90) * (math.Pi / 180)) * math32.Cos(cameraRotation.x * (math.Pi / 180))
+		cameraPosition.y += math32.Sin((cameraRotation.x) * (math.Pi / 180))
 	}
 
+
 	if ebiten.IsKeyPressed(ebiten.KeyS) {
-		basicTrianglePosition.z += speed
+		cameraPosition.x -= math32.Cos((cameraRotation.y + 90) * (math.Pi / 180)) * math32.Cos(cameraRotation.x * (math.Pi / 180))
+		cameraPosition.z -= math32.Sin((cameraRotation.y + 90) * (math.Pi / 180)) * math32.Cos(cameraRotation.x * (math.Pi / 180))
+		cameraPosition.y -= math32.Sin((cameraRotation.x) * (math.Pi / 180))	
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyD) {
+		cameraPosition.x -= math32.Cos(cameraRotation.y * (math.Pi / 180))
+		cameraPosition.z -= math32.Sin(cameraRotation.y * (math.Pi / 180))
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyA) {
+		cameraPosition.x += math32.Cos(cameraRotation.y * (math.Pi / 180))
+		cameraPosition.z += math32.Sin(cameraRotation.y * (math.Pi / 180))
 	}
 
 	return nil
@@ -719,13 +735,12 @@ func (g *Game) Update() error {
 var rotationDegrees Vertex3D
 var smallRotation Vertex3D
 
-func (m *Model) processModel(modelMatrix *Matrix, projectionMatrix *Matrix, buffer *[]Triangle) {
+func (m *Model) processModel(transformationMatrix *Matrix, buffer *[]Triangle) {
 	var amountOfLeftSide, amountOfRightSide, amountOfTopSide, amountOfBottomSide int = 0, 0, 0, 0
 
 	for i := 0; i < 8; i++ {
 		var transformed Matrix = m.BoundingBox[i].convertToMatrix()
-		transformed = transformed.multiplyMatrix(modelMatrix)
-		transformed = transformed.multiplyMatrix(projectionMatrix)
+		transformed = transformed.multiplyMatrix(transformationMatrix)
 
 		var vertex Vertex4D = transformed.convertToVertex()
 
@@ -761,17 +776,35 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	rotationDegrees.y += 1
 	//rotationDegrees.x += 1
 
+	//var rotation Vertex3D
+
+	var cameraRotationX Vertex3D = Vertex3D{cameraRotation.x, 0, 0}
+	var cameraRotationY Vertex3D = Vertex3D{0, cameraRotation.y, 0}
+	var cameraRotationZ Vertex3D = Vertex3D{0, 0, cameraRotation.z}
+
 	var tileGrid TileGrid
+	var rotationMatrixX = createTransformationMatrix(Vertex3D{0, 0, 0}, cameraRotationX.convertToQuaternion())
+	var rotationMatrixY = createTransformationMatrix(Vertex3D{0, 0, 0}, cameraRotationY.convertToQuaternion())
+	var rotationMatrixZ = createTransformationMatrix(Vertex3D{0, 0, 0}, cameraRotationZ.convertToQuaternion())
+
+	var emptyRotation Vertex3D
+
+	var cameraMatrix Matrix = createTransformationMatrix(cameraPosition, emptyRotation.convertToQuaternion())
 	var transformationMatrix Matrix = createTransformationMatrix(basicTrianglePosition, rotationDegrees.convertToQuaternion())
+	transformationMatrix = transformationMatrix.multiplyMatrix(&cameraMatrix)
+	transformationMatrix = transformationMatrix.multiplyMatrix(&rotationMatrixY)
+	transformationMatrix = transformationMatrix.multiplyMatrix(&rotationMatrixX)
+	transformationMatrix = transformationMatrix.multiplyMatrix(&rotationMatrixZ)
+	transformationMatrix = transformationMatrix.multiplyMatrix(&projectionMatrix)
 
 	var triData []Triangle
 
-	teapot.processModel(&transformationMatrix, &projectionMatrix, &triData)
-	car.processModel(&transformationMatrix, &projectionMatrix, &triData)
-	skull.processModel(&transformationMatrix, &projectionMatrix, &triData)
-	monkey.processModel(&transformationMatrix, &projectionMatrix, &triData)
-	//person.processModel(&transformationMatrix, &projectionMatrix, &triData)
-	//cat.processModel(&transformationMatrix, &projectionMatrix, &triData)
+	//teapot.processModel(&transformationMatrix, &triData)
+	//car.processModel(&transformationMatrix, &triData)
+	//skull.processModel(&transformationMatrix, &triData)
+	//monkey.processModel(&transformationMatrix, &triData)
+	person.processModel(&transformationMatrix, &triData)
+	//cat.processModel(&transformationMatrix, &triData)
 
 	//fmt.Println(len(triData))
 
@@ -785,7 +818,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		go func(chunk int, model *Model, grid *TileGrid) {
 			for t := chunk * amountPerCore; t < chunk*amountPerCore+amountPerCore; t++ {
 				var convertedTriangle = triData[t].multiplyMatrix(&transformationMatrix)
-				convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
 
 				convertedTriangle.clip(grid)
 			}
@@ -796,7 +828,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	for t := 7 * amountPerCore; t < 8 * amountPerCore + amountLeft; t++ {
 		var convertedTriangle = triData[t].multiplyMatrix(&transformationMatrix)
-		convertedTriangle = convertedTriangle.multiplyMatrix(&projectionMatrix)
 
 		convertedTriangle.clip(&tileGrid)
 	}
@@ -834,7 +865,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("Car.png")
+	cobble, _, err = ebitenutil.NewImageFromFile("Person.jpg")
 
 	if err != nil {
 		log.Fatal(err)

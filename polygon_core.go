@@ -18,7 +18,7 @@ import (
 )
 
 type AABB struct {
-	position Vertex3D
+	position                              Vertex3D
 	halfExtentX, halfExtentY, halfExtentZ float32
 }
 
@@ -199,13 +199,16 @@ type Matrix [][]float32
 type Tile []ComputedTriangle
 type TileGrid [4][2]Tile
 
+var tileSizeX int = width / 4
+var tileSizeY int = height / 2
+
 var screenBuffer Buffer
 var depthBuffer FloatBuffer
 var cores, chunkSize, chunkSizeDepth, chunkSizeRemaining, chunkSizeDepthRemaining int
 
 var car, teapot, skull, monkey, person, cat, level Model
 
-var width, height int = 320, 180
+var width, height int = 640, 360
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -221,19 +224,19 @@ var fov float32 = 165
 var projectionMatrix Matrix
 
 func (vertex *Vertex4D) isInClipSpaceX(direction bool) bool {
-		if direction {
-			return vertex.x <= vertex.w
-		} else {
-			return vertex.x >= -vertex.w
-		}
+	if direction {
+		return vertex.x <= vertex.w
+	} else {
+		return vertex.x >= -vertex.w
+	}
 }
 
 func (vertex *Vertex4D) isInClipSpaceY(direction bool) bool {
-		if direction {
-			return vertex.y <= vertex.w
-		} else {
-			return vertex.y >= -vertex.w
-		}
+	if direction {
+		return vertex.y <= vertex.w
+	} else {
+		return vertex.y >= -vertex.w
+	}
 }
 
 func (boundingBox *AABB) convertToVertices() (vertices [8]Vertex3D) {
@@ -271,7 +274,7 @@ func (boundingBox *AABB) convertToVertices() (vertices [8]Vertex3D) {
 	vertices[6].x = boundingBox.position.x - boundingBox.halfExtentX
 	vertices[6].y = boundingBox.position.y - boundingBox.halfExtentY
 	vertices[6].z = boundingBox.position.z + boundingBox.halfExtentZ
-	
+
 	vertices[7].x = boundingBox.position.x + boundingBox.halfExtentX
 	vertices[7].y = boundingBox.position.y - boundingBox.halfExtentY
 	vertices[7].z = boundingBox.position.z + boundingBox.halfExtentZ
@@ -471,9 +474,6 @@ func (buffer *FloatBuffer) clearDepth() {
 }
 
 func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *FloatBuffer, texture *Buffer, image *ebiten.Image, xPos, yPos int, tileGrid *TileGrid) {
-	var tileSizeX int = width / len(tileGrid)
-	var tileSizeY int = height / len(tileGrid[0])
-
 	var minX = clamp(triangle.minX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
 	var minY = clamp(triangle.minY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
 	var maxX = clamp(triangle.maxX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
@@ -485,9 +485,10 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 			if s >= 0 && t >= 0 && s+t <= 1 {
 				var depth float32 = w*triangle.vertices[0].z + s*triangle.vertices[1].z + t*triangle.vertices[2].z
+				var position int = (y-1)*(width) + (x - 1)
 
-				if depth < (*depthBuffer)[(y-1)*(width)+(x-1)] {
-					var location int = ((y-1)*(width) + (x - 1)) * 4
+				if depth < (*depthBuffer)[position] {
+					var location int = (position) * 4
 
 					var wt float32 = w*triangle.at.z + s*triangle.bt.z + t*triangle.ct.z
 
@@ -499,7 +500,7 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 					var colorLocation int = ((ty*image.Bounds().Dx() + tx) * 4) % (image.Bounds().Dx() * image.Bounds().Dy() * 4)
 
-					(*depthBuffer)[(y-1)*(width)+(x-1)] = depth
+					(*depthBuffer)[position] = depth
 
 					(*buffer)[location] = (*texture)[colorLocation]
 					(*buffer)[location+1] = (*texture)[colorLocation+1]
@@ -640,7 +641,7 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 								Vertex3D{uvdat[index+2].x / vertices[index+2].w, uvdat[index+2].y / vertices[index+2].w, 1 / vertices[index+2].w},
 
 								Vertex4D{}, Vertex4D{}, 0,
-		
+
 								0, 0, 0, 0,
 							}
 
@@ -663,7 +664,7 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 
 								newTriangle.vs1, newTriangle.vs2 = newTriangle.spanningVectors()
 								newTriangle.span = newTriangle.vs1.crossProduct(&newTriangle.vs2)
-							
+
 								for x := tilePositionMinX; x <= tilePositionMaxX; x++ {
 									for y := tilePositionMinY; y <= tilePositionMaxY; y++ {
 										mu.Lock()
@@ -678,7 +679,7 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 					}
 				}
 			}
-		}	
+		}
 	}
 }
 
@@ -704,16 +705,15 @@ func (g *Game) Update() error {
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyW) {
-		cameraPosition.x += math32.Cos((cameraRotation.y + 90) * (math.Pi / 180)) * math32.Cos(cameraRotation.x * (math.Pi / 180))
-		cameraPosition.z += math32.Sin((cameraRotation.y + 90) * (math.Pi / 180)) * math32.Cos(cameraRotation.x * (math.Pi / 180))
+		cameraPosition.x += math32.Cos((cameraRotation.y+90)*(math.Pi/180)) * math32.Cos(cameraRotation.x*(math.Pi/180))
+		cameraPosition.z += math32.Sin((cameraRotation.y+90)*(math.Pi/180)) * math32.Cos(cameraRotation.x*(math.Pi/180))
 		cameraPosition.y += math32.Sin((cameraRotation.x) * (math.Pi / 180))
 	}
 
-
 	if ebiten.IsKeyPressed(ebiten.KeyS) {
-		cameraPosition.x -= math32.Cos((cameraRotation.y + 90) * (math.Pi / 180)) * math32.Cos(cameraRotation.x * (math.Pi / 180))
-		cameraPosition.z -= math32.Sin((cameraRotation.y + 90) * (math.Pi / 180)) * math32.Cos(cameraRotation.x * (math.Pi / 180))
-		cameraPosition.y -= math32.Sin((cameraRotation.x) * (math.Pi / 180))	
+		cameraPosition.x -= math32.Cos((cameraRotation.y+90)*(math.Pi/180)) * math32.Cos(cameraRotation.x*(math.Pi/180))
+		cameraPosition.z -= math32.Sin((cameraRotation.y+90)*(math.Pi/180)) * math32.Cos(cameraRotation.x*(math.Pi/180))
+		cameraPosition.y -= math32.Sin((cameraRotation.x) * (math.Pi / 180))
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyD) {
@@ -742,19 +742,19 @@ func (m *Model) processModel(transformationMatrix *Matrix, buffer *[]Triangle) {
 		var vertex Vertex4D = transformed.convertToVertex()
 
 		if vertex.isInClipSpaceX(false) {
-			amountOfLeftSide ++
+			amountOfLeftSide++
 		}
 
 		if vertex.isInClipSpaceX(true) {
-			amountOfRightSide ++
+			amountOfRightSide++
 		}
 
 		if vertex.isInClipSpaceY(false) {
-			amountOfTopSide ++
+			amountOfTopSide++
 		}
 
 		if vertex.isInClipSpaceY(true) {
-			amountOfBottomSide ++
+			amountOfBottomSide++
 		}
 	}
 
@@ -804,7 +804,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//cat.processModel(&transformationMatrix, &triData)
 	level.processModel(&transformationMatrix, &triData)
 
-	//fmt.Println(len(triData))
+	fmt.Println(len(triData))
 
 	var amount int = len(triData)
 	var amountPerCore int = amount / 8
@@ -824,7 +824,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}(p, &teapot, &tileGrid)
 	}
 
-	for t := 7 * amountPerCore; t < 8 * amountPerCore + amountLeft; t++ {
+	for t := 7 * amountPerCore; t < 8*amountPerCore+amountLeft; t++ {
 		var convertedTriangle = triData[t].multiplyMatrix(&transformationMatrix)
 
 		convertedTriangle.clip(&tileGrid)
@@ -834,6 +834,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	for x := 0; x < len(tileGrid); x++ {
 		for y := 0; y < len(tileGrid[0]); y++ {
+			if x == 0 && y == 0 {
+				continue
+			}
+
 			wg.Add(1)
 
 			go func(tileGrid *TileGrid, x, y int) {
@@ -846,13 +850,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 	}
 
+	for _, t := range tileGrid[0][0] {
+		t.renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble, 0, 0, &tileGrid)
+	}
+
 	wg.Wait()
 
 	depthBuffer.clearDepth()
 	screen.WritePixels(screenBuffer)
 
 	wg.Wait()
-	screenBuffer.clearScreen()
+	//screenBuffer.clearScreen()
 
 	ebitenutil.DebugPrint(screen, strconv.Itoa(int(ebiten.ActualFPS())))
 }
@@ -873,7 +881,7 @@ func init() {
 func main() {
 	fmt.Println("Initializing Polygon Core")
 
-	ebiten.SetWindowSize(640, 360)
+	ebiten.SetWindowSize(1280, 720)
 	ebiten.SetWindowTitle("Polygon Core - V2")
 	ebiten.SetVsyncEnabled(false)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
@@ -908,7 +916,7 @@ func main() {
 
 	fmt.Println("Triangle Data Initialized")
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

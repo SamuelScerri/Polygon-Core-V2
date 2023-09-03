@@ -208,7 +208,7 @@ var cores, chunkSize, chunkSizeDepth, chunkSizeRemaining, chunkSizeDepthRemainin
 
 var car, teapot, skull, monkey, person, cat, level Model
 
-var width, height int = 640, 360
+var width, height int = 320, 180
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -632,25 +632,26 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 
 						//Finally We Build All The Triangles
 						for index := 0; index < len(vertices)-2; index++ {
-							var newTriangle ComputedTriangle = ComputedTriangle{
-								[3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
-								[3]Vertex2D{uvdat[0], uvdat[index+1], uvdat[index+2]},
 
-								Vertex3D{uvdat[0].x / vertices[0].w, uvdat[0].y / vertices[0].w, 1 / vertices[0].w},
-								Vertex3D{uvdat[index+1].x / vertices[index+1].w, uvdat[index+1].y / vertices[index+1].w, 1 / vertices[index+1].w},
-								Vertex3D{uvdat[index+2].x / vertices[index+2].w, uvdat[index+2].y / vertices[index+2].w, 1 / vertices[index+2].w},
-
-								Vertex4D{}, Vertex4D{}, 0,
-
-								0, 0, 0, 0,
-							}
-
-							t1 := newTriangle.vertices[1].subtract(&newTriangle.vertices[0])
-							t2 := newTriangle.vertices[2].subtract(&newTriangle.vertices[0])
+							t1 := vertices[index+1].subtract(&vertices[0])
+							t2 := vertices[index+2].subtract(&vertices[0])
 
 							crossed := t1.cross(&t2)
 
 							if crossed.z < 0 {
+								var newTriangle ComputedTriangle = ComputedTriangle{
+									[3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
+									[3]Vertex2D{uvdat[0], uvdat[index+1], uvdat[index+2]},
+
+									Vertex3D{uvdat[0].x / vertices[0].w, uvdat[0].y / vertices[0].w, 1 / vertices[0].w},
+									Vertex3D{uvdat[index+1].x / vertices[index+1].w, uvdat[index+1].y / vertices[index+1].w, 1 / vertices[index+1].w},
+									Vertex3D{uvdat[index+2].x / vertices[index+2].w, uvdat[index+2].y / vertices[index+2].w, 1 / vertices[index+2].w},
+
+									Vertex4D{}, Vertex4D{}, 0,
+
+									0, 0, 0, 0,
+								}
+
 								newTriangle.minX, newTriangle.minY, newTriangle.maxX, newTriangle.maxY = newTriangle.bounds()
 
 								var tileSizeX int = (width) / len(tileGrid)
@@ -796,7 +797,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	var triData []Triangle
 
-	//teapot.processModel(&transformationMatrix, &triData)
+	teapot.processModel(&transformationMatrix, &triData)
 	//car.processModel(&transformationMatrix, &triData)
 	//skull.processModel(&transformationMatrix, &triData)
 	//monkey.processModel(&transformationMatrix, &triData)
@@ -804,7 +805,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//cat.processModel(&transformationMatrix, &triData)
 	level.processModel(&transformationMatrix, &triData)
 
-	fmt.Println(len(triData))
+	//fmt.Println(len(triData))
 
 	var amount int = len(triData)
 	var amountPerCore int = amount / 8
@@ -851,6 +852,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	for _, t := range tileGrid[0][0] {
+
 		t.renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble, 0, 0, &tileGrid)
 	}
 
@@ -860,7 +862,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.WritePixels(screenBuffer)
 
 	wg.Wait()
-	//screenBuffer.clearScreen()
 
 	ebitenutil.DebugPrint(screen, strconv.Itoa(int(ebiten.ActualFPS())))
 }
@@ -883,7 +884,7 @@ func main() {
 
 	ebiten.SetWindowSize(1280, 720)
 	ebiten.SetWindowTitle("Polygon Core - V2")
-	ebiten.SetVsyncEnabled(false)
+	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)

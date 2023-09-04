@@ -197,10 +197,10 @@ type FloatBuffer []float32
 type Matrix [][]float32
 
 type Tile []ComputedTriangle
-type TileGrid [4][2]Tile
+type TileGrid [4][3]Tile
 
 var tileSizeX int = width / 4
-var tileSizeY int = height / 2
+var tileSizeY int = height / 3
 
 var screenBuffer Buffer
 var depthBuffer FloatBuffer
@@ -208,7 +208,7 @@ var cores, chunkSize, chunkSizeDepth, chunkSizeRemaining, chunkSizeDepthRemainin
 
 var car, teapot, skull, monkey, person, cat, level Model
 
-var width, height int = 320, 180
+var width, height int = 640, 360
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -460,7 +460,7 @@ func (buffer *Buffer) clearScreen() {
 }
 
 func (buffer *FloatBuffer) clearDepth() {
-	for i := 0; i < cores; i++ {
+	for i := 0; i < 11; i++ {
 		wg.Add(1)
 
 		go func(section int) {
@@ -470,6 +470,10 @@ func (buffer *FloatBuffer) clearDepth() {
 
 			wg.Done()
 		}(i)
+	}
+
+	for i := 11 * chunkSizeDepth; i < 12 * chunkSizeDepth; i++ {
+		(*buffer)[i] = math32.MaxFloat32
 	}
 }
 
@@ -604,82 +608,67 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 	var vertices []Vertex4D = t.vertices[:]
 	var uvdat []Vertex2D = t.uv[:]
 
-	clip_axis(&vertices, &uvdat, 1, 0)
-
-	/*
-		I Know I Know, This Looks Like It Could Been Written With A Simple For Loop,
-		But Apparently Unrolling Loops Will Make It Faster.
-		(I'm Sure The Compiler Optimizes This, But Just To Be On The Safe Side)
-	*/
-	if len(vertices) > 0 {
-		clip_axis(&vertices, &uvdat, -1, 0)
-
+	for i := 0; i < 2; i++ {
 		if len(vertices) > 0 {
-			clip_axis(&vertices, &uvdat, 1, 1)
+			clip_axis(&vertices, &uvdat, 1, i)
 
 			if len(vertices) > 0 {
-				clip_axis(&vertices, &uvdat, -1, 1)
+				clip_axis(&vertices, &uvdat, -1, i)
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+	}
 
-				if len(vertices) > 0 {
-					//clip_axis(&vertices, &uvdat, -1, 2)
+	//We Pre-Convert The Vertices Here To Avoid Doing The Same Calculations Twice On Every Triangle
+	for i := 0; i < len(vertices); i++ {
+		vertices[i].convertToNormalized()
+		vertices[i].convertToScreenSpace()
+	}
 
-					//We Pre-Convert The Vertices Here To Avoid Doing The Same Calculations Twice On Every Triangle
-					if len(vertices) > 0 {
-						for i := 0; i < len(vertices); i++ {
-							vertices[i].convertToNormalized()
-							vertices[i].convertToScreenSpace()
-						}
+	//Finally We Build All The Triangles
+	for index := 0; index < len(vertices)-2; index++ {
 
-						//Finally We Build All The Triangles
-						for index := 0; index < len(vertices)-2; index++ {
+		t1 := vertices[index+1].subtract(&vertices[0])
+		t2 := vertices[index+2].subtract(&vertices[0])
 
-							t1 := vertices[index+1].subtract(&vertices[0])
-							t2 := vertices[index+2].subtract(&vertices[0])
+		crossed := t1.cross(&t2)
 
-							crossed := t1.cross(&t2)
+		if crossed.z < 0 {
+			var newTriangle ComputedTriangle = ComputedTriangle{
+				[3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
+				[3]Vertex2D{uvdat[0], uvdat[index+1], uvdat[index+2]},
 
-							if crossed.z < 0 {
-								var newTriangle ComputedTriangle = ComputedTriangle{
-									[3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
-									[3]Vertex2D{uvdat[0], uvdat[index+1], uvdat[index+2]},
+				Vertex3D{uvdat[0].x / vertices[0].w, uvdat[0].y / vertices[0].w, 1 / vertices[0].w},
+				Vertex3D{uvdat[index+1].x / vertices[index+1].w, uvdat[index+1].y / vertices[index+1].w, 1 / vertices[index+1].w},
+				Vertex3D{uvdat[index+2].x / vertices[index+2].w, uvdat[index+2].y / vertices[index+2].w, 1 / vertices[index+2].w},
 
-									Vertex3D{uvdat[0].x / vertices[0].w, uvdat[0].y / vertices[0].w, 1 / vertices[0].w},
-									Vertex3D{uvdat[index+1].x / vertices[index+1].w, uvdat[index+1].y / vertices[index+1].w, 1 / vertices[index+1].w},
-									Vertex3D{uvdat[index+2].x / vertices[index+2].w, uvdat[index+2].y / vertices[index+2].w, 1 / vertices[index+2].w},
+				Vertex4D{}, Vertex4D{}, 0,
 
-									Vertex4D{}, Vertex4D{}, 0,
+				0, 0, 0, 0,
+			}
 
-									0, 0, 0, 0,
-								}
+			newTriangle.minX, newTriangle.minY, newTriangle.maxX, newTriangle.maxY = newTriangle.bounds()
 
-								newTriangle.minX, newTriangle.minY, newTriangle.maxX, newTriangle.maxY = newTriangle.bounds()
+			var tilePositionMaxX int = clamp(int(math32.Round(float32(newTriangle.maxX/tileSizeX))), 0, len(tileGrid)-1)
+			var tilePositionMaxY int = clamp(int(math32.Round(float32(newTriangle.maxY/tileSizeY))), 0, len(tileGrid[0])-1)
 
-								var tileSizeX int = (width) / len(tileGrid)
-								var tileSizeY int = (height) / len(tileGrid[0])
+			var tilePositionMinX int = clamp(int(math32.Round(float32(newTriangle.minX/tileSizeX))), 0, len(tileGrid)-1)
+			var tilePositionMinY int = clamp(int(math32.Round(float32(newTriangle.minY/tileSizeY))), 0, len(tileGrid[0])-1)
 
-								var tilePositionMaxX int = clamp(int(math32.Round(float32(newTriangle.maxX/tileSizeX))), 0, len(tileGrid)-1)
-								var tilePositionMaxY int = clamp(int(math32.Round(float32(newTriangle.maxY/tileSizeY))), 0, len(tileGrid[0])-1)
+			newTriangle.vs1, newTriangle.vs2 = newTriangle.spanningVectors()
+			newTriangle.span = newTriangle.vs1.crossProduct(&newTriangle.vs2)
 
-								var tilePositionMinX int = clamp(int(math32.Round(float32(newTriangle.minX/tileSizeX))), 0, len(tileGrid)-1)
-								var tilePositionMinY int = clamp(int(math32.Round(float32(newTriangle.minY/tileSizeY))), 0, len(tileGrid[0])-1)
-
-								newTriangle.vs1, newTriangle.vs2 = newTriangle.spanningVectors()
-								newTriangle.span = newTriangle.vs1.crossProduct(&newTriangle.vs2)
-
-								for x := tilePositionMinX; x <= tilePositionMaxX; x++ {
-									for y := tilePositionMinY; y <= tilePositionMaxY; y++ {
-										mu.Lock()
-
-										tileGrid[x][y] = append(tileGrid[x][y], newTriangle)
-
-										mu.Unlock()
-									}
-								}
-							}
-						}
-					}
+			mu.Lock()
+			for x := tilePositionMinX; x <= tilePositionMaxX; x++ {
+				for y := tilePositionMinY; y <= tilePositionMaxY; y++ {
+					tileGrid[x][y] = append(tileGrid[x][y], newTriangle)			
 				}
 			}
+
+			mu.Unlock()
 		}
 	}
 }
@@ -765,6 +754,8 @@ func (m *Model) processModel(transformationMatrix *Matrix, buffer *[]Triangle) {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	wg.Wait()
+	
 	if cobble_buffer == nil {
 		cobble_buffer = make(Buffer, cobble.Bounds().Dx()*cobble.Bounds().Dy()*4)
 		cobble.ReadPixels(cobble_buffer)
@@ -797,7 +788,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	var triData []Triangle
 
-	teapot.processModel(&transformationMatrix, &triData)
+	//teapot.processModel(&transformationMatrix, &triData)
 	//car.processModel(&transformationMatrix, &triData)
 	//skull.processModel(&transformationMatrix, &triData)
 	//monkey.processModel(&transformationMatrix, &triData)
@@ -808,10 +799,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//fmt.Println(len(triData))
 
 	var amount int = len(triData)
-	var amountPerCore int = amount / 8
-	var amountLeft = amount % 8
+	var amountPerCore int = amount / 12
+	var amountLeft = amount % 12
 
-	for p := 0; p < 7; p++ {
+	for p := 0; p < 11; p++ {
 		wg.Add(1)
 
 		go func(chunk int, model *Model, grid *TileGrid) {
@@ -825,7 +816,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}(p, &teapot, &tileGrid)
 	}
 
-	for t := 7 * amountPerCore; t < 8*amountPerCore+amountLeft; t++ {
+	for t := 11 * amountPerCore; t < 12*amountPerCore+amountLeft; t++ {
 		var convertedTriangle = triData[t].multiplyMatrix(&transformationMatrix)
 
 		convertedTriangle.clip(&tileGrid)
@@ -858,12 +849,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	wg.Wait()
 
-	depthBuffer.clearDepth()
 	screen.WritePixels(screenBuffer)
-
-	wg.Wait()
-
 	ebitenutil.DebugPrint(screen, strconv.Itoa(int(ebiten.ActualFPS())))
+
+	depthBuffer.clearDepth()
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -882,9 +871,9 @@ func init() {
 func main() {
 	fmt.Println("Initializing Polygon Core")
 
-	ebiten.SetWindowSize(1280, 720)
+	ebiten.SetWindowSize(640, 360)
 	ebiten.SetWindowTitle("Polygon Core - V2")
-	ebiten.SetVsyncEnabled(true)
+	ebiten.SetVsyncEnabled(false)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
@@ -917,7 +906,7 @@ func main() {
 
 	fmt.Println("Triangle Data Initialized")
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

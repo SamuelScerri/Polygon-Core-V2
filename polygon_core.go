@@ -197,23 +197,21 @@ type FloatBuffer []float32
 type Matrix [][]float32
 
 type Tile []ComputedTriangle
-type TileGrid [4][3]Tile
+type TileGrid [4][2]Tile
 
 var tileSizeX int = width / 4
-var tileSizeY int = height / 3
+var tileSizeY int = height / 2
 
 var screenBuffer Buffer
 var depthBuffer FloatBuffer
-var cores, chunkSize, chunkSizeDepth, chunkSizeRemaining, chunkSizeDepthRemaining int
+var cores, chunkSize, chunkSizeDepth int
 
 var car, teapot, skull, monkey, person, cat, level Model
 
-var width, height int = 640, 360
+var width, height int = 1280, 720
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
-
-var transformationMatrix Matrix
 
 var cobble *ebiten.Image
 var cameraPosition, cameraRotation Vertex3D
@@ -313,10 +311,6 @@ func (vertex *Vertex3D) convertToMatrix() Matrix {
 	return Matrix{{vertex.x, vertex.y, vertex.z, 1}}
 }
 
-func (vertex *Vertex4D) convertToMatrix() Matrix {
-	return Matrix{{vertex.x, vertex.y, vertex.z, vertex.w}}
-}
-
 func (m1 *Matrix) multiplyMatrix(m2 *Matrix) (result Matrix) {
 	result = make(Matrix, len(*m1))
 
@@ -338,19 +332,6 @@ func (matrix *Matrix) convertToVertex() Vertex4D {
 }
 
 func (triangle *Triangle) multiplyMatrix(m2 *Matrix) (result ComputedTriangle) {
-	var tm1, tm2, tm3 Matrix = triangle.vertices[0].convertToMatrix(), triangle.vertices[1].convertToMatrix(), triangle.vertices[2].convertToMatrix()
-	tm1, tm2, tm3 = tm1.multiplyMatrix(m2), tm2.multiplyMatrix(m2), tm3.multiplyMatrix(m2)
-
-	result.vertices[0] = tm1.convertToVertex()
-	result.vertices[1] = tm2.convertToVertex()
-	result.vertices[2] = tm3.convertToVertex()
-
-	result.uv = triangle.uv
-
-	return
-}
-
-func (triangle *ComputedTriangle) multiplyMatrix(m2 *Matrix) (result ComputedTriangle) {
 	var tm1, tm2, tm3 Matrix = triangle.vertices[0].convertToMatrix(), triangle.vertices[1].convertToMatrix(), triangle.vertices[2].convertToMatrix()
 	tm1, tm2, tm3 = tm1.multiplyMatrix(m2), tm2.multiplyMatrix(m2), tm3.multiplyMatrix(m2)
 
@@ -460,7 +441,7 @@ func (buffer *Buffer) clearScreen() {
 }
 
 func (buffer *FloatBuffer) clearDepth() {
-	for i := 0; i < 11; i++ {
+	for i := 0; i < 7; i++ {
 		wg.Add(1)
 
 		go func(section int) {
@@ -472,7 +453,7 @@ func (buffer *FloatBuffer) clearDepth() {
 		}(i)
 	}
 
-	for i := 11 * chunkSizeDepth; i < 12 * chunkSizeDepth; i++ {
+	for i := 7 * chunkSizeDepth; i < 8*chunkSizeDepth; i++ {
 		(*buffer)[i] = math32.MaxFloat32
 	}
 }
@@ -664,7 +645,7 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 			mu.Lock()
 			for x := tilePositionMinX; x <= tilePositionMaxX; x++ {
 				for y := tilePositionMinY; y <= tilePositionMaxY; y++ {
-					tileGrid[x][y] = append(tileGrid[x][y], newTriangle)			
+					tileGrid[x][y] = append(tileGrid[x][y], newTriangle)
 				}
 			}
 
@@ -720,7 +701,6 @@ func (g *Game) Update() error {
 }
 
 var rotationDegrees Vertex3D
-var smallRotation Vertex3D
 
 func (m *Model) processModel(transformationMatrix *Matrix, buffer *[]Triangle) {
 	var amountOfLeftSide, amountOfRightSide, amountOfTopSide, amountOfBottomSide int = 0, 0, 0, 0
@@ -755,7 +735,7 @@ func (m *Model) processModel(transformationMatrix *Matrix, buffer *[]Triangle) {
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	wg.Wait()
-	
+
 	if cobble_buffer == nil {
 		cobble_buffer = make(Buffer, cobble.Bounds().Dx()*cobble.Bounds().Dy()*4)
 		cobble.ReadPixels(cobble_buffer)
@@ -788,21 +768,21 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	var triData []Triangle
 
-	//teapot.processModel(&transformationMatrix, &triData)
+	teapot.processModel(&transformationMatrix, &triData)
 	//car.processModel(&transformationMatrix, &triData)
 	//skull.processModel(&transformationMatrix, &triData)
 	//monkey.processModel(&transformationMatrix, &triData)
 	//person.processModel(&transformationMatrix, &triData)
 	//cat.processModel(&transformationMatrix, &triData)
-	level.processModel(&transformationMatrix, &triData)
+	//level.processModel(&transformationMatrix, &triData)
 
 	//fmt.Println(len(triData))
 
 	var amount int = len(triData)
-	var amountPerCore int = amount / 12
-	var amountLeft = amount % 12
+	var amountPerCore int = amount / 8
+	var amountLeft = amount % 8
 
-	for p := 0; p < 11; p++ {
+	for p := 0; p < 7; p++ {
 		wg.Add(1)
 
 		go func(chunk int, model *Model, grid *TileGrid) {
@@ -816,7 +796,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}(p, &teapot, &tileGrid)
 	}
 
-	for t := 11 * amountPerCore; t < 12*amountPerCore+amountLeft; t++ {
+	for t := 7 * amountPerCore; t < 8*amountPerCore+amountLeft; t++ {
 		var convertedTriangle = triData[t].multiplyMatrix(&transformationMatrix)
 
 		convertedTriangle.clip(&tileGrid)
@@ -843,13 +823,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	for _, t := range tileGrid[0][0] {
-
 		t.renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble, 0, 0, &tileGrid)
 	}
 
 	wg.Wait()
 
 	screen.WritePixels(screenBuffer)
+	screenBuffer.clearScreen()
 	ebitenutil.DebugPrint(screen, strconv.Itoa(int(ebiten.ActualFPS())))
 
 	depthBuffer.clearDepth()
@@ -861,7 +841,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("Autumn.png")
+	cobble, _, err = ebitenutil.NewImageFromFile("Brick.png")
 
 	if err != nil {
 		log.Fatal(err)
@@ -873,23 +853,21 @@ func main() {
 
 	ebiten.SetWindowSize(640, 360)
 	ebiten.SetWindowTitle("Polygon Core - V2")
-	ebiten.SetVsyncEnabled(false)
+	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
 	cores = runtime.NumCPU()
-	//runtime.LockOSThread()
+	runtime.LockOSThread()
 
 	screenBuffer = make(Buffer, width*height*4)
 	chunkSize = (width * height * 4) / cores
-	chunkSizeRemaining = (width * height * 4) % cores
 
 	fmt.Println("Screen Buffer Initialized")
 
 	depthBuffer = make(FloatBuffer, width*height)
 	chunkSizeDepth = (width * height) / cores
-	chunkSizeDepthRemaining = (width * height) % cores
 
 	fmt.Println("Depth Buffer Initialized")
 
@@ -906,7 +884,7 @@ func main() {
 
 	fmt.Println("Triangle Data Initialized")
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

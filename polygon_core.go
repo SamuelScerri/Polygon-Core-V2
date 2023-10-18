@@ -196,11 +196,14 @@ type Buffer []byte
 type FloatBuffer []float32
 type Matrix [][]float32
 
-type Tile []ComputedTriangle
-type TileGrid [4][2]Tile
+const HT = 4
+const VT = 2
 
-var tileSizeX int = width / 4
-var tileSizeY int = height / 2
+type Tile []ComputedTriangle
+type TileGrid [HT][VT]Tile
+
+var tileSizeX int = width / HT
+var tileSizeY int = height / VT
 
 var screenBuffer Buffer
 var depthBuffer FloatBuffer
@@ -425,7 +428,7 @@ func clamp(value, min, max int) int {
 }
 
 func (buffer *Buffer) clearScreen() {
-	for i := 0; i < cores; i++ {
+	for i := 0; i < (HT * VT); i++ {
 		wg.Add(1)
 
 		go func(section int) {
@@ -441,7 +444,7 @@ func (buffer *Buffer) clearScreen() {
 }
 
 func (buffer *FloatBuffer) clearDepth() {
-	for i := 0; i < 7; i++ {
+	for i := 0; i < (HT*VT)-1; i++ {
 		wg.Add(1)
 
 		go func(section int) {
@@ -453,7 +456,7 @@ func (buffer *FloatBuffer) clearDepth() {
 		}(i)
 	}
 
-	for i := 7 * chunkSizeDepth; i < 8*chunkSizeDepth; i++ {
+	for i := ((HT * VT) - 1) * chunkSizeDepth; i < (HT*VT)*chunkSizeDepth; i++ {
 		(*buffer)[i] = math32.MaxFloat32
 	}
 }
@@ -769,20 +772,18 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	var triData []Triangle
 
 	teapot.processModel(&transformationMatrix, &triData)
-	//car.processModel(&transformationMatrix, &triData)
-	//skull.processModel(&transformationMatrix, &triData)
-	//monkey.processModel(&transformationMatrix, &triData)
-	//person.processModel(&transformationMatrix, &triData)
-	//cat.processModel(&transformationMatrix, &triData)
+	car.processModel(&transformationMatrix, &triData)
+	skull.processModel(&transformationMatrix, &triData)
+	monkey.processModel(&transformationMatrix, &triData)
+	person.processModel(&transformationMatrix, &triData)
+	cat.processModel(&transformationMatrix, &triData)
 	//level.processModel(&transformationMatrix, &triData)
 
-	//fmt.Println(len(triData))
-
 	var amount int = len(triData)
-	var amountPerCore int = amount / 8
-	var amountLeft = amount % 8
+	var amountPerCore int = amount / (HT * VT)
+	var amountLeft = amount % (HT * VT)
 
-	for p := 0; p < 7; p++ {
+	for p := 0; p < (HT*VT)-1; p++ {
 		wg.Add(1)
 
 		go func(chunk int, model *Model, grid *TileGrid) {
@@ -796,7 +797,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}(p, &teapot, &tileGrid)
 	}
 
-	for t := 7 * amountPerCore; t < 8*amountPerCore+amountLeft; t++ {
+	for t := ((HT * VT) - 1) * amountPerCore; t < (HT*VT)*amountPerCore+amountLeft; t++ {
 		var convertedTriangle = triData[t].multiplyMatrix(&transformationMatrix)
 
 		convertedTriangle.clip(&tileGrid)
@@ -864,12 +865,12 @@ func main() {
 	runtime.LockOSThread()
 
 	screenBuffer = make(Buffer, width*height*4)
-	chunkSize = (width * height * 4) / cores
+	chunkSize = (width * height * 4) / (HT * VT)
 
 	fmt.Println("Screen Buffer Initialized")
 
 	depthBuffer = make(FloatBuffer, width*height)
-	chunkSizeDepth = (width * height) / cores
+	chunkSizeDepth = (width * height) / (HT * VT)
 
 	fmt.Println("Depth Buffer Initialized")
 

@@ -208,7 +208,7 @@ var cores, chunkSize, chunkSizeDepth int
 
 var car, teapot, skull, monkey, person, cat, level Model
 
-var width, height int = 1280, 720
+var width, height int = 640, 360
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -829,9 +829,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	wg.Wait()
 
 	screen.WritePixels(screenBuffer)
-	screenBuffer.clearScreen()
-	ebitenutil.DebugPrint(screen, strconv.Itoa(int(ebiten.ActualFPS())))
+	ebitenutil.DebugPrint(screen, "FPS: "+strconv.Itoa(int(ebiten.ActualFPS())))
+	ebitenutil.DebugPrintAt(screen, "TRIANGLES RASTERIZED: "+strconv.Itoa(amount), 0, 16)
+	ebitenutil.DebugPrintAt(screen, "AMOUNT OF CORES: "+strconv.Itoa(runtime.NumCPU()), 0, 32)
 
+	screenBuffer.clearScreen()
 	depthBuffer.clearDepth()
 }
 

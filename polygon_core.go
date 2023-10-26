@@ -395,6 +395,14 @@ func (triangle *ComputedTriangle) barycentricCoordinates(vs1, vs2 *Vertex4D, x, 
 	return
 }
 
+func (triangle *ComputedTriangle) edgeSpan(x, y *int) (w0, w1, w2 float32) {
+	w0 = (triangle.vertices[2].y - triangle.vertices[1].y) * (float32(*x) - triangle.vertices[1].x) - (triangle.vertices[2].x - triangle.vertices[1].x) * (float32(*y) - triangle.vertices[1].y)
+	w1 = (triangle.vertices[0].y - triangle.vertices[2].y) * (float32(*x) - triangle.vertices[2].x) - (triangle.vertices[0].x - triangle.vertices[2].x) * (float32(*y) - triangle.vertices[2].y)
+	w2 = (triangle.vertices[1].y - triangle.vertices[0].y) * (float32(*x) - triangle.vertices[0].x) - (triangle.vertices[1].x - triangle.vertices[0].x) * (float32(*y) - triangle.vertices[0].y)
+
+	return
+}
+
 func (v *Vertex4D) convertToNormalized() {
 	v.x /= v.w
 	v.y /= v.w
@@ -469,9 +477,10 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 	for x := minX; x <= maxX; x++ {
 		for y := minY; y <= maxY; y++ {
-			var s, t, w float32 = triangle.barycentricCoordinates(&triangle.vs1, &triangle.vs2, &x, &y, &triangle.span)
-
-			if s >= 0 && t >= 0 && s+t <= 1 {
+			var w0, w1, w2 float32 = triangle.edgeSpan(&x, &y)
+			
+			if w0 >= 0 && w1 >= 0 && w2 >= 0 {
+				var s, t, w float32 = triangle.barycentricCoordinates(&triangle.vs1, &triangle.vs2, &x, &y, &triangle.span)
 				var depth float32 = w*triangle.vertices[0].z + s*triangle.vertices[1].z + t*triangle.vertices[2].z
 				var position int = (y-1)*(width) + (x - 1)
 
@@ -772,11 +781,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	var triData []Triangle
 
 	teapot.processModel(&transformationMatrix, &triData)
-	car.processModel(&transformationMatrix, &triData)
-	skull.processModel(&transformationMatrix, &triData)
-	monkey.processModel(&transformationMatrix, &triData)
-	person.processModel(&transformationMatrix, &triData)
-	cat.processModel(&transformationMatrix, &triData)
+	//car.processModel(&transformationMatrix, &triData)
+	//skull.processModel(&transformationMatrix, &triData)
+	//monkey.processModel(&transformationMatrix, &triData)
+	//person.processModel(&transformationMatrix, &triData)
+	//cat.processModel(&transformationMatrix, &triData)
 	//level.processModel(&transformationMatrix, &triData)
 
 	var amount int = len(triData)
@@ -887,7 +896,7 @@ func main() {
 
 	fmt.Println("Triangle Data Initialized")
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"runtime"
+	"sort"
 	"strconv"
 	"sync"
 
@@ -167,6 +168,10 @@ type Vertex2D struct {
 	x, y float32
 }
 
+type Vertex2Di struct {
+	x, y int
+}
+
 type Vertex3D struct {
 	x, y, z float32
 }
@@ -196,8 +201,8 @@ type Buffer []byte
 type FloatBuffer []float32
 type Matrix [][]float32
 
-const HT = 4
-const VT = 2
+const HT = 1
+const VT = 1
 
 type Tile []ComputedTriangle
 type TileGrid [HT][VT]Tile
@@ -211,7 +216,7 @@ var cores, chunkSize, chunkSizeDepth int
 
 var car, teapot, skull, monkey, person, cat, level Model
 
-var width, height int = 640, 360
+var width, height int = 1280, 720
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -310,6 +315,31 @@ func (v1 *Vertex4D) subtract(v2 *Vertex4D) Vertex4D {
 	}
 }
 
+func (v1 *Vertex4D) add(v2 *Vertex4D) Vertex4D {
+	return Vertex4D{
+		v1.x + v2.x,
+		v1.y + v2.y,
+		v1.z + v2.z,
+		v1.w + v2.w,
+	}
+}
+
+func (v1 *Vertex2D) subtract(v2 *Vertex2D) Vertex2D {
+	return Vertex2D{
+		v1.x - v2.x,
+		v1.y - v2.y,
+	}
+}
+
+func (v1 *Vertex4D) multiply(v2 *Vertex4D) Vertex4D {
+	return Vertex4D{
+		v1.x * v2.x,
+		v1.y * v2.y,
+		v1.z * v2.z,
+		v1.w * v2.w,
+	}
+}
+
 func (vertex *Vertex3D) convertToMatrix() Matrix {
 	return Matrix{{vertex.x, vertex.y, vertex.z, 1}}
 }
@@ -396,9 +426,9 @@ func (triangle *ComputedTriangle) barycentricCoordinates(vs1, vs2 *Vertex4D, x, 
 }
 
 func (triangle *ComputedTriangle) edgeSpan(x, y *int) (w0, w1, w2 float32) {
-	w0 = (triangle.vertices[2].y - triangle.vertices[1].y) * (float32(*x) - triangle.vertices[1].x) - (triangle.vertices[2].x - triangle.vertices[1].x) * (float32(*y) - triangle.vertices[1].y)
-	w1 = (triangle.vertices[0].y - triangle.vertices[2].y) * (float32(*x) - triangle.vertices[2].x) - (triangle.vertices[0].x - triangle.vertices[2].x) * (float32(*y) - triangle.vertices[2].y)
-	w2 = (triangle.vertices[1].y - triangle.vertices[0].y) * (float32(*x) - triangle.vertices[0].x) - (triangle.vertices[1].x - triangle.vertices[0].x) * (float32(*y) - triangle.vertices[0].y)
+	w0 = (triangle.vertices[2].y-triangle.vertices[1].y)*(float32(*x)-triangle.vertices[1].x) - (triangle.vertices[2].x-triangle.vertices[1].x)*(float32(*y)-triangle.vertices[1].y)
+	w1 = (triangle.vertices[0].y-triangle.vertices[2].y)*(float32(*x)-triangle.vertices[2].x) - (triangle.vertices[0].x-triangle.vertices[2].x)*(float32(*y)-triangle.vertices[2].y)
+	w2 = (triangle.vertices[1].y-triangle.vertices[0].y)*(float32(*x)-triangle.vertices[0].x) - (triangle.vertices[1].x-triangle.vertices[0].x)*(float32(*y)-triangle.vertices[0].y)
 
 	return
 }
@@ -425,7 +455,29 @@ func (v1 *Vertex2D) interpolate(v2 *Vertex2D, factor float32) Vertex2D {
 	}
 }
 
+func interpolate(i0, d0, i1, d1 float32) (values []float32) {
+	a := (d1 - d0) / (i1 - i0)
+	d := d0
+
+	for i := i0; i < i1; i++ {
+		values = append(values, d)
+		d += a
+	}
+
+	return values
+}
+
 func clamp(value, min, max int) int {
+	if value < min {
+		return min
+	}
+	if value > max {
+		return max
+	}
+	return value
+}
+
+func clampF(value, min, max float32) float32 {
 	if value < min {
 		return min
 	}
@@ -470,16 +522,21 @@ func (buffer *FloatBuffer) clearDepth() {
 }
 
 func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *FloatBuffer, texture *Buffer, image *ebiten.Image, xPos, yPos int, tileGrid *TileGrid) {
-	var minX = clamp(triangle.minX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
-	var minY = clamp(triangle.minY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
-	var maxX = clamp(triangle.maxX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
-	var maxY = clamp(triangle.maxY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
 
-	for x := minX; x <= maxX; x++ {
-		for y := minY; y <= maxY; y++ {
-			var w0, w1, w2 float32 = triangle.edgeSpan(&x, &y)
-			
-			if w0 >= 0 && w1 >= 0 && w2 >= 0 {
+	//var minX = clamp(triangle.minX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
+	//var minY = clamp(triangle.minY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
+	//var maxX = clamp(triangle.maxX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
+	//var maxY = clamp(triangle.maxY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
+
+	//var invSlope1 float32 = (copiedVertex[1].x - copiedVertex[0].x) / (copiedVertex[1].y - copiedVertex[0].y)
+	//var invSlope2 float32 = (copiedVertex[2].x - copiedVertex[0].x) / (copiedVertex[2].y - copiedVertex[0].y)
+	//
+	//var curX1 float32 = copiedVertex[0].x
+	//var curX2 float32 = copiedVertex[0].x
+
+	/*for y := clamp(int(copiedVertex[0].y), 1, height + 1); y < clamp(int(copiedVertex[1].y), 1, height + 1); y++ {
+		if int(curX1) < int(curX2) {
+			for x := clamp(int(curX1), 1, width + 1); x < clamp(int(curX2), 1, width + 1); x++ {
 				var s, t, w float32 = triangle.barycentricCoordinates(&triangle.vs1, &triangle.vs2, &x, &y, &triangle.span)
 				var depth float32 = w*triangle.vertices[0].z + s*triangle.vertices[1].z + t*triangle.vertices[2].z
 				var position int = (y-1)*(width) + (x - 1)
@@ -497,6 +554,10 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 					var colorLocation int = ((ty*image.Bounds().Dx() + tx) * 4) % (image.Bounds().Dx() * image.Bounds().Dy() * 4)
 
+					if colorLocation < 0 {
+						colorLocation = - colorLocation
+					}
+
 					(*depthBuffer)[position] = depth
 
 					(*buffer)[location] = (*texture)[colorLocation]
@@ -505,7 +566,98 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 				}
 			}
 		}
+
+		curX1 += invSlope1
+		curX2 += invSlope2
+	}*/
+
+	var copiedVertex [3]Vertex4D = triangle.vertices
+
+	sort.Slice(copiedVertex[:], func(i, j int) bool {
+		return copiedVertex[j].y > copiedVertex[i].y
+	})
+
+	var ti [3]Vertex2Di = [3]Vertex2Di{
+		{int(copiedVertex[0].x), int(copiedVertex[0].y)},
+		{int(copiedVertex[1].x), int(copiedVertex[1].y)},
+		{int(copiedVertex[2].x), int(copiedVertex[2].y)},
 	}
+
+	var totalHeight int = ti[2].y - ti[0].y
+
+	for i := 0; i < totalHeight; i++ {
+		secondHalf := i > ti[1].y-ti[0].y || (ti[1].y) == (ti[0].y)
+		var segmentHeight, betaHalf int
+
+		if secondHalf {
+			segmentHeight = ti[2].y - ti[1].y
+			betaHalf = ti[1].y - ti[0].y
+		} else {
+			segmentHeight = ti[1].y - ti[0].y
+			betaHalf = 0
+		}
+
+		var alpha float32 = float32(i) / float32(totalHeight)
+		var beta float32 = float32(i-betaHalf) / float32(segmentHeight)
+
+		var a Vertex2Di = Vertex2Di{
+			ti[0].x + int(float32(ti[2].x-ti[0].x)*alpha),
+			ti[0].y + int(float32(ti[2].y-ti[0].y)*alpha),
+		}
+
+		var b Vertex2Di
+
+		if secondHalf {
+			b = Vertex2Di{
+				ti[1].x + int(float32(ti[2].x-ti[1].x)*beta),
+				ti[1].y + int(float32(ti[2].y-ti[1].y)*beta),
+			}
+		} else {
+			b = Vertex2Di{
+				ti[0].x + int(float32(ti[1].x-ti[0].x)*beta),
+				ti[0].y + int(float32(ti[1].y-ti[0].y)*beta),
+			}
+		}
+
+		if a.x > b.x {
+			var temp Vertex2Di = a
+			a = b
+			b = temp
+		}
+
+		for j := clamp(a.x, 1, width+1); j < clamp(b.x, 1, width+1); j++ {
+			var offset int = clamp(ti[0].y+i, 1, height)
+
+			var s, t, w float32 = triangle.barycentricCoordinates(&triangle.vs1, &triangle.vs2, &j, &offset, &triangle.span)
+			var position int = (offset-1)*(width) + (j - 1)
+			var depth float32 = w*triangle.vertices[0].z + s*triangle.vertices[1].z + t*triangle.vertices[2].z
+
+			if depth < (*depthBuffer)[position] {
+				var location int = position * 4
+
+				var wt float32 = w*triangle.at.z + s*triangle.bt.z + t*triangle.ct.z
+
+				var uvX float32 = (w*triangle.at.x + s*triangle.bt.x + t*triangle.ct.x) / wt
+				var uvY float32 = (w*triangle.at.y + s*triangle.bt.y + t*triangle.ct.y) / wt
+
+				var tx int = int(uvX * float32(image.Bounds().Dx()))
+				var ty int = int((1 - uvY) * float32(image.Bounds().Dy()))
+
+				var colorLocation int = ((ty*image.Bounds().Dx() + tx) * 4) % (image.Bounds().Dx() * image.Bounds().Dy() * 4)
+
+				if colorLocation < 0 {
+					colorLocation = -colorLocation
+				}
+
+				(*depthBuffer)[position] = depth
+
+				(*buffer)[location] = (*texture)[colorLocation]
+				(*buffer)[location+1] = (*texture)[colorLocation+1]
+				(*buffer)[location+2] = (*texture)[colorLocation+2]
+			}
+		}
+	}
+
 }
 
 func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, factor float32, axis int) {
@@ -863,9 +1015,9 @@ func init() {
 func main() {
 	fmt.Println("Initializing Polygon Core")
 
-	ebiten.SetWindowSize(640, 360)
+	ebiten.SetWindowSize(width, height)
 	ebiten.SetWindowTitle("Polygon Core - V2")
-	ebiten.SetVsyncEnabled(true)
+	ebiten.SetVsyncEnabled(false)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
@@ -886,17 +1038,17 @@ func main() {
 	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 100)
 	fmt.Println("Projection Matrix Initialized")
 
-	car = NewModel("Car.obj")
+	//car = NewModel("Car.obj")
 	teapot = NewModel("Teapot.obj")
-	skull = NewModel("Skull_HQ.obj")
-	monkey = NewModel("Monkey.obj")
-	person = NewModel("Person.obj")
-	cat = NewModel("Cat.obj")
-	level = NewModel("Autumn.obj")
+	//skull = NewModel("Skull_HQ.obj")
+	//monkey = NewModel("Monkey.obj")
+	//person = NewModel("Person.obj")
+	//cat = NewModel("Cat.obj")
+	//level = NewModel("Autumn.obj")
 
 	fmt.Println("Triangle Data Initialized")
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryOpenGL, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryDirectX, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -315,31 +315,6 @@ func (v1 *Vertex4D) subtract(v2 *Vertex4D) Vertex4D {
 	}
 }
 
-func (v1 *Vertex4D) add(v2 *Vertex4D) Vertex4D {
-	return Vertex4D{
-		v1.x + v2.x,
-		v1.y + v2.y,
-		v1.z + v2.z,
-		v1.w + v2.w,
-	}
-}
-
-func (v1 *Vertex2D) subtract(v2 *Vertex2D) Vertex2D {
-	return Vertex2D{
-		v1.x - v2.x,
-		v1.y - v2.y,
-	}
-}
-
-func (v1 *Vertex4D) multiply(v2 *Vertex4D) Vertex4D {
-	return Vertex4D{
-		v1.x * v2.x,
-		v1.y * v2.y,
-		v1.z * v2.z,
-		v1.w * v2.w,
-	}
-}
-
 func (vertex *Vertex3D) convertToMatrix() Matrix {
 	return Matrix{{vertex.x, vertex.y, vertex.z, 1}}
 }
@@ -425,14 +400,6 @@ func (triangle *ComputedTriangle) barycentricCoordinates(vs1, vs2 *Vertex4D, x, 
 	return
 }
 
-func (triangle *ComputedTriangle) edgeSpan(x, y *int) (w0, w1, w2 float32) {
-	w0 = (triangle.vertices[2].y-triangle.vertices[1].y)*(float32(*x)-triangle.vertices[1].x) - (triangle.vertices[2].x-triangle.vertices[1].x)*(float32(*y)-triangle.vertices[1].y)
-	w1 = (triangle.vertices[0].y-triangle.vertices[2].y)*(float32(*x)-triangle.vertices[2].x) - (triangle.vertices[0].x-triangle.vertices[2].x)*(float32(*y)-triangle.vertices[2].y)
-	w2 = (triangle.vertices[1].y-triangle.vertices[0].y)*(float32(*x)-triangle.vertices[0].x) - (triangle.vertices[1].x-triangle.vertices[0].x)*(float32(*y)-triangle.vertices[0].y)
-
-	return
-}
-
 func (v *Vertex4D) convertToNormalized() {
 	v.x /= v.w
 	v.y /= v.w
@@ -455,29 +422,7 @@ func (v1 *Vertex2D) interpolate(v2 *Vertex2D, factor float32) Vertex2D {
 	}
 }
 
-func interpolate(i0, d0, i1, d1 float32) (values []float32) {
-	a := (d1 - d0) / (i1 - i0)
-	d := d0
-
-	for i := i0; i < i1; i++ {
-		values = append(values, d)
-		d += a
-	}
-
-	return values
-}
-
 func clamp(value, min, max int) int {
-	if value < min {
-		return min
-	}
-	if value > max {
-		return max
-	}
-	return value
-}
-
-func clampF(value, min, max float32) float32 {
 	if value < min {
 		return min
 	}
@@ -534,12 +479,8 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 		{int(copiedVertex[2].x), int(copiedVertex[2].y)},
 	}
 
-	var totalHeight int = ti[2].y - ti[0].y
-
 	for k := clamp(ti[0].y, yPos*tileSizeY+1, yPos*tileSizeY+tileSizeY+1); k < clamp(ti[2].y, yPos*tileSizeY+1, yPos*tileSizeY+tileSizeY+1); k++ {
 		var i int = k - ti[0].y
-
-		//fmt.Println(i)
 
 		secondHalf := i > ti[1].y-ti[0].y || ti[1].y == ti[0].y
 		var segmentHeight, betaHalf int
@@ -549,10 +490,9 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 			betaHalf = ti[1].y - ti[0].y
 		} else {
 			segmentHeight = ti[1].y - ti[0].y
-			betaHalf = 0
 		}
 
-		var alpha float32 = float32(i) / float32(totalHeight)
+		var alpha float32 = float32(i) / float32(ti[2].y-ti[0].y)
 		var beta float32 = float32(i-betaHalf) / float32(segmentHeight)
 
 		var a Vertex2Di = Vertex2Di{
@@ -582,8 +522,9 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 		for j := clamp(a.x, xPos*tileSizeX+1, xPos*tileSizeX+tileSizeX+1); j < clamp(b.x, xPos*tileSizeX+1, xPos*tileSizeX+tileSizeX+1); j++ {
 			var s, t, w float32 = triangle.barycentricCoordinates(&triangle.vs1, &triangle.vs2, &j, &k, &triangle.span)
-			var position int = (k-1)*(width) + (j - 1)
 			var depth float32 = w*triangle.vertices[0].z + s*triangle.vertices[1].z + t*triangle.vertices[2].z
+
+			var position int = (k-1)*(width) + (j - 1)
 
 			if depth < (*depthBuffer)[position] {
 				var location int = position * 4
@@ -970,7 +911,7 @@ func main() {
 
 	ebiten.SetWindowSize(width, height)
 	ebiten.SetWindowTitle("Polygon Core - V2")
-	ebiten.SetVsyncEnabled(false)
+	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
@@ -993,12 +934,12 @@ func main() {
 	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 100)
 	fmt.Println("Projection Matrix Initialized")
 
-	//car = NewModel("Car.obj")
+	car = NewModel("Car.obj")
 	teapot = NewModel("Teapot.obj")
-	//skull = NewModel("Skull_HQ.obj")
-	//monkey = NewModel("Monkey.obj")
-	//person = NewModel("Person.obj")
-	//cat = NewModel("Cat.obj")
+	skull = NewModel("Skull_HQ.obj")
+	monkey = NewModel("Monkey.obj")
+	person = NewModel("Person.obj")
+	cat = NewModel("Cat.obj")
 	//level = NewModel("Autumn.obj")
 
 	fmt.Println("Triangle Data Initialized")

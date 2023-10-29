@@ -201,8 +201,8 @@ type Buffer []byte
 type FloatBuffer []float32
 type Matrix [][]float32
 
-const HT = 1
-const VT = 1
+const HT = 4
+const VT = 3
 
 type Tile []ComputedTriangle
 type TileGrid [HT][VT]Tile
@@ -522,55 +522,6 @@ func (buffer *FloatBuffer) clearDepth() {
 }
 
 func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *FloatBuffer, texture *Buffer, image *ebiten.Image, xPos, yPos int, tileGrid *TileGrid) {
-
-	//var minX = clamp(triangle.minX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
-	//var minY = clamp(triangle.minY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
-	//var maxX = clamp(triangle.maxX, xPos*tileSizeX, xPos*tileSizeX+tileSizeX)
-	//var maxY = clamp(triangle.maxY, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
-
-	//var invSlope1 float32 = (copiedVertex[1].x - copiedVertex[0].x) / (copiedVertex[1].y - copiedVertex[0].y)
-	//var invSlope2 float32 = (copiedVertex[2].x - copiedVertex[0].x) / (copiedVertex[2].y - copiedVertex[0].y)
-	//
-	//var curX1 float32 = copiedVertex[0].x
-	//var curX2 float32 = copiedVertex[0].x
-
-	/*for y := clamp(int(copiedVertex[0].y), 1, height + 1); y < clamp(int(copiedVertex[1].y), 1, height + 1); y++ {
-		if int(curX1) < int(curX2) {
-			for x := clamp(int(curX1), 1, width + 1); x < clamp(int(curX2), 1, width + 1); x++ {
-				var s, t, w float32 = triangle.barycentricCoordinates(&triangle.vs1, &triangle.vs2, &x, &y, &triangle.span)
-				var depth float32 = w*triangle.vertices[0].z + s*triangle.vertices[1].z + t*triangle.vertices[2].z
-				var position int = (y-1)*(width) + (x - 1)
-
-				if depth < (*depthBuffer)[position] {
-					var location int = (position) * 4
-
-					var wt float32 = w*triangle.at.z + s*triangle.bt.z + t*triangle.ct.z
-
-					var uvX float32 = (w*triangle.at.x + s*triangle.bt.x + t*triangle.ct.x) / wt
-					var uvY float32 = (w*triangle.at.y + s*triangle.bt.y + t*triangle.ct.y) / wt
-
-					var tx int = int(uvX * float32(image.Bounds().Dx()))
-					var ty int = int((1 - uvY) * float32(image.Bounds().Dy()))
-
-					var colorLocation int = ((ty*image.Bounds().Dx() + tx) * 4) % (image.Bounds().Dx() * image.Bounds().Dy() * 4)
-
-					if colorLocation < 0 {
-						colorLocation = - colorLocation
-					}
-
-					(*depthBuffer)[position] = depth
-
-					(*buffer)[location] = (*texture)[colorLocation]
-					(*buffer)[location+1] = (*texture)[colorLocation+1]
-					(*buffer)[location+2] = (*texture)[colorLocation+2]
-				}
-			}
-		}
-
-		curX1 += invSlope1
-		curX2 += invSlope2
-	}*/
-
 	var copiedVertex [3]Vertex4D = triangle.vertices
 
 	sort.Slice(copiedVertex[:], func(i, j int) bool {
@@ -585,8 +536,12 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 	var totalHeight int = ti[2].y - ti[0].y
 
-	for i := 0; i < totalHeight; i++ {
-		secondHalf := i > ti[1].y-ti[0].y || (ti[1].y) == (ti[0].y)
+	for k := clamp(ti[0].y, yPos*tileSizeY+1, yPos*tileSizeY+tileSizeY+1); k < clamp(ti[2].y, yPos*tileSizeY+1, yPos*tileSizeY+tileSizeY+1); k++ {
+		var i int = k - ti[0].y
+
+		//fmt.Println(i)
+
+		secondHalf := i > ti[1].y-ti[0].y || ti[1].y == ti[0].y
 		var segmentHeight, betaHalf int
 
 		if secondHalf {
@@ -601,21 +556,21 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 		var beta float32 = float32(i-betaHalf) / float32(segmentHeight)
 
 		var a Vertex2Di = Vertex2Di{
-			ti[0].x + int(float32(ti[2].x-ti[0].x)*alpha),
-			ti[0].y + int(float32(ti[2].y-ti[0].y)*alpha),
+			int(float32(ti[0].x) + float32(ti[2].x-ti[0].x)*alpha),
+			int(float32(ti[0].y) + float32(ti[2].y-ti[0].y)*alpha),
 		}
 
 		var b Vertex2Di
 
 		if secondHalf {
 			b = Vertex2Di{
-				ti[1].x + int(float32(ti[2].x-ti[1].x)*beta),
-				ti[1].y + int(float32(ti[2].y-ti[1].y)*beta),
+				int(float32(ti[1].x) + float32(ti[2].x-ti[1].x)*beta),
+				int(float32(ti[1].y) + float32(ti[2].y-ti[1].y)*beta),
 			}
 		} else {
 			b = Vertex2Di{
-				ti[0].x + int(float32(ti[1].x-ti[0].x)*beta),
-				ti[0].y + int(float32(ti[1].y-ti[0].y)*beta),
+				int(float32(ti[0].x) + float32(ti[1].x-ti[0].x)*beta),
+				int(float32(ti[0].y) + float32(ti[1].y-ti[0].y)*beta),
 			}
 		}
 
@@ -625,11 +580,9 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 			b = temp
 		}
 
-		for j := clamp(a.x, 1, width+1); j < clamp(b.x, 1, width+1); j++ {
-			var offset int = clamp(ti[0].y+i, 1, height)
-
-			var s, t, w float32 = triangle.barycentricCoordinates(&triangle.vs1, &triangle.vs2, &j, &offset, &triangle.span)
-			var position int = (offset-1)*(width) + (j - 1)
+		for j := clamp(a.x, xPos*tileSizeX+1, xPos*tileSizeX+tileSizeX+1); j < clamp(b.x, xPos*tileSizeX+1, xPos*tileSizeX+tileSizeX+1); j++ {
+			var s, t, w float32 = triangle.barycentricCoordinates(&triangle.vs1, &triangle.vs2, &j, &k, &triangle.span)
+			var position int = (k-1)*(width) + (j - 1)
 			var depth float32 = w*triangle.vertices[0].z + s*triangle.vertices[1].z + t*triangle.vertices[2].z
 
 			if depth < (*depthBuffer)[position] {
@@ -1024,6 +977,8 @@ func main() {
 
 	cores = runtime.NumCPU()
 	runtime.LockOSThread()
+
+	cameraPosition.z -= 3
 
 	screenBuffer = make(Buffer, width*height*4)
 	chunkSize = (width * height * 4) / (HT * VT)

@@ -1,4 +1,4 @@
-module rgoti/mod
+module rgoti/ghetty
 
 go 1.20
 

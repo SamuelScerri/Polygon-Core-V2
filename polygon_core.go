@@ -212,11 +212,11 @@ var tileSizeY int = height / VT
 
 var screenBuffer Buffer
 var depthBuffer FloatBuffer
-var cores, chunkSize, chunkSizeDepth int
+var chunkSize, chunkSizeDepth int
 
 var car, teapot, skull, monkey, person, cat, level Model
 
-var width, height int = 1280, 720
+var width, height int = 1920, 1080
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -548,6 +548,10 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 				(*buffer)[location] = (*texture)[colorLocation]
 				(*buffer)[location+1] = (*texture)[colorLocation+1]
 				(*buffer)[location+2] = (*texture)[colorLocation+2]
+
+				//(*buffer)[location] = 255
+				//(*buffer)[location+1] = 255
+				//(*buffer)[location+2] = 255
 			}
 		}
 	}
@@ -899,7 +903,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("Brick.png")
+	cobble, _, err = ebitenutil.NewImageFromFile("brick.png")
 
 	if err != nil {
 		log.Fatal(err)
@@ -915,8 +919,8 @@ func main() {
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
+	ebiten.SetFullscreen(true)
 
-	cores = runtime.NumCPU()
 	runtime.LockOSThread()
 
 	cameraPosition.z -= 3
@@ -934,12 +938,12 @@ func main() {
 	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 100)
 	fmt.Println("Projection Matrix Initialized")
 
-	car = NewModel("Car.obj")
-	teapot = NewModel("Teapot.obj")
-	skull = NewModel("Skull_HQ.obj")
-	monkey = NewModel("Monkey.obj")
-	person = NewModel("Person.obj")
-	cat = NewModel("Cat.obj")
+	//car = NewModel("Car.obj")
+	teapot = NewModel("teapot.obj")
+	//skull = NewModel("Skull_HQ.obj")
+	//monkey = NewModel("Monkey.obj")
+	//person = NewModel("Person.obj")
+	//cat = NewModel("Cat.obj")
 	//level = NewModel("Autumn.obj")
 
 	fmt.Println("Triangle Data Initialized")

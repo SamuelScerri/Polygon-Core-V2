@@ -20,8 +20,7 @@ The future iterations of Polygon Core will utilize a Super Resolution Model to i
 - Wavefront OBJ Support
 
 # Features That Will Be Added:
-- WebAssembly Support (Final Output Should Be Of Type ImageData)
-- Super Resolution Upscaling (Using WebAssembly & TensorFlow)
+- Super Resolution Upscaling
 
 # Features That MIGHT Be Added:
 - SDL2 Version

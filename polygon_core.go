@@ -199,6 +199,7 @@ type ComputedTriangle struct {
 
 	minX, maxX, minY, maxY int
 	na, nb, nc Vertex3D
+	fa, fb, fc Vertex3D
 }
 
 type Buffer []byte
@@ -218,7 +219,7 @@ var screenBuffer Buffer
 var depthBuffer FloatBuffer
 var chunkSize, chunkSizeDepth int
 
-var car, teapot, skull, monkey, person, cat, level Model
+var car, teapot, bunny, skull, monkey, person, cat, level Model
 
 var width, height int = 640, 360
 var aspectRatio float32 = float32(width) / float32(height)
@@ -346,6 +347,10 @@ func (vertex *Vertex3D) convertToMatrix() Matrix {
 	return Matrix{{vertex.x, vertex.y, vertex.z, 1}}
 }
 
+func (vertex *Vertex4D) convertToMatrix() Matrix {
+	return Matrix{{vertex.x, vertex.y, vertex.z, vertex.w}}
+}
+
 func (m1 *Matrix) multiplyMatrix(m2 *Matrix) (result Matrix) {
 	result = make(Matrix, len(*m1))
 
@@ -366,16 +371,42 @@ func (matrix *Matrix) convertToVertex() Vertex4D {
 	return Vertex4D{(*matrix)[0][0], (*matrix)[0][1], (*matrix)[0][2], (*matrix)[0][3]}
 }
 
+func (matrix *Matrix) convertToVertex3() Vertex3D {
+	return Vertex3D{(*matrix)[0][0], (*matrix)[0][1], (*matrix)[0][2]}
+}
+
 func (triangle *Triangle) multiplyMatrix(m2 *Matrix) (result ComputedTriangle) {
 	var tm1, tm2, tm3 Matrix = triangle.vertices[0].convertToMatrix(), triangle.vertices[1].convertToMatrix(), triangle.vertices[2].convertToMatrix()
 	tm1, tm2, tm3 = tm1.multiplyMatrix(m2), tm2.multiplyMatrix(m2), tm3.multiplyMatrix(m2)
+
+	/*inverseMatrix := Matrix{
+		{(*m2)[0][0], (*m2)[0][1], (*m2)[0][2], (*m2)[0][3]},
+		{(*m2)[1][0], (*m2)[1][1], (*m2)[1][2], (*m2)[1][3]},
+		{(*m2)[2][0], (*m2)[2][1], (*m2)[2][2], (*m2)[2][3]},
+		{(*m2)[3][0], (*m2)[3][1], (*m2)[3][2], (*m2)[3][3]},
+	}*/
+
+	//inverseMatrix := Matrix{
+	//	{(*m2)[0][0], (*m2)[1][0], (*m2)[2][0], (*m2)[0][3]},
+	//	{(*m2)[0][1], (*m2)[1][1], (*m2)[2][1], (*m2)[1][3]},
+	//	{(*m2)[0][2], (*m2)[1][2], (*m2)[2][2], (*m2)[2][3]},
+	//	{(*m2)[3][0], (*m2)[3][1], (*m2)[3][2], (*m2)[3][3]},
+	//}
+
+	inverseMatrix := *m2
+
+	var nm1, nm2, nm3 Matrix = triangle.normals[0].convertToMatrix(), triangle.normals[1].convertToMatrix(), triangle.normals[2].convertToMatrix()
+	nm1, nm2, nm3 = nm1.multiplyMatrix(&inverseMatrix), nm2.multiplyMatrix(&inverseMatrix), nm3.multiplyMatrix(&inverseMatrix)
 
 	result.vertices[0] = tm1.convertToVertex()
 	result.vertices[1] = tm2.convertToVertex()
 	result.vertices[2] = tm3.convertToVertex()
 
+	result.normals[0] = nm1.convertToVertex3()
+	result.normals[1] = nm2.convertToVertex3()
+	result.normals[2] = nm3.convertToVertex3()
+
 	result.uv = triangle.uv
-	result.normals = triangle.normals
 
 	return
 }
@@ -587,25 +618,48 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 				(*depthBuffer)[position] = depth
 			
-				var lightDir Vertex4D = Vertex4D{0, 0, 1, 0}
+				var lightDir Vertex4D = Vertex4D{1, 0, 0, 0}
 				lightDir = lightDir.normalize()
 
-				var wn float32 = w*triangle.na.z + s*triangle.nb.z + t*triangle.nc.z
+				var fragPos Vertex3D = Vertex3D{
+					w*triangle.fa.x + s*triangle.fb.x + t*triangle.fc.x,
+					w*triangle.fa.y + s*triangle.fb.y + t*triangle.fc.y,
+					w*triangle.fa.z + s*triangle.fb.z + t*triangle.fc.z,
+				}
+
+				//var wn float32 = w*triangle.na.z + s*triangle.nb.z + t*triangle.nc.z
 				var interpolatedNormal Vertex4D = Vertex4D{
-					(w * triangle.na.x + s * triangle.nb.x + t * triangle.nc.x) / wn,
-					(w * triangle.na.y + s * triangle.nb.y + t * triangle.nc.y) / wn,
-					(w * triangle.na.z + s * triangle.nb.z + t * triangle.nc.z) / wn,
+					(w * triangle.na.x + s * triangle.nb.x + t * triangle.nc.x),
+					(w * triangle.na.y + s * triangle.nb.y + t * triangle.nc.y),
+					(w * triangle.na.z + s * triangle.nb.z + t * triangle.nc.z),
 					0,
 				}
 
 				interpolatedNormal = interpolatedNormal.normalize()
 				var lightIntensity float32 = interpolatedNormal.dot(&lightDir)
 
-				var rawColor [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
+				var viewDir = Vertex4D{
+					cameraPosition.x - fragPos.x,
+					cameraPosition.y - fragPos.y,
+					cameraPosition.z - fragPos.z, 0,
+				}
+
+				viewDir = viewDir.normalize()
+
+				var reflectDir = Vertex4D{
+					-lightDir.x - 2 * -lightIntensity * interpolatedNormal.x,
+					-lightDir.y - 2 * -lightIntensity * interpolatedNormal.y,
+					-lightDir.z - 2 * -lightIntensity * interpolatedNormal.z,
+					0,
+				}
+
+				var specular float32 = math32.Pow(viewDir.dot(&reflectDir), 64) * 4
+
+				var color [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
 				
-				(*buffer)[location] = uint8(clamp(int(rawColor[0] * lightIntensity * 255), 0, 255))
-				(*buffer)[location+1] = uint8(clamp(int(rawColor[1] * lightIntensity * 255), 0, 255))
-				(*buffer)[location+2] = uint8(clamp(int(rawColor[2] * lightIntensity * 255), 0, 255))
+				(*buffer)[location] = uint8(clamp(int(color[0] * 1 * (0 + specular + lightIntensity) * 255), 0, 255))
+				(*buffer)[location+1] = uint8(clamp(int(color[1] * 1 * (0 + specular + lightIntensity) * 255), 0, 255))
+				(*buffer)[location+2] = uint8(clamp(int(color[2] * 1 * (0 + specular + lightIntensity) * 255), 0, 255))
 			}
 		}
 	}
@@ -763,6 +817,10 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 				Vertex3D{normaldat[0].x / computedVertices[0].w, normaldat[0].y / computedVertices[0].w, normaldat[0].z / computedVertices[0].w},
 				Vertex3D{normaldat[index+1].x / computedVertices[index+1].w, normaldat[index+1].y / computedVertices[index+1].w, normaldat[index+1].z / computedVertices[index+1].w},
 				Vertex3D{normaldat[index+2].x / computedVertices[index+2].w, normaldat[index+2].y / computedVertices[index+2].w, normaldat[index+2].z / computedVertices[index+2].w},
+
+				Vertex3D{vertices[0].x, vertices[0].y, vertices[0].z},
+				Vertex3D{vertices[1].x, vertices[1].y, vertices[1].z},
+				Vertex3D{vertices[2].x, vertices[2].y, vertices[2].z},
 			}
 
 			newTriangle.minX, newTriangle.minY, newTriangle.maxX, newTriangle.maxY = newTriangle.bounds()
@@ -867,6 +925,8 @@ func (m *Model) processModel(transformationMatrix *Matrix, buffer *[]Triangle) {
 	}
 }
 
+var rotation Vertex3D
+
 func (g *Game) Draw(screen *ebiten.Image) {
 	wg.Wait()
 
@@ -879,7 +939,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//rotationDegrees.y += 1
 	//rotationDegrees.x += 1
 
-	//var rotation Vertex3D
+	
+	rotation.y += 1
+
+	var rotmaty = createTransformationMatrix(Vertex3D{0, 0, 0}, rotation.convertToQuaternion())
 
 	var cameraRotationX Vertex3D = Vertex3D{cameraRotation.x, 0, 0}
 	var cameraRotationY Vertex3D = Vertex3D{0, cameraRotation.y, 0}
@@ -900,9 +963,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	transformationMatrix = transformationMatrix.multiplyMatrix(&rotationMatrixZ)
 	transformationMatrix = transformationMatrix.multiplyMatrix(&projectionMatrix)
 
+	
+
 	var triData []Triangle
 
-	teapot.processModel(&transformationMatrix, &triData)
+	//teapot.processModel(&transformationMatrix, &triData)
+	bunny.processModel(&transformationMatrix, &triData)
 	//car.processModel(&transformationMatrix, &triData)
 	//skull.processModel(&transformationMatrix, &triData)
 	//monkey.processModel(&transformationMatrix, &triData)
@@ -919,7 +985,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 		go func(chunk int, model *Model, grid *TileGrid) {
 			for t := chunk * amountPerCore; t < chunk*amountPerCore+amountPerCore; t++ {
-				var convertedTriangle = triData[t].multiplyMatrix(&transformationMatrix)
+				matrix := rotmaty.multiplyMatrix(&transformationMatrix)
+
+				var convertedTriangle = triData[t].multiplyMatrix(&matrix)
 
 				convertedTriangle.clip(grid)
 			}
@@ -1011,12 +1079,13 @@ func main() {
 	fmt.Println("Projection Matrix Initialized")
 
 	car = NewModel("Car.obj")
+	bunny = NewModel("teapot.obj")
 	teapot = NewModel("teapot.obj")
 	skull = NewModel("Skull_HQ.obj")
 	monkey = NewModel("Monkey.obj")
 	person = NewModel("Person.obj")
 	cat = NewModel("Cat.obj")
-	//level = NewModel("Autumn.obj")
+	level = NewModel("Autumn.obj")
 
 	fmt.Println("Triangle Data Initialized")
 

@@ -150,13 +150,14 @@ func NewModel(file string) Model {
 		var tri Triangle = Triangle{
 			[3]Vertex3D{model.Vecs[model.VecIndices[i*3]-1], model.Vecs[model.VecIndices[i*3+1]-1], model.Vecs[model.VecIndices[i*3+2]-1]},
 			[3]Vertex2D{model.Uvs[model.UvIndices[i*3]-1], model.Uvs[model.UvIndices[i*3+1]-1], model.Uvs[model.UvIndices[i*3+2]-1]},
+			[3]Vertex3D{model.Normals[model.NormalIndices[i*3]-1], model.Normals[model.NormalIndices[i*3+1]-1], model.Normals[model.NormalIndices[i*3+2]-1]},
 		}
 
 		model.TriangleData = append(model.TriangleData, tri)
 	}
 
 	//fmt.Println(model.VecIndices)
-	fmt.Println(len(model.TriangleData))
+	fmt.Println(len(model.TriangleData[0].normals))
 
 	model.BoundingBox = newBoundingBox.convertToVertices()
 
@@ -183,11 +184,13 @@ type Vertex4D struct {
 type Triangle struct {
 	vertices [3]Vertex3D
 	uv       [3]Vertex2D
+	normals  [3]Vertex3D
 }
 
 type ComputedTriangle struct {
 	vertices [3]Vertex4D
 	uv       [3]Vertex2D
+	normals  [3]Vertex3D
 
 	at, bt, ct Vertex3D
 	vs1, vs2   Vertex4D
@@ -195,6 +198,7 @@ type ComputedTriangle struct {
 	span float32
 
 	minX, maxX, minY, maxY int
+	na, nb, nc Vertex3D
 }
 
 type Buffer []byte
@@ -216,7 +220,7 @@ var chunkSize, chunkSizeDepth int
 
 var car, teapot, skull, monkey, person, cat, level Model
 
-var width, height int = 1920, 1080
+var width, height int = 640, 360
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -315,6 +319,29 @@ func (v1 *Vertex4D) subtract(v2 *Vertex4D) Vertex4D {
 	}
 }
 
+
+func (v1 Vertex4D) multiply(v2 *Vertex4D) Vertex4D {
+	return Vertex4D{
+		v1.x * v2.x,
+		v1.y * v2.y,
+		v1.z * v2.z,
+		v1.w * v2.w,
+	}
+}
+
+func (v1 Vertex4D) add(v2 *Vertex4D) Vertex4D {
+	return Vertex4D{
+		v1.x + v2.x,
+		v1.y + v2.y,
+		v1.z + v2.z,
+		v1.w + v2.w,
+	}
+}
+
+func (v1 Vertex4D) dot(v2 *Vertex4D) float32 {
+	return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z
+}
+
 func (vertex *Vertex3D) convertToMatrix() Matrix {
 	return Matrix{{vertex.x, vertex.y, vertex.z, 1}}
 }
@@ -348,6 +375,7 @@ func (triangle *Triangle) multiplyMatrix(m2 *Matrix) (result ComputedTriangle) {
 	result.vertices[2] = tm3.convertToVertex()
 
 	result.uv = triangle.uv
+	result.normals = triangle.normals
 
 	return
 }
@@ -406,12 +434,26 @@ func (v *Vertex4D) convertToNormalized() {
 	v.z /= v.w
 }
 
+func (v Vertex4D) normalize() Vertex4D {
+	var magnitude float32 = math32.Sqrt((v.x * v.x) + (v.y * v.y) + (v.z * v.z))
+
+	return Vertex4D{v.x / magnitude, v.y / magnitude, v.z / magnitude, 0}
+}
+
 func (v1 *Vertex4D) interpolate(v2 *Vertex4D, factor float32) Vertex4D {
 	return Vertex4D{
 		v1.x*(1-factor) + v2.x*factor,
 		v1.y*(1-factor) + v2.y*factor,
 		v1.z*(1-factor) + v2.z*factor,
 		v1.w*(1-factor) + v2.w*factor,
+	}
+}
+
+func (v1 *Vertex3D) interpolate(v2 *Vertex3D, factor float32) Vertex3D {
+	return Vertex3D{
+		v1.x*(1-factor) + v2.x*factor,
+		v1.y*(1-factor) + v2.y*factor,
+		v1.z*(1-factor) + v2.z*factor,
 	}
 }
 
@@ -544,26 +586,40 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 				}
 
 				(*depthBuffer)[position] = depth
+			
+				var lightDir Vertex4D = Vertex4D{0, 0, 1, 0}
+				lightDir = lightDir.normalize()
 
-				(*buffer)[location] = (*texture)[colorLocation]
-				(*buffer)[location+1] = (*texture)[colorLocation+1]
-				(*buffer)[location+2] = (*texture)[colorLocation+2]
+				var wn float32 = w*triangle.na.z + s*triangle.nb.z + t*triangle.nc.z
+				var interpolatedNormal Vertex4D = Vertex4D{
+					(w * triangle.na.x + s * triangle.nb.x + t * triangle.nc.x) / wn,
+					(w * triangle.na.y + s * triangle.nb.y + t * triangle.nc.y) / wn,
+					(w * triangle.na.z + s * triangle.nb.z + t * triangle.nc.z) / wn,
+					0,
+				}
 
-				//(*buffer)[location] = 255
-				//(*buffer)[location+1] = 255
-				//(*buffer)[location+2] = 255
+				interpolatedNormal = interpolatedNormal.normalize()
+				var lightIntensity float32 = interpolatedNormal.dot(&lightDir)
+
+				var rawColor [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
+				
+				(*buffer)[location] = uint8(clamp(int(rawColor[0] * lightIntensity * 255), 0, 255))
+				(*buffer)[location+1] = uint8(clamp(int(rawColor[1] * lightIntensity * 255), 0, 255))
+				(*buffer)[location+2] = uint8(clamp(int(rawColor[2] * lightIntensity * 255), 0, 255))
 			}
 		}
 	}
 
 }
 
-func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, factor float32, axis int) {
+func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, normals *[]Vertex3D, factor float32, axis int) {
 	var data []Vertex4D
 	var uvData []Vertex2D
+	var normalData []Vertex3D
 
 	var previousVertex *Vertex4D = &(*vertices)[len(*vertices)-1]
 	var previousUV *Vertex2D = &(*uv)[len(*uv)-1]
+	var previousNormal *Vertex3D = &(*normals)[len(*normals)-1]
 
 	var previousComponent float32 = factor
 	var previousInside bool
@@ -584,6 +640,7 @@ func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, factor float32, axis int) {
 	for v := 0; v < len(*vertices); v++ {
 		var currentVertex *Vertex4D = &(*vertices)[v]
 		var currentUV *Vertex2D = &(*uv)[v]
+		var currentNormal *Vertex3D = &(*normals)[v]
 
 		var currentComponent float32 = factor
 		var currentInside bool
@@ -605,21 +662,25 @@ func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, factor float32, axis int) {
 
 			data = append(data, previousVertex.interpolate(currentVertex, factor))
 			uvData = append(uvData, previousUV.interpolate(currentUV, factor))
+			normalData = append(normalData, previousNormal.interpolate(currentNormal, factor))
 		}
 
 		if currentInside {
 			data = append(data, *currentVertex)
 			uvData = append(uvData, *currentUV)
+			normalData = append(normalData, *currentNormal)
 		}
 
 		previousVertex = currentVertex
 		previousComponent = currentComponent
 		previousInside = currentInside
 		previousUV = currentUV
+		previousNormal = currentNormal
 	}
 
 	*vertices = data
 	*uv = uvData
+	*normals = normalData
 }
 
 func (v *Vertex3D) convertToQuaternion() Vertex4D {
@@ -650,13 +711,14 @@ func (v *Vertex3D) convertToQuaternion() Vertex4D {
 func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 	var vertices []Vertex4D = t.vertices[:]
 	var uvdat []Vertex2D = t.uv[:]
+	var normaldat []Vertex3D = t.normals[:]
 
 	for i := 0; i < 2; i++ {
 		if len(vertices) > 0 {
-			clip_axis(&vertices, &uvdat, 1, i)
+			clip_axis(&vertices, &uvdat, &normaldat, 1, i)
 
 			if len(vertices) > 0 {
-				clip_axis(&vertices, &uvdat, -1, i)
+				clip_axis(&vertices, &uvdat, &normaldat, -1, i)
 			} else {
 				break
 			}
@@ -665,32 +727,42 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 		}
 	}
 
+	var computedVertices []Vertex4D
+
 	//We Pre-Convert The Vertices Here To Avoid Doing The Same Calculations Twice On Every Triangle
 	for i := 0; i < len(vertices); i++ {
-		vertices[i].convertToNormalized()
-		vertices[i].convertToScreenSpace()
+		var tempVertex Vertex4D = vertices[i]
+
+		tempVertex.convertToNormalized()
+		tempVertex.convertToScreenSpace()
+
+		computedVertices = append(computedVertices, tempVertex)
 	}
 
 	//Finally We Build All The Triangles
-	for index := 0; index < len(vertices)-2; index++ {
+	for index := 0; index < len(computedVertices)-2; index++ {
 
-		t1 := vertices[index+1].subtract(&vertices[0])
-		t2 := vertices[index+2].subtract(&vertices[0])
+		t1 := computedVertices[index+1].subtract(&computedVertices[0])
+		t2 := computedVertices[index+2].subtract(&computedVertices[0])
 
 		crossed := t1.cross(&t2)
 
 		if crossed.z < 0 {
 			var newTriangle ComputedTriangle = ComputedTriangle{
-				[3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
+				[3]Vertex4D{computedVertices[0], computedVertices[index+1], computedVertices[index+2]},
 				[3]Vertex2D{uvdat[0], uvdat[index+1], uvdat[index+2]},
+				[3]Vertex3D{normaldat[0], normaldat[index+1], normaldat[index+2]},
 
-				Vertex3D{uvdat[0].x / vertices[0].w, uvdat[0].y / vertices[0].w, 1 / vertices[0].w},
-				Vertex3D{uvdat[index+1].x / vertices[index+1].w, uvdat[index+1].y / vertices[index+1].w, 1 / vertices[index+1].w},
-				Vertex3D{uvdat[index+2].x / vertices[index+2].w, uvdat[index+2].y / vertices[index+2].w, 1 / vertices[index+2].w},
+				Vertex3D{uvdat[0].x / computedVertices[0].w, uvdat[0].y / computedVertices[0].w, 1 / computedVertices[0].w},
+				Vertex3D{uvdat[index+1].x / computedVertices[index+1].w, uvdat[index+1].y / computedVertices[index+1].w, 1 / computedVertices[index+1].w},
+				Vertex3D{uvdat[index+2].x / computedVertices[index+2].w, uvdat[index+2].y / computedVertices[index+2].w, 1 / computedVertices[index+2].w},
 
 				Vertex4D{}, Vertex4D{}, 0,
 
 				0, 0, 0, 0,
+				Vertex3D{normaldat[0].x / computedVertices[0].w, normaldat[0].y / computedVertices[0].w, normaldat[0].z / computedVertices[0].w},
+				Vertex3D{normaldat[index+1].x / computedVertices[index+1].w, normaldat[index+1].y / computedVertices[index+1].w, normaldat[index+1].z / computedVertices[index+1].w},
+				Vertex3D{normaldat[index+2].x / computedVertices[index+2].w, normaldat[index+2].y / computedVertices[index+2].w, normaldat[index+2].z / computedVertices[index+2].w},
 			}
 
 			newTriangle.minX, newTriangle.minY, newTriangle.maxX, newTriangle.maxY = newTriangle.bounds()
@@ -919,7 +991,7 @@ func main() {
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	ebiten.SetFullscreen(true)
+	ebiten.SetFullscreen(false)
 
 	runtime.LockOSThread()
 
@@ -938,12 +1010,12 @@ func main() {
 	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 100)
 	fmt.Println("Projection Matrix Initialized")
 
-	//car = NewModel("Car.obj")
+	car = NewModel("Car.obj")
 	teapot = NewModel("teapot.obj")
-	//skull = NewModel("Skull_HQ.obj")
-	//monkey = NewModel("Monkey.obj")
-	//person = NewModel("Person.obj")
-	//cat = NewModel("Cat.obj")
+	skull = NewModel("Skull_HQ.obj")
+	monkey = NewModel("Monkey.obj")
+	person = NewModel("Person.obj")
+	cat = NewModel("Cat.obj")
 	//level = NewModel("Autumn.obj")
 
 	fmt.Println("Triangle Data Initialized")

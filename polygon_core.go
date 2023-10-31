@@ -657,13 +657,14 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 				(*depthBuffer)[position] = depth
 
+				//var fn float32 = w*triangle.fa.z + s*triangle.fb.z + t*triangle.fc.z
 				var fragPos Vertex3D = Vertex3D{
-					w*triangle.triangle.vertices[0].x + s*triangle.triangle.vertices[1].x + t*triangle.triangle.vertices[2].x,
-					w*triangle.triangle.vertices[0].y + s*triangle.triangle.vertices[1].y + t*triangle.triangle.vertices[2].y,
-					w*triangle.triangle.vertices[0].z + s*triangle.triangle.vertices[1].z + t*triangle.triangle.vertices[2].z,
+					(w*triangle.fa.x + s*triangle.fb.x + t*triangle.fc.x),
+					(w*triangle.fa.y + s*triangle.fb.y + t*triangle.fc.y),
+					(w*triangle.fa.z + s*triangle.fb.z + t*triangle.fc.z),
 				}
 
-				var lightDir Vertex4D = Vertex4D{-fragPos.x, 2 - fragPos.y, 4 - fragPos.z, 0}
+				var lightDir Vertex4D = Vertex4D{-fragPos.x, fragPos.y, 2 - fragPos.z, 0}
 				lightDir = lightDir.normalize()
 
 				//var wn float32 = w*triangle.na.z + s*triangle.nb.z + t*triangle.nc.z
@@ -716,14 +717,16 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 }
 
-func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, normals *[]Vertex3D, factor float32, axis int) {
+func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, normals *[]Vertex3D, worldVert *[]Vertex4D, factor float32, axis int) {
 	var data []Vertex4D
 	var uvData []Vertex2D
 	var normalData []Vertex3D
+	var worldVertData []Vertex4D
 
 	var previousVertex *Vertex4D = &(*vertices)[len(*vertices)-1]
 	var previousUV *Vertex2D = &(*uv)[len(*uv)-1]
 	var previousNormal *Vertex3D = &(*normals)[len(*normals)-1]
+	var previousWorldVert *Vertex4D = &(*worldVert)[len(*worldVert)-1]
 
 	var previousComponent float32 = factor
 	var previousInside bool
@@ -745,6 +748,7 @@ func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, normals *[]Vertex3D, factor
 		var currentVertex *Vertex4D = &(*vertices)[v]
 		var currentUV *Vertex2D = &(*uv)[v]
 		var currentNormal *Vertex3D = &(*normals)[v]
+		var currentWorldVert *Vertex4D = &(*worldVert)[v]
 
 		var currentComponent float32 = factor
 		var currentInside bool
@@ -767,12 +771,14 @@ func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, normals *[]Vertex3D, factor
 			data = append(data, previousVertex.interpolate(currentVertex, factor))
 			uvData = append(uvData, previousUV.interpolate(currentUV, factor))
 			normalData = append(normalData, previousNormal.interpolate(currentNormal, factor))
+			worldVertData = append(worldVertData, previousWorldVert.interpolate(currentWorldVert, factor))
 		}
 
 		if currentInside {
 			data = append(data, *currentVertex)
 			uvData = append(uvData, *currentUV)
 			normalData = append(normalData, *currentNormal)
+			worldVertData = append(worldVertData, *currentWorldVert)
 		}
 
 		previousVertex = currentVertex
@@ -780,11 +786,13 @@ func clip_axis(vertices *[]Vertex4D, uv *[]Vertex2D, normals *[]Vertex3D, factor
 		previousInside = currentInside
 		previousUV = currentUV
 		previousNormal = currentNormal
+		previousWorldVert = currentWorldVert
 	}
 
 	*vertices = data
 	*uv = uvData
 	*normals = normalData
+	*worldVert = worldVertData
 }
 
 func (v *Vertex3D) convertToQuaternion() Vertex4D {
@@ -817,13 +825,14 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid, triData *ComputedTriangle) {
 
 	var uvdat []Vertex2D = t.uv[:]
 	var normaldat []Vertex3D = triData.normals[:]
+	var worldVert []Vertex4D = triData.vertices[:]
 
 	for i := 0; i < 2; i++ {
 		if len(vertices) > 0 {
-			clip_axis(&vertices, &uvdat, &normaldat, 1, i)
+			clip_axis(&vertices, &uvdat, &normaldat, &worldVert, 1, i)
 
 			if len(vertices) > 0 {
-				clip_axis(&vertices, &uvdat, &normaldat, -1, i)
+				clip_axis(&vertices, &uvdat, &normaldat, &worldVert, -1, i)
 			} else {
 				break
 			}
@@ -865,13 +874,13 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid, triData *ComputedTriangle) {
 				Vertex4D{}, Vertex4D{}, 0,
 
 				0, 0, 0, 0,
-				Vertex3D{normaldat[0].x / computedVertices[0].w, normaldat[0].y / computedVertices[0].w, normaldat[0].z / computedVertices[0].w},
-				Vertex3D{normaldat[index+1].x / computedVertices[index+1].w, normaldat[index+1].y / computedVertices[index+1].w, normaldat[index+1].z / computedVertices[index+1].w},
-				Vertex3D{normaldat[index+2].x / computedVertices[index+2].w, normaldat[index+2].y / computedVertices[index+2].w, normaldat[index+2].z / computedVertices[index+2].w},
+				Vertex3D{normaldat[0].x, normaldat[0].y, normaldat[0].z},
+				Vertex3D{normaldat[index+1].x, normaldat[index+1].y, normaldat[index+1].z},
+				Vertex3D{normaldat[index+2].x, normaldat[index+2].y, normaldat[index+2].z},
 
-				Vertex3D{vertices[0].x, vertices[0].y, vertices[0].z},
-				Vertex3D{vertices[index+1].x, vertices[index+1].y, vertices[index+1].z},
-				Vertex3D{vertices[index+2].x, vertices[index+2].y, vertices[index+2].z},
+				Vertex3D{worldVert[0].x, worldVert[0].y, worldVert[0].z},
+				Vertex3D{worldVert[index+1].x, worldVert[index+1].y, worldVert[index+1].z},
+				Vertex3D{worldVert[index+2].x, worldVert[index+2].y, worldVert[index+2].z},
 
 				triData,
 			}
@@ -1131,7 +1140,7 @@ func main() {
 	fmt.Println("Projection Matrix Initialized")
 
 	car = NewModel("Car.obj")
-	bunny = NewModel("teapot.obj")
+	bunny = NewModel("bunny.obj")
 	teapot = NewModel("teapot.obj")
 	skull = NewModel("Skull_HQ.obj")
 	monkey = NewModel("Monkey.obj")

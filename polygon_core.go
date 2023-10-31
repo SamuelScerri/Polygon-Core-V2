@@ -198,8 +198,9 @@ type ComputedTriangle struct {
 	span float32
 
 	minX, maxX, minY, maxY int
-	na, nb, nc Vertex3D
-	fa, fb, fc Vertex3D
+	na, nb, nc             Vertex3D
+	fa, fb, fc             Vertex3D
+	triangle               *ComputedTriangle
 }
 
 type Buffer []byte
@@ -221,7 +222,7 @@ var chunkSize, chunkSizeDepth int
 
 var car, teapot, bunny, skull, monkey, person, cat, level Model
 
-var width, height int = 640, 360
+var width, height int = 1280, 720
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -320,7 +321,6 @@ func (v1 *Vertex4D) subtract(v2 *Vertex4D) Vertex4D {
 	}
 }
 
-
 func (v1 Vertex4D) multiply(v2 *Vertex4D) Vertex4D {
 	return Vertex4D{
 		v1.x * v2.x,
@@ -375,16 +375,34 @@ func (matrix *Matrix) convertToVertex3() Vertex3D {
 	return Vertex3D{(*matrix)[0][0], (*matrix)[0][1], (*matrix)[0][2]}
 }
 
-func (triangle *Triangle) multiplyMatrix(m2 *Matrix) (result ComputedTriangle) {
+func (triangle Triangle) multiplyMatrix(m2 *Matrix, normal bool) (result ComputedTriangle) {
 	var tm1, tm2, tm3 Matrix = triangle.vertices[0].convertToMatrix(), triangle.vertices[1].convertToMatrix(), triangle.vertices[2].convertToMatrix()
 	tm1, tm2, tm3 = tm1.multiplyMatrix(m2), tm2.multiplyMatrix(m2), tm3.multiplyMatrix(m2)
 
-	/*inverseMatrix := Matrix{
-		{(*m2)[0][0], (*m2)[0][1], (*m2)[0][2], (*m2)[0][3]},
-		{(*m2)[1][0], (*m2)[1][1], (*m2)[1][2], (*m2)[1][3]},
-		{(*m2)[2][0], (*m2)[2][1], (*m2)[2][2], (*m2)[2][3]},
-		{(*m2)[3][0], (*m2)[3][1], (*m2)[3][2], (*m2)[3][3]},
-	}*/
+	var determinant float32 = (*m2)[0][0]*((*m2)[1][1]*(*m2)[2][2]-(*m2)[2][1]*(*m2)[1][2]) -
+		(*m2)[0][1]*((*m2)[1][0]*(*m2)[2][2]-(*m2)[1][2]*(*m2)[2][0]) +
+		(*m2)[0][2]*((*m2)[1][0]*(*m2)[2][1]-(*m2)[1][1]*(*m2)[2][0])
+
+	var invDeterminant float32 = 1 / determinant
+
+	var inverseMatrix Matrix = make(Matrix, len(*m2))
+
+	for i := 0; i < len(*m2); i++ {
+		inverseMatrix[i] = make([]float32, len((*m2)[0]))
+		for j := 0; j < len((*m2)[0]); j++ {
+			inverseMatrix[i][j] = (*m2)[i][j]
+		}
+	}
+
+	inverseMatrix[0][0] = ((*m2)[1][1]*(*m2)[2][2] - (*m2)[2][1]*(*m2)[1][2]) * invDeterminant
+	inverseMatrix[0][1] = ((*m2)[0][2]*(*m2)[2][1] - (*m2)[0][1]*(*m2)[2][2]) * invDeterminant
+	inverseMatrix[0][2] = ((*m2)[0][1]*(*m2)[1][2] - (*m2)[0][2]*(*m2)[1][1]) * invDeterminant
+	inverseMatrix[1][0] = ((*m2)[1][2]*(*m2)[2][0] - (*m2)[1][0]*(*m2)[2][2]) * invDeterminant
+	inverseMatrix[1][1] = ((*m2)[0][0]*(*m2)[2][2] - (*m2)[0][2]*(*m2)[2][0]) * invDeterminant
+	inverseMatrix[1][2] = ((*m2)[1][0]*(*m2)[0][2] - (*m2)[0][0]*(*m2)[1][2]) * invDeterminant
+	inverseMatrix[2][0] = ((*m2)[1][0]*(*m2)[2][1] - (*m2)[2][0]*(*m2)[1][1]) * invDeterminant
+	inverseMatrix[2][1] = ((*m2)[2][0]*(*m2)[0][1] - (*m2)[0][0]*(*m2)[2][1]) * invDeterminant
+	inverseMatrix[2][2] = ((*m2)[0][0]*(*m2)[1][1] - (*m2)[1][0]*(*m2)[0][1]) * invDeterminant
 
 	//inverseMatrix := Matrix{
 	//	{(*m2)[0][0], (*m2)[1][0], (*m2)[2][0], (*m2)[0][3]},
@@ -393,20 +411,35 @@ func (triangle *Triangle) multiplyMatrix(m2 *Matrix) (result ComputedTriangle) {
 	//	{(*m2)[3][0], (*m2)[3][1], (*m2)[3][2], (*m2)[3][3]},
 	//}
 
-	inverseMatrix := *m2
+	//inverseMatrix := *m2
+
+	transposeMatrix := make(Matrix, len(inverseMatrix))
+
+	for i := range inverseMatrix {
+		transposeMatrix[i] = make([]float32, len(inverseMatrix[i]))
+		for j := range inverseMatrix[i] {
+			transposeMatrix[i][j] = inverseMatrix[j][i]
+		}
+	}
 
 	var nm1, nm2, nm3 Matrix = triangle.normals[0].convertToMatrix(), triangle.normals[1].convertToMatrix(), triangle.normals[2].convertToMatrix()
-	nm1, nm2, nm3 = nm1.multiplyMatrix(&inverseMatrix), nm2.multiplyMatrix(&inverseMatrix), nm3.multiplyMatrix(&inverseMatrix)
+	nm1, nm2, nm3 = nm1.multiplyMatrix(&transposeMatrix), nm2.multiplyMatrix(&transposeMatrix), nm3.multiplyMatrix(&transposeMatrix)
 
 	result.vertices[0] = tm1.convertToVertex()
 	result.vertices[1] = tm2.convertToVertex()
 	result.vertices[2] = tm3.convertToVertex()
 
-	result.normals[0] = nm1.convertToVertex3()
-	result.normals[1] = nm2.convertToVertex3()
-	result.normals[2] = nm3.convertToVertex3()
+	result.normals[0] = nm1.convertToVertex3().normalize()
+	result.normals[1] = nm2.convertToVertex3().normalize()
+	result.normals[2] = nm3.convertToVertex3().normalize()
+
+	//result.normals[0] = result.normals[0].normalize()
 
 	result.uv = triangle.uv
+
+	if !normal {
+		result.normals = triangle.normals
+	}
 
 	return
 }
@@ -469,6 +502,12 @@ func (v Vertex4D) normalize() Vertex4D {
 	var magnitude float32 = math32.Sqrt((v.x * v.x) + (v.y * v.y) + (v.z * v.z))
 
 	return Vertex4D{v.x / magnitude, v.y / magnitude, v.z / magnitude, 0}
+}
+
+func (v Vertex3D) normalize() Vertex3D {
+	var magnitude float32 = math32.Sqrt((v.x * v.x) + (v.y * v.y) + (v.z * v.z))
+
+	return Vertex3D{v.x / magnitude, v.y / magnitude, v.z / magnitude}
 }
 
 func (v1 *Vertex4D) interpolate(v2 *Vertex4D, factor float32) Vertex4D {
@@ -617,21 +656,28 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 				}
 
 				(*depthBuffer)[position] = depth
-			
-				var lightDir Vertex4D = Vertex4D{1, 0, 0, 0}
-				lightDir = lightDir.normalize()
 
 				var fragPos Vertex3D = Vertex3D{
-					w*triangle.fa.x + s*triangle.fb.x + t*triangle.fc.x,
-					w*triangle.fa.y + s*triangle.fb.y + t*triangle.fc.y,
-					w*triangle.fa.z + s*triangle.fb.z + t*triangle.fc.z,
+					w*triangle.triangle.vertices[0].x + s*triangle.triangle.vertices[1].x + t*triangle.triangle.vertices[2].x,
+					w*triangle.triangle.vertices[0].y + s*triangle.triangle.vertices[1].y + t*triangle.triangle.vertices[2].y,
+					w*triangle.triangle.vertices[0].z + s*triangle.triangle.vertices[1].z + t*triangle.triangle.vertices[2].z,
 				}
+
+				var lightDir Vertex4D = Vertex4D{-fragPos.x, 2 - fragPos.y, 4 - fragPos.z, 0}
+				lightDir = lightDir.normalize()
 
 				//var wn float32 = w*triangle.na.z + s*triangle.nb.z + t*triangle.nc.z
 				var interpolatedNormal Vertex4D = Vertex4D{
-					(w * triangle.na.x + s * triangle.nb.x + t * triangle.nc.x),
-					(w * triangle.na.y + s * triangle.nb.y + t * triangle.nc.y),
-					(w * triangle.na.z + s * triangle.nb.z + t * triangle.nc.z),
+					(w*triangle.na.x + s*triangle.nb.x + t*triangle.nc.x),
+					(w*triangle.na.y + s*triangle.nb.y + t*triangle.nc.y),
+					(w*triangle.na.z + s*triangle.nb.z + t*triangle.nc.z),
+					0,
+				}
+
+				var _ Vertex4D = Vertex4D{
+					-lightDir.x,
+					-lightDir.y,
+					-lightDir.z,
 					0,
 				}
 
@@ -647,19 +693,23 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 				viewDir = viewDir.normalize()
 
 				var reflectDir = Vertex4D{
-					-lightDir.x - 2 * -lightIntensity * interpolatedNormal.x,
-					-lightDir.y - 2 * -lightIntensity * interpolatedNormal.y,
-					-lightDir.z - 2 * -lightIntensity * interpolatedNormal.z,
+					-lightDir.x - 2*lightIntensity*interpolatedNormal.x,
+					-lightDir.y - 2*lightIntensity*interpolatedNormal.y,
+					-lightDir.z - 2*lightIntensity*interpolatedNormal.z,
 					0,
 				}
 
-				var specular float32 = math32.Pow(viewDir.dot(&reflectDir), 64) * 4
-
+				var _ float32 = math32.Pow(viewDir.dot(&reflectDir), 64) * 4
 				var color [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
-				
-				(*buffer)[location] = uint8(clamp(int(color[0] * 1 * (0 + specular + lightIntensity) * 255), 0, 255))
-				(*buffer)[location+1] = uint8(clamp(int(color[1] * 1 * (0 + specular + lightIntensity) * 255), 0, 255))
-				(*buffer)[location+2] = uint8(clamp(int(color[2] * 1 * (0 + specular + lightIntensity) * 255), 0, 255))
+
+				(*buffer)[location] = uint8(clamp(int(color[0]*1*(0+lightIntensity)*255), 0, 255))
+				(*buffer)[location+1] = uint8(clamp(int(color[1]*1*(0+lightIntensity)*255), 0, 255))
+				(*buffer)[location+2] = uint8(clamp(int(color[2]*1*(0+lightIntensity)*255), 0, 255))
+
+				/*var color [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
+				(*buffer)[location] = uint8(color[0] * 255)
+				(*buffer)[location+1] = uint8(color[1] * 255)
+				(*buffer)[location+2] = uint8(color[2] * 255)*/
 			}
 		}
 	}
@@ -762,10 +812,11 @@ func (v *Vertex3D) convertToQuaternion() Vertex4D {
 	return Vertex4D{x, y, z, w}
 }
 
-func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
+func (t *ComputedTriangle) clip(tileGrid *TileGrid, triData *ComputedTriangle) {
 	var vertices []Vertex4D = t.vertices[:]
+
 	var uvdat []Vertex2D = t.uv[:]
-	var normaldat []Vertex3D = t.normals[:]
+	var normaldat []Vertex3D = triData.normals[:]
 
 	for i := 0; i < 2; i++ {
 		if len(vertices) > 0 {
@@ -819,8 +870,10 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid) {
 				Vertex3D{normaldat[index+2].x / computedVertices[index+2].w, normaldat[index+2].y / computedVertices[index+2].w, normaldat[index+2].z / computedVertices[index+2].w},
 
 				Vertex3D{vertices[0].x, vertices[0].y, vertices[0].z},
-				Vertex3D{vertices[1].x, vertices[1].y, vertices[1].z},
-				Vertex3D{vertices[2].x, vertices[2].y, vertices[2].z},
+				Vertex3D{vertices[index+1].x, vertices[index+1].y, vertices[index+1].z},
+				Vertex3D{vertices[index+2].x, vertices[index+2].y, vertices[index+2].z},
+
+				triData,
 			}
 
 			newTriangle.minX, newTriangle.minY, newTriangle.maxX, newTriangle.maxY = newTriangle.bounds()
@@ -936,13 +989,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	//smallRotation.z += 1
-	//rotationDegrees.y += 1
+	rotationDegrees.y += 1
 	//rotationDegrees.x += 1
 
-	
-	rotation.y += 1
+	rotation.y = 0
 
-	var rotmaty = createTransformationMatrix(Vertex3D{0, 0, 0}, rotation.convertToQuaternion())
+	var _ = createTransformationMatrix(Vertex3D{0, 0, 0}, rotation.convertToQuaternion())
 
 	var cameraRotationX Vertex3D = Vertex3D{cameraRotation.x, 0, 0}
 	var cameraRotationY Vertex3D = Vertex3D{0, cameraRotation.y, 0}
@@ -962,8 +1014,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	transformationMatrix = transformationMatrix.multiplyMatrix(&rotationMatrixX)
 	transformationMatrix = transformationMatrix.multiplyMatrix(&rotationMatrixZ)
 	transformationMatrix = transformationMatrix.multiplyMatrix(&projectionMatrix)
-
-	
 
 	var triData []Triangle
 
@@ -985,11 +1035,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 		go func(chunk int, model *Model, grid *TileGrid) {
 			for t := chunk * amountPerCore; t < chunk*amountPerCore+amountPerCore; t++ {
-				matrix := rotmaty.multiplyMatrix(&transformationMatrix)
+				var r Matrix = createTransformationMatrix(emptyRotation, rotationDegrees.convertToQuaternion())
+				convertedTriangle := triData[t].multiplyMatrix(&transformationMatrix, false)
+				t := triData[t].multiplyMatrix(&r, true)
 
-				var convertedTriangle = triData[t].multiplyMatrix(&matrix)
-
-				convertedTriangle.clip(grid)
+				convertedTriangle.clip(grid, &t)
 			}
 
 			wg.Done()
@@ -997,9 +1047,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	for t := ((HT * VT) - 1) * amountPerCore; t < (HT*VT)*amountPerCore+amountLeft; t++ {
-		var convertedTriangle = triData[t].multiplyMatrix(&transformationMatrix)
+		var r Matrix = createTransformationMatrix(emptyRotation, rotationDegrees.convertToQuaternion())
+		convertedTriangle := triData[t].multiplyMatrix(&transformationMatrix, false)
+		t := triData[t].multiplyMatrix(&r, true)
 
-		convertedTriangle.clip(&tileGrid)
+		convertedTriangle.clip(&tileGrid, &t)
 	}
 
 	wg.Wait()
@@ -1055,11 +1107,11 @@ func main() {
 
 	ebiten.SetWindowSize(width, height)
 	ebiten.SetWindowTitle("Polygon Core - V2")
-	ebiten.SetVsyncEnabled(true)
+	ebiten.SetVsyncEnabled(false)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	ebiten.SetFullscreen(false)
+	ebiten.SetFullscreen(true)
 
 	runtime.LockOSThread()
 

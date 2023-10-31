@@ -208,7 +208,7 @@ type FloatBuffer []float32
 type Matrix [][]float32
 
 const HT = 4
-const VT = 3
+const VT = 2
 
 type Tile []ComputedTriangle
 type TileGrid [HT][VT]Tile
@@ -222,7 +222,7 @@ var chunkSize, chunkSizeDepth int
 
 var car, teapot, bunny, skull, monkey, person, cat, level Model
 
-var width, height int = 640, 360
+var width, height int = 1280, 720
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -544,6 +544,16 @@ func clamp(value, min, max int) int {
 	return value
 }
 
+func clampF(value, min, max float32) float32 {
+	if value < min {
+		return min
+	}
+	if value > max {
+		return max
+	}
+	return value
+}
+
 func (buffer *Buffer) clearScreen() {
 	for i := 0; i < (HT * VT); i++ {
 		wg.Add(1)
@@ -659,19 +669,19 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 				//var fn float32 = w*triangle.fa.z + s*triangle.fb.z + t*triangle.fc.z
 				var fragPos Vertex3D = Vertex3D{
-					(w*triangle.fa.x + s*triangle.fb.x + t*triangle.fc.x),
-					(w*triangle.fa.y + s*triangle.fb.y + t*triangle.fc.y),
-					(w*triangle.fa.z + s*triangle.fb.z + t*triangle.fc.z),
+					(w*triangle.fa.x + s*triangle.fb.x + t*triangle.fc.x) / wt,
+					(w*triangle.fa.y + s*triangle.fb.y + t*triangle.fc.y) / wt,
+					(w*triangle.fa.z + s*triangle.fb.z + t*triangle.fc.z) / wt,
 				}
 
-				var lightDir Vertex4D = Vertex4D{-cameraPosition.x - fragPos.x, -cameraPosition.y - fragPos.y, -cameraPosition.z - fragPos.z, 0}
+				var lightDir Vertex4D = Vertex4D{fragPos.x, fragPos.y, 4 - fragPos.z, 0}
 				lightDir = lightDir.normalize()
 
 				//var wn float32 = w*triangle.na.z + s*triangle.nb.z + t*triangle.nc.z
 				var interpolatedNormal Vertex4D = Vertex4D{
-					(w*triangle.na.x + s*triangle.nb.x + t*triangle.nc.x),
-					(w*triangle.na.y + s*triangle.nb.y + t*triangle.nc.y),
-					(w*triangle.na.z + s*triangle.nb.z + t*triangle.nc.z),
+					(w*triangle.na.x + s*triangle.nb.x + t*triangle.nc.x) / wt,
+					(w*triangle.na.y + s*triangle.nb.y + t*triangle.nc.y) / wt,
+					(w*triangle.na.z + s*triangle.nb.z + t*triangle.nc.z) / wt,
 					0,
 				}
 
@@ -683,7 +693,7 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 				}
 
 				interpolatedNormal = interpolatedNormal.normalize()
-				var lightIntensity float32 = interpolatedNormal.dot(&lightDir)
+				var lightIntensity float32 = clampF(interpolatedNormal.dot(&lightDir), 0, math32.Inf(1))
 
 				var negLightIntensity float32 = interpolatedNormal.dot(&negatedLightDir)
 
@@ -702,12 +712,12 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 					0,
 				}
 
-				var specular float32 = math32.Pow(viewDir.dot(&reflectDir), 64) * .75
+				var specular float32 = math32.Pow(clampF(viewDir.dot(&reflectDir), math32.Inf(-1), 0), 64) * .5
 				var color [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
 
-				(*buffer)[location] = uint8(clamp(int(color[0]*1*(lightIntensity+specular)*255), 0, 255))
-				(*buffer)[location+1] = uint8(clamp(int(color[1]*1*(lightIntensity+specular)*255), 0, 255))
-				(*buffer)[location+2] = uint8(clamp(int(color[2]*1*(lightIntensity+specular)*255), 0, 255))
+				(*buffer)[location] = uint8(clamp(int(color[0]*0+.25*(.5+lightIntensity+specular)*255), 0, 255))
+				(*buffer)[location+1] = uint8(clamp(int(color[1]*0+.25*(.5+lightIntensity+specular)*255), 0, 255))
+				(*buffer)[location+2] = uint8(clamp(int(color[2]*0+.25*(.5+lightIntensity+specular)*255), 0, 255))
 
 				/*var color [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
 				(*buffer)[location] = uint8(color[0] * 255)
@@ -876,13 +886,13 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid, triData *ComputedTriangle) {
 				Vertex4D{}, Vertex4D{}, 0,
 
 				0, 0, 0, 0,
-				Vertex3D{normaldat[0].x, normaldat[0].y, normaldat[0].z},
-				Vertex3D{normaldat[index+1].x, normaldat[index+1].y, normaldat[index+1].z},
-				Vertex3D{normaldat[index+2].x, normaldat[index+2].y, normaldat[index+2].z},
+				Vertex3D{normaldat[0].x / computedVertices[0].w, normaldat[0].y / computedVertices[0].w, normaldat[0].z / computedVertices[0].w},
+				Vertex3D{normaldat[index+1].x / computedVertices[index+1].w, normaldat[index+1].y / computedVertices[index+1].w, normaldat[index+1].z / computedVertices[index+1].w},
+				Vertex3D{normaldat[index+2].x / computedVertices[index+2].w, normaldat[index+2].y / computedVertices[index+2].w, normaldat[index+2].z / computedVertices[index+2].w},
 
-				Vertex3D{worldVert[0].x, worldVert[0].y, worldVert[0].z},
-				Vertex3D{worldVert[index+1].x, worldVert[index+1].y, worldVert[index+1].z},
-				Vertex3D{worldVert[index+2].x, worldVert[index+2].y, worldVert[index+2].z},
+				Vertex3D{worldVert[0].x / computedVertices[0].w, worldVert[0].y / computedVertices[0].w, worldVert[0].z / computedVertices[0].w},
+				Vertex3D{worldVert[index+1].x / computedVertices[index+1].w, worldVert[index+1].y / computedVertices[index+1].w, worldVert[index+1].z / computedVertices[index+1].w},
+				Vertex3D{worldVert[index+2].x / computedVertices[index+2].w, worldVert[index+2].y / computedVertices[index+2].w, worldVert[index+2].z / computedVertices[index+2].w},
 
 				triData,
 			}
@@ -1000,7 +1010,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	//smallRotation.z += 1
-	rotationDegrees.y = 0
+	rotationDegrees.y += 1
 	//rotationDegrees.x += 1
 
 	rotation.y = 0
@@ -1118,7 +1128,7 @@ func main() {
 
 	ebiten.SetWindowSize(width, height)
 	ebiten.SetWindowTitle("Polygon Core - V2")
-	ebiten.SetVsyncEnabled(false)
+	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
@@ -1152,7 +1162,7 @@ func main() {
 
 	fmt.Println("Triangle Data Initialized")
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryDirectX, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

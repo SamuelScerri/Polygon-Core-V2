@@ -222,7 +222,7 @@ var chunkSize, chunkSizeDepth int
 
 var car, teapot, bunny, skull, monkey, person, cat, level Model
 
-var width, height int = 1280, 720
+var width, height int = 640, 360
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -295,8 +295,8 @@ func (boundingBox *AABB) convertToVertices() (vertices [8]Vertex3D) {
 }
 
 func (vertex *Vertex4D) convertToScreenSpace() {
-	vertex.x = (((vertex.x + 1) * float32(width+2)) / 2)
-	vertex.y = (((-vertex.y + 1) * float32(height+2)) / 2)
+	vertex.x = (((vertex.x + 1) * float32(width+1)) / 2)
+	vertex.y = (((-vertex.y + 1) * float32(height+1)) / 2)
 }
 
 func (v1 *Vertex4D) crossProduct(v2 *Vertex4D) float32 {
@@ -591,7 +591,7 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 		{int(copiedVertex[2].x), int(copiedVertex[2].y)},
 	}
 
-	for k := clamp(ti[0].y, yPos*tileSizeY+1, yPos*tileSizeY+tileSizeY+1); k < clamp(ti[2].y, yPos*tileSizeY+1, yPos*tileSizeY+tileSizeY+1); k++ {
+	for k := clamp(ti[0].y, yPos*tileSizeY, yPos*tileSizeY+tileSizeY); k < clamp(ti[2].y, yPos*tileSizeY, yPos*tileSizeY+tileSizeY); k++ {
 		var i int = k - ti[0].y
 
 		secondHalf := i > ti[1].y-ti[0].y || ti[1].y == ti[0].y
@@ -608,21 +608,21 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 		var beta float32 = float32(i-betaHalf) / float32(segmentHeight)
 
 		var a Vertex2Di = Vertex2Di{
-			int(float32(ti[0].x) + float32(ti[2].x-ti[0].x)*alpha),
-			int(float32(ti[0].y) + float32(ti[2].y-ti[0].y)*alpha),
+			ti[0].x + int(float32(ti[2].x-ti[0].x)*alpha),
+			ti[0].y + int(float32(ti[2].y-ti[0].y)*alpha),
 		}
 
 		var b Vertex2Di
 
 		if secondHalf {
 			b = Vertex2Di{
-				int(float32(ti[1].x) + float32(ti[2].x-ti[1].x)*beta),
-				int(float32(ti[1].y) + float32(ti[2].y-ti[1].y)*beta),
+				ti[1].x + int(float32(ti[2].x-ti[1].x)*beta),
+				ti[1].y + int(float32(ti[2].y-ti[1].y)*beta),
 			}
 		} else {
 			b = Vertex2Di{
-				int(float32(ti[0].x) + float32(ti[1].x-ti[0].x)*beta),
-				int(float32(ti[0].y) + float32(ti[1].y-ti[0].y)*beta),
+				ti[0].x + int(float32(ti[1].x-ti[0].x)*beta),
+				ti[0].y + int(float32(ti[1].y-ti[0].y)*beta),
 			}
 		}
 
@@ -632,11 +632,11 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 			b = temp
 		}
 
-		for j := clamp(a.x, xPos*tileSizeX+1, xPos*tileSizeX+tileSizeX+1); j < clamp(b.x, xPos*tileSizeX+1, xPos*tileSizeX+tileSizeX+1); j++ {
+		for j := clamp(a.x, xPos*tileSizeX, xPos*tileSizeX+tileSizeX); j < clamp(b.x, xPos*tileSizeX, xPos*tileSizeX+tileSizeX); j++ {
 			var s, t, w float32 = triangle.barycentricCoordinates(&triangle.vs1, &triangle.vs2, &j, &k, &triangle.span)
 			var depth float32 = w*triangle.vertices[0].z + s*triangle.vertices[1].z + t*triangle.vertices[2].z
 
-			var position int = (k-1)*(width) + (j - 1)
+			var position int = (k)*(width) + (j)
 
 			if depth < (*depthBuffer)[position] {
 				var location int = position * 4
@@ -705,9 +705,9 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 				var specular float32 = math32.Pow(viewDir.dot(&reflectDir), 64) * .75
 				var color [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
 
-				(*buffer)[location] = uint8(clamp(int(color[0]*(lightIntensity+specular)*255), 0, 255))
-				(*buffer)[location+1] = uint8(clamp(int(color[1]*(lightIntensity+specular)*255), 0, 255))
-				(*buffer)[location+2] = uint8(clamp(int(color[2]*(lightIntensity+specular)*255), 0, 255))
+				(*buffer)[location] = uint8(clamp(int(color[0]*1*(lightIntensity+specular)*255), 0, 255))
+				(*buffer)[location+1] = uint8(clamp(int(color[1]*1*(lightIntensity+specular)*255), 0, 255))
+				(*buffer)[location+2] = uint8(clamp(int(color[2]*1*(lightIntensity+specular)*255), 0, 255))
 
 				/*var color [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
 				(*buffer)[location] = uint8(color[0] * 255)
@@ -1000,7 +1000,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	//smallRotation.z += 1
-	rotationDegrees.y += 1
+	rotationDegrees.y = 0
 	//rotationDegrees.x += 1
 
 	rotation.y = 0

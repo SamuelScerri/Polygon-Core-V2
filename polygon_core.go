@@ -664,7 +664,7 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 					(w*triangle.fa.z + s*triangle.fb.z + t*triangle.fc.z),
 				}
 
-				var lightDir Vertex4D = Vertex4D{-fragPos.x, fragPos.y, 2 - fragPos.z, 0}
+				var lightDir Vertex4D = Vertex4D{-cameraPosition.x - fragPos.x, -cameraPosition.y - fragPos.y, -cameraPosition.z - fragPos.z, 0}
 				lightDir = lightDir.normalize()
 
 				//var wn float32 = w*triangle.na.z + s*triangle.nb.z + t*triangle.nc.z
@@ -675,7 +675,7 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 					0,
 				}
 
-				var _ Vertex4D = Vertex4D{
+				var negatedLightDir Vertex4D = Vertex4D{
 					-lightDir.x,
 					-lightDir.y,
 					-lightDir.z,
@@ -684,6 +684,8 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 
 				interpolatedNormal = interpolatedNormal.normalize()
 				var lightIntensity float32 = interpolatedNormal.dot(&lightDir)
+
+				var negLightIntensity float32 = interpolatedNormal.dot(&negatedLightDir)
 
 				var viewDir = Vertex4D{
 					cameraPosition.x - fragPos.x,
@@ -694,18 +696,18 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 				viewDir = viewDir.normalize()
 
 				var reflectDir = Vertex4D{
-					-lightDir.x - 2*lightIntensity*interpolatedNormal.x,
-					-lightDir.y - 2*lightIntensity*interpolatedNormal.y,
-					-lightDir.z - 2*lightIntensity*interpolatedNormal.z,
+					-lightDir.x - 2*negLightIntensity*interpolatedNormal.x,
+					-lightDir.y - 2*negLightIntensity*interpolatedNormal.y,
+					-lightDir.z - 2*negLightIntensity*interpolatedNormal.z,
 					0,
 				}
 
-				var _ float32 = math32.Pow(viewDir.dot(&reflectDir), 64) * 4
+				var specular float32 = math32.Pow(viewDir.dot(&reflectDir), 64) * .75
 				var color [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
 
-				(*buffer)[location] = uint8(clamp(int(color[0]*1*(0+lightIntensity)*255), 0, 255))
-				(*buffer)[location+1] = uint8(clamp(int(color[1]*1*(0+lightIntensity)*255), 0, 255))
-				(*buffer)[location+2] = uint8(clamp(int(color[2]*1*(0+lightIntensity)*255), 0, 255))
+				(*buffer)[location] = uint8(clamp(int(color[0]*(lightIntensity+specular)*255), 0, 255))
+				(*buffer)[location+1] = uint8(clamp(int(color[1]*(lightIntensity+specular)*255), 0, 255))
+				(*buffer)[location+2] = uint8(clamp(int(color[2]*(lightIntensity+specular)*255), 0, 255))
 
 				/*var color [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
 				(*buffer)[location] = uint8(color[0] * 255)
@@ -1140,7 +1142,7 @@ func main() {
 	fmt.Println("Projection Matrix Initialized")
 
 	car = NewModel("Car.obj")
-	bunny = NewModel("bunny.obj")
+	bunny = NewModel("teapot.obj")
 	teapot = NewModel("teapot.obj")
 	skull = NewModel("Skull_HQ.obj")
 	monkey = NewModel("Monkey.obj")

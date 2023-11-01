@@ -200,15 +200,14 @@ type ComputedTriangle struct {
 	minX, maxX, minY, maxY int
 	na, nb, nc             Vertex3D
 	fa, fb, fc             Vertex3D
-	triangle               *ComputedTriangle
 }
 
 type Buffer []byte
 type FloatBuffer []float32
 type Matrix [][]float32
 
-const HT = 4
-const VT = 2
+const HT = 6
+const VT = 4
 
 type Tile []ComputedTriangle
 type TileGrid [HT][VT]Tile
@@ -222,7 +221,7 @@ var chunkSize, chunkSizeDepth int
 
 var car, teapot, bunny, skull, monkey, person, cat, level Model
 
-var width, height int = 1280, 720
+var width, height int = 640, 360
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -601,6 +600,9 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 		{int(copiedVertex[2].x), int(copiedVertex[2].y)},
 	}
 
+	var segHeightTrue int = ti[2].y - ti[1].y
+	var segHeightFalse int = ti[1].y - ti[0].y
+
 	for k := clamp(ti[0].y, yPos*tileSizeY, yPos*tileSizeY+tileSizeY); k < clamp(ti[2].y, yPos*tileSizeY, yPos*tileSizeY+tileSizeY); k++ {
 		var i int = k - ti[0].y
 
@@ -608,10 +610,10 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 		var segmentHeight, betaHalf int
 
 		if secondHalf {
-			segmentHeight = ti[2].y - ti[1].y
+			segmentHeight = segHeightTrue
 			betaHalf = ti[1].y - ti[0].y
 		} else {
-			segmentHeight = ti[1].y - ti[0].y
+			segmentHeight = segHeightFalse
 		}
 
 		var alpha float32 = float32(i) / float32(ti[2].y-ti[0].y)
@@ -715,14 +717,9 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 				var specular float32 = math32.Pow(clampF(viewDir.dot(&reflectDir), math32.Inf(-1), 0), 64) * .5
 				var color [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
 
-				(*buffer)[location] = uint8(clamp(int(color[0]*0+.25*(.5+lightIntensity+specular)*255), 0, 255))
-				(*buffer)[location+1] = uint8(clamp(int(color[1]*0+.25*(.5+lightIntensity+specular)*255), 0, 255))
-				(*buffer)[location+2] = uint8(clamp(int(color[2]*0+.25*(.5+lightIntensity+specular)*255), 0, 255))
-
-				/*var color [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
-				(*buffer)[location] = uint8(color[0] * 255)
-				(*buffer)[location+1] = uint8(color[1] * 255)
-				(*buffer)[location+2] = uint8(color[2] * 255)*/
+				(*buffer)[location] = uint8(clamp(int(color[0]*(.125+lightIntensity+specular)*255), 0, 255))
+				(*buffer)[location+1] = uint8(clamp(int(color[1]*(.125+lightIntensity+specular)*255), 0, 255))
+				(*buffer)[location+2] = uint8(clamp(int(color[2]*(.125+lightIntensity+specular)*255), 0, 255))
 			}
 		}
 	}
@@ -893,8 +890,6 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid, triData *ComputedTriangle) {
 				Vertex3D{worldVert[0].x / computedVertices[0].w, worldVert[0].y / computedVertices[0].w, worldVert[0].z / computedVertices[0].w},
 				Vertex3D{worldVert[index+1].x / computedVertices[index+1].w, worldVert[index+1].y / computedVertices[index+1].w, worldVert[index+1].z / computedVertices[index+1].w},
 				Vertex3D{worldVert[index+2].x / computedVertices[index+2].w, worldVert[index+2].y / computedVertices[index+2].w, worldVert[index+2].z / computedVertices[index+2].w},
-
-				triData,
 			}
 
 			newTriangle.minX, newTriangle.minY, newTriangle.maxX, newTriangle.maxY = newTriangle.bounds()
@@ -908,14 +903,14 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid, triData *ComputedTriangle) {
 			newTriangle.vs1, newTriangle.vs2 = newTriangle.spanningVectors()
 			newTriangle.span = newTriangle.vs1.crossProduct(&newTriangle.vs2)
 
-			mu.Lock()
 			for x := tilePositionMinX; x <= tilePositionMaxX; x++ {
 				for y := tilePositionMinY; y <= tilePositionMaxY; y++ {
+					mu.Lock()
 					tileGrid[x][y] = append(tileGrid[x][y], newTriangle)
+					mu.Unlock()
 				}
 			}
 
-			mu.Unlock()
 		}
 	}
 }
@@ -1010,7 +1005,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	//smallRotation.z += 1
-	rotationDegrees.y += 1
+	rotationDegrees.y = 0
 	//rotationDegrees.x += 1
 
 	rotation.y = 0
@@ -1128,7 +1123,7 @@ func main() {
 
 	ebiten.SetWindowSize(width, height)
 	ebiten.SetWindowTitle("Polygon Core - V2")
-	ebiten.SetVsyncEnabled(true)
+	ebiten.SetVsyncEnabled(false)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
@@ -1162,7 +1157,7 @@ func main() {
 
 	fmt.Println("Triangle Data Initialized")
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryDirectX, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/chewxy/math32"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 type AABB struct {
@@ -206,8 +207,8 @@ type Buffer []byte
 type FloatBuffer []float32
 type Matrix [][]float32
 
-const HT = 6
-const VT = 4
+const HT = 4
+const VT = 3
 
 type Tile []ComputedTriangle
 type TileGrid [HT][VT]Tile
@@ -714,7 +715,7 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 					0,
 				}
 
-				var specular float32 = math32.Pow(clampF(viewDir.dot(&reflectDir), math32.Inf(-1), 0), 64) * .5
+				var specular float32 = math32.Pow(clampF(viewDir.dot(&reflectDir), math32.Inf(-1), 0), 64) * 8
 				var color [3]float32 = [3]float32{float32((*texture)[colorLocation]) / 255, float32((*texture)[colorLocation+1]) / 255, float32((*texture)[colorLocation+2]) / 255}
 
 				(*buffer)[location] = uint8(clamp(int(color[0]*(.125+lightIntensity+specular)*255), 0, 255))
@@ -958,6 +959,18 @@ func (g *Game) Update() error {
 		cameraPosition.z += math32.Sin(cameraRotation.y * (math.Pi / 180))
 	}
 
+	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
+		if currentModelIndex > 0 {
+			currentModelIndex --
+		}
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyE) {
+		if currentModelIndex < len(modelList) - 1 {
+			currentModelIndex ++
+		}
+	}
+
 	return nil
 }
 
@@ -1005,7 +1018,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	//smallRotation.z += 1
-	rotationDegrees.y = 0
+	rotationDegrees.y += 1
 	//rotationDegrees.x += 1
 
 	rotation.y = 0
@@ -1033,8 +1046,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	var triData []Triangle
 
+	modelList[currentModelIndex].processModel(&transformationMatrix, &triData)
 	//teapot.processModel(&transformationMatrix, &triData)
-	bunny.processModel(&transformationMatrix, &triData)
+	//bunny.processModel(&transformationMatrix, &triData)
 	//car.processModel(&transformationMatrix, &triData)
 	//skull.processModel(&transformationMatrix, &triData)
 	//monkey.processModel(&transformationMatrix, &triData)
@@ -1100,6 +1114,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen, "FPS: "+strconv.Itoa(int(ebiten.ActualFPS())))
 	ebitenutil.DebugPrintAt(screen, "TRIANGLES RASTERIZED: "+strconv.Itoa(amount), 0, 16)
 	ebitenutil.DebugPrintAt(screen, "AMOUNT OF CORES: "+strconv.Itoa(runtime.NumCPU()), 0, 32)
+	ebitenutil.DebugPrintAt(screen, "PRESS Q & E TO SWITCH MODELS", 0, 48)
 
 	screenBuffer.clearScreen()
 	depthBuffer.clearDepth()
@@ -1118,18 +1133,19 @@ func init() {
 	}
 }
 
+var modelList []Model
+var currentModelIndex int
+
 func main() {
 	fmt.Println("Initializing Polygon Core")
 
 	ebiten.SetWindowSize(width, height)
 	ebiten.SetWindowTitle("Polygon Core - V2")
-	ebiten.SetVsyncEnabled(false)
+	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetFullscreen(true)
-
-	runtime.LockOSThread()
 
 	cameraPosition.z -= 3
 
@@ -1146,14 +1162,12 @@ func main() {
 	projectionMatrix = createProjectionMatrix(fov, aspectRatio, .1, 100)
 	fmt.Println("Projection Matrix Initialized")
 
-	car = NewModel("Car.obj")
-	bunny = NewModel("teapot.obj")
-	teapot = NewModel("teapot.obj")
-	skull = NewModel("Skull_HQ.obj")
-	monkey = NewModel("Monkey.obj")
-	person = NewModel("Person.obj")
-	cat = NewModel("Cat.obj")
-	level = NewModel("Autumn.obj")
+	modelList = append(modelList, NewModel("Cube.obj"))
+	modelList = append(modelList, NewModel("car.obj"))
+	modelList = append(modelList, NewModel("bunny.obj"))
+	modelList = append(modelList, NewModel("teapot.obj"))
+	modelList = append(modelList, NewModel("Skull_HQ.obj"))
+	modelList = append(modelList, NewModel("Monkey.obj"))
 
 	fmt.Println("Triangle Data Initialized")
 

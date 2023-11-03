@@ -571,9 +571,9 @@ func (buffer *Buffer) clearScreen() {
 }
 
 func (triangle *ComputedTriangle) edgeSpan(x, y *int) (w0, w1, w2 float32) {
-	w0 = (triangle.vertices[2].y - triangle.vertices[1].y) * (float32(*x) - triangle.vertices[1].x) - (triangle.vertices[2].x - triangle.vertices[1].x) * (float32(*y) - triangle.vertices[1].y)
-	w1 = (triangle.vertices[0].y - triangle.vertices[2].y) * (float32(*x) - triangle.vertices[2].x) - (triangle.vertices[0].x - triangle.vertices[2].x) * (float32(*y) - triangle.vertices[2].y)
-	w2 = (triangle.vertices[1].y - triangle.vertices[0].y) * (float32(*x) - triangle.vertices[0].x) - (triangle.vertices[1].x - triangle.vertices[0].x) * (float32(*y) - triangle.vertices[0].y)
+	w0 = (triangle.vertices[2].y-triangle.vertices[1].y)*(float32(*x)-triangle.vertices[1].x) - (triangle.vertices[2].x-triangle.vertices[1].x)*(float32(*y)-triangle.vertices[1].y)
+	w1 = (triangle.vertices[0].y-triangle.vertices[2].y)*(float32(*x)-triangle.vertices[2].x) - (triangle.vertices[0].x-triangle.vertices[2].x)*(float32(*y)-triangle.vertices[2].y)
+	w2 = (triangle.vertices[1].y-triangle.vertices[0].y)*(float32(*x)-triangle.vertices[0].x) - (triangle.vertices[1].x-triangle.vertices[0].x)*(float32(*y)-triangle.vertices[0].y)
 
 	return
 }
@@ -657,7 +657,7 @@ func (triangle *ComputedTriangle) renderToScreen(buffer *Buffer, depthBuffer *Fl
 			var s, t, w float32 = triangle.barycentricCoordinates(&triangle.vs1, &triangle.vs2, &j, &k, &triangle.span)
 			var depth float32 = w*triangle.vertices[0].z + s*triangle.vertices[1].z + t*triangle.vertices[2].z
 
-			var position int = k * width + j
+			var position int = k*width + j
 
 			if depth < (*depthBuffer)[position] {
 				var location int = position * 4
@@ -860,66 +860,77 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid, triData *ComputedTriangle) {
 	}
 
 	//We Pre-Convert The Vertices Here To Avoid Doing The Same Calculations Twice On Every Triangle
-	for i := 0; i < len(vertices); i++ {
-		vertices[i].convertToNormalized()
-		vertices[i].convertToScreenSpace()
-	}
+	//for i := 0; i < len(vertices); i++ {
+	//
+	//	}
 
 	//Finally We Build All The Triangles
-	for index := 0; index < len(vertices)-2; index++ {
 
-		t1 := vertices[index+1].subtract(&vertices[0])
-		t2 := vertices[index+2].subtract(&vertices[0])
+	if len(vertices) > 0 {
+		vertices[0].convertToNormalized()
+		vertices[0].convertToScreenSpace()
 
-		crossed := t1.cross(&t2)
+		vertices[1].convertToNormalized()
+		vertices[1].convertToScreenSpace()
 
-		if crossed.z < 0 {
-			inverseIndex := 1 / vertices[0].w
-			inverseIndex1 := 1 / vertices[index+1].w
-			inverseIndex2 := 1 / vertices[index+2].w
+		for index := 0; index < len(vertices)-2; index++ {
+			vertices[index+2].convertToNormalized()
+			vertices[index+2].convertToScreenSpace()
 
-			var newTriangle ComputedTriangle = ComputedTriangle{
-				[3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
-				[3]Vertex2D{uvdat[0], uvdat[index+1], uvdat[index+2]},
-				[3]Vertex3D{normaldat[0], normaldat[index+1], normaldat[index+2]},
+			t1 := vertices[index+1].subtract(&vertices[0])
+			t2 := vertices[index+2].subtract(&vertices[0])
 
-				Vertex3D{uvdat[0].x * inverseIndex, uvdat[0].y * inverseIndex, inverseIndex},
-				Vertex3D{uvdat[index+1].x * inverseIndex1, uvdat[index+1].y * inverseIndex1, inverseIndex1},
-				Vertex3D{uvdat[index+2].x * inverseIndex2, uvdat[index+2].y * inverseIndex2, inverseIndex2},
+			crossed := t1.cross(&t2)
 
-				Vertex4D{}, Vertex4D{}, 0,
+			if crossed.z < 0 {
+				inverseIndex := 1 / vertices[0].w
+				inverseIndex1 := 1 / vertices[index+1].w
+				inverseIndex2 := 1 / vertices[index+2].w
 
-				0, 0, 0, 0,
-				Vertex3D{normaldat[0].x * inverseIndex, normaldat[0].y * inverseIndex, normaldat[0].z * inverseIndex},
-				Vertex3D{normaldat[index+1].x * inverseIndex1, normaldat[index+1].y * inverseIndex1, normaldat[index+1].z * inverseIndex1},
-				Vertex3D{normaldat[index+2].x * inverseIndex2, normaldat[index+2].y * inverseIndex2, normaldat[index+2].z * inverseIndex2},
+				var newTriangle ComputedTriangle = ComputedTriangle{
+					[3]Vertex4D{vertices[0], vertices[index+1], vertices[index+2]},
+					[3]Vertex2D{uvdat[0], uvdat[index+1], uvdat[index+2]},
+					[3]Vertex3D{normaldat[0], normaldat[index+1], normaldat[index+2]},
 
-				Vertex3D{worldVert[0].x * inverseIndex, worldVert[0].y * inverseIndex, worldVert[0].z * inverseIndex},
-				Vertex3D{worldVert[index+1].x * inverseIndex1, worldVert[index+1].y * inverseIndex1, worldVert[index+1].z * inverseIndex1},
-				Vertex3D{worldVert[index+2].x * inverseIndex2, worldVert[index+2].y * inverseIndex2, worldVert[index+2].z * inverseIndex2},
-			}
+					Vertex3D{uvdat[0].x * inverseIndex, uvdat[0].y * inverseIndex, inverseIndex},
+					Vertex3D{uvdat[index+1].x * inverseIndex1, uvdat[index+1].y * inverseIndex1, inverseIndex1},
+					Vertex3D{uvdat[index+2].x * inverseIndex2, uvdat[index+2].y * inverseIndex2, inverseIndex2},
 
-			newTriangle.minX, newTriangle.minY, newTriangle.maxX, newTriangle.maxY = newTriangle.bounds()
+					Vertex4D{}, Vertex4D{}, 0,
 
-			var tilePositionMaxX int = clamp(int(math32.Round(float32(newTriangle.maxX/tileSizeX))), 0, len(tileGrid)-1)
-			var tilePositionMaxY int = clamp(int(math32.Round(float32(newTriangle.maxY/tileSizeY))), 0, len(tileGrid[0])-1)
+					0, 0, 0, 0,
+					Vertex3D{normaldat[0].x * inverseIndex, normaldat[0].y * inverseIndex, normaldat[0].z * inverseIndex},
+					Vertex3D{normaldat[index+1].x * inverseIndex1, normaldat[index+1].y * inverseIndex1, normaldat[index+1].z * inverseIndex1},
+					Vertex3D{normaldat[index+2].x * inverseIndex2, normaldat[index+2].y * inverseIndex2, normaldat[index+2].z * inverseIndex2},
 
-			var tilePositionMinX int = clamp(int(math32.Round(float32(newTriangle.minX/tileSizeX))), 0, len(tileGrid)-1)
-			var tilePositionMinY int = clamp(int(math32.Round(float32(newTriangle.minY/tileSizeY))), 0, len(tileGrid[0])-1)
-
-			newTriangle.vs1, newTriangle.vs2 = newTriangle.spanningVectors()
-			newTriangle.span = newTriangle.vs1.crossProduct(&newTriangle.vs2)
-
-			for x := tilePositionMinX; x <= tilePositionMaxX; x++ {
-				for y := tilePositionMinY; y <= tilePositionMaxY; y++ {
-					mu.Lock()
-					tileGrid[x][y] = append(tileGrid[x][y], newTriangle)
-					mu.Unlock()
+					Vertex3D{worldVert[0].x * inverseIndex, worldVert[0].y * inverseIndex, worldVert[0].z * inverseIndex},
+					Vertex3D{worldVert[index+1].x * inverseIndex1, worldVert[index+1].y * inverseIndex1, worldVert[index+1].z * inverseIndex1},
+					Vertex3D{worldVert[index+2].x * inverseIndex2, worldVert[index+2].y * inverseIndex2, worldVert[index+2].z * inverseIndex2},
 				}
-			}
 
+				newTriangle.minX, newTriangle.minY, newTriangle.maxX, newTriangle.maxY = newTriangle.bounds()
+
+				var tilePositionMaxX int = clamp(int(math32.Round(float32(newTriangle.maxX/tileSizeX))), 0, len(tileGrid)-1)
+				var tilePositionMaxY int = clamp(int(math32.Round(float32(newTriangle.maxY/tileSizeY))), 0, len(tileGrid[0])-1)
+
+				var tilePositionMinX int = clamp(int(math32.Round(float32(newTriangle.minX/tileSizeX))), 0, len(tileGrid)-1)
+				var tilePositionMinY int = clamp(int(math32.Round(float32(newTriangle.minY/tileSizeY))), 0, len(tileGrid[0])-1)
+
+				newTriangle.vs1, newTriangle.vs2 = newTriangle.spanningVectors()
+				newTriangle.span = newTriangle.vs1.crossProduct(&newTriangle.vs2)
+
+				for x := tilePositionMinX; x <= tilePositionMaxX; x++ {
+					for y := tilePositionMinY; y <= tilePositionMaxY; y++ {
+						mu.Lock()
+						tileGrid[x][y] = append(tileGrid[x][y], newTriangle)
+						mu.Unlock()
+					}
+				}
+
+			}
 		}
 	}
+
 }
 
 type Game struct{}
@@ -967,13 +978,13 @@ func (g *Game) Update() error {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
 		if currentModelIndex > 0 {
-			currentModelIndex --
+			currentModelIndex--
 		}
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyE) {
-		if currentModelIndex < len(modelList) - 1 {
-			currentModelIndex ++
+		if currentModelIndex < len(modelList)-1 {
+			currentModelIndex++
 		}
 	}
 
@@ -1093,7 +1104,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			go func(tileGrid *TileGrid, x, y int) {
 				for _, t := range tileGrid[x][y] {
 					t.renderToScreen(&screenBuffer, &depthBuffer, &cobble_buffer, cobble, x, y, tileGrid)
-				 }
+				}
 
 				wg.Done()
 			}(&tileGrid, x, y)
@@ -1112,7 +1123,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrintAt(screen, "AMOUNT OF CORES: "+strconv.Itoa(runtime.NumCPU()), 0, 32)
 	ebitenutil.DebugPrintAt(screen, "PRESS Q & E TO SWITCH MODELS", 0, 48)
 
-	 screenBuffer.clearScreen()
+	screenBuffer.clearScreen()
 	depthBuffer.clearDepth()
 }
 
@@ -1169,7 +1180,7 @@ func main() {
 
 	fmt.Println("Triangle Data Initialized")
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryDirectX, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

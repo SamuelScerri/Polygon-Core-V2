@@ -555,7 +555,7 @@ func clampF(value, min, max float32) float32 {
 }
 
 func (buffer *Buffer) clearScreen() {
-	for i := 0; i < (HT * VT); i++ {
+	for i := 0; i < (HT*VT)-1; i++ {
 		wg.Add(1)
 
 		go func(section int) {
@@ -565,6 +565,10 @@ func (buffer *Buffer) clearScreen() {
 
 			wg.Done()
 		}(i)
+	}
+
+	for p := ((HT * VT) - 1) * chunkSize; p < ((HT*VT)-1)*chunkSize+chunkSize; p++ {
+		(*buffer)[p] = 0
 	}
 
 	wg.Wait()
@@ -1155,7 +1159,7 @@ func main() {
 
 	ebiten.SetWindowSize(width, height)
 	ebiten.SetWindowTitle("Polygon Core - V2")
-	ebiten.SetVsyncEnabled(false)
+	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)

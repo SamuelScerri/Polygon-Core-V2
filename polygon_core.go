@@ -145,7 +145,6 @@ func NewModel(file string) Model {
 	}
 
 	var newBoundingBox AABB = AABB{Vertex3D{0, 0, 0}, longestX, longestY, longestZ}
-	fmt.Println(longestX, longestY, longestZ)
 
 	for i := 0; i < len(model.VecIndices)/3; i++ {
 		var tri Triangle = Triangle{
@@ -157,10 +156,9 @@ func NewModel(file string) Model {
 		model.TriangleData = append(model.TriangleData, tri)
 	}
 
-	//fmt.Println(model.VecIndices)
-	fmt.Println(len(model.TriangleData[0].normals))
-
 	model.BoundingBox = newBoundingBox.convertToVertices()
+
+	fmt.Println("Successfully Loaded: " + file)
 
 	// Return the newly created Model.
 	return model
@@ -208,7 +206,7 @@ type FloatBuffer []float32
 type Matrix [][]float32
 
 const HT = 4
-const VT = 3
+const VT = 2
 
 type Tile []ComputedTriangle
 type TileGrid [HT][VT]Tile
@@ -219,8 +217,6 @@ var tileSizeY int = height / VT
 var screenBuffer Buffer
 var depthBuffer FloatBuffer
 var chunkSize, chunkSizeDepth int
-
-var car, teapot, bunny, skull, monkey, person, cat, level Model
 
 var width, height int = 640, 360
 var aspectRatio float32 = float32(width) / float32(height)
@@ -864,12 +860,6 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid, triData *ComputedTriangle) {
 	}
 
 	//We Pre-Convert The Vertices Here To Avoid Doing The Same Calculations Twice On Every Triangle
-	//for i := 0; i < len(vertices); i++ {
-	//
-	//	}
-
-	//Finally We Build All The Triangles
-
 	if len(vertices) > 0 {
 		vertices[0].convertToNormalized()
 		vertices[0].convertToScreenSpace()
@@ -877,6 +867,7 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid, triData *ComputedTriangle) {
 		vertices[1].convertToNormalized()
 		vertices[1].convertToScreenSpace()
 
+		//Index + 1 Will Always Be Calculated Beforehand
 		inverseIndex := 1 / vertices[0].w
 		inverseIndex1 := 1 / vertices[1].w
 
@@ -1072,6 +1063,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	modelList[currentModelIndex].processModel(&transformationMatrix, &triData)
 
+	//if currentModelIndex < len(modelList)-1 {
+	//	modelList[currentModelIndex+1].processModel(&transformationMatrix, &triData)
+	//}
+
 	var amount int = len(triData)
 	var amountPerCore int = amount / (HT * VT)
 	var amountLeft = amount % (HT * VT)
@@ -1079,7 +1074,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for p := 0; p < (HT*VT)-1; p++ {
 		wg.Add(1)
 
-		go func(chunk int, model *Model, grid *TileGrid) {
+		go func(chunk int, grid *TileGrid) {
 			for t := chunk * amountPerCore; t < chunk*amountPerCore+amountPerCore; t++ {
 				var r Matrix = createTransformationMatrix(emptyRotation, rotationDegrees.convertToQuaternion())
 				convertedTriangle := triData[t].multiplyMatrix(&transformationMatrix, false)
@@ -1089,7 +1084,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			}
 
 			wg.Done()
-		}(p, &teapot, &tileGrid)
+		}(p, &tileGrid)
 	}
 
 	for t := ((HT * VT) - 1) * amountPerCore; t < (HT*VT)*amountPerCore+amountLeft; t++ {
@@ -1142,7 +1137,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("brick.png")
+	cobble, _, err = ebitenutil.NewImageFromFile("Brick.png")
 
 	//runtime.GOMAXPROCS(runtime.NumCPU())
 
@@ -1181,11 +1176,13 @@ func main() {
 	fmt.Println("Projection Matrix Initialized")
 
 	modelList = append(modelList, NewModel("Cube.obj"))
+	modelList = append(modelList, NewModel("Torus.obj"))
 	modelList = append(modelList, NewModel("car.obj"))
 	modelList = append(modelList, NewModel("bunny.obj"))
 	modelList = append(modelList, NewModel("teapot.obj"))
 	modelList = append(modelList, NewModel("Skull_HQ.obj"))
 	modelList = append(modelList, NewModel("Monkey.obj"))
+	modelList = append(modelList, NewModel("Dragon.obj"))
 
 	fmt.Println("Triangle Data Initialized")
 

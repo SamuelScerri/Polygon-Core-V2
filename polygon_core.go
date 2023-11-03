@@ -873,18 +873,20 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid, triData *ComputedTriangle) {
 		vertices[1].convertToNormalized()
 		vertices[1].convertToScreenSpace()
 
+		inverseIndex := 1 / vertices[0].w
+		inverseIndex1 := 1 / vertices[1].w
+
+		t1 := vertices[1].subtract((&vertices[0]))
+
 		for index := 0; index < len(vertices)-2; index++ {
 			vertices[index+2].convertToNormalized()
 			vertices[index+2].convertToScreenSpace()
 
-			t1 := vertices[index+1].subtract(&vertices[0])
 			t2 := vertices[index+2].subtract(&vertices[0])
 
 			crossed := t1.cross(&t2)
 
 			if crossed.z < 0 {
-				inverseIndex := 1 / vertices[0].w
-				inverseIndex1 := 1 / vertices[index+1].w
 				inverseIndex2 := 1 / vertices[index+2].w
 
 				var newTriangle ComputedTriangle = ComputedTriangle{
@@ -918,6 +920,9 @@ func (t *ComputedTriangle) clip(tileGrid *TileGrid, triData *ComputedTriangle) {
 
 				newTriangle.vs1, newTriangle.vs2 = newTriangle.spanningVectors()
 				newTriangle.span = newTriangle.vs1.crossProduct(&newTriangle.vs2)
+
+				inverseIndex1 = inverseIndex2
+				t1 = t2
 
 				for x := tilePositionMinX; x <= tilePositionMaxX; x++ {
 					for y := tilePositionMinY; y <= tilePositionMaxY; y++ {
@@ -1135,7 +1140,7 @@ func init() {
 	var err error
 	cobble, _, err = ebitenutil.NewImageFromFile("brick.png")
 
-	runtime.GOMAXPROCS(runtime.NumCPU() * 2)
+	//runtime.GOMAXPROCS(runtime.NumCPU())
 
 	if err != nil {
 		log.Fatal(err)

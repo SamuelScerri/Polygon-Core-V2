@@ -206,7 +206,7 @@ type FloatBuffer []float32
 type Matrix [][]float32
 
 const HT = 4
-const VT = 2
+const VT = 3
 
 type Tile []ComputedTriangle
 type TileGrid [HT][VT]Tile
@@ -218,7 +218,9 @@ var screenBuffer Buffer
 var depthBuffer FloatBuffer
 var chunkSize, chunkSizeDepth int
 
-var width, height int = 640, 360
+var width, height int = 480, 270
+
+// var width, height int = 1280, 720
 var aspectRatio float32 = float32(width) / float32(height)
 var wg sync.WaitGroup
 var mu sync.Mutex
@@ -1137,9 +1139,9 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func init() {
 	var err error
-	cobble, _, err = ebitenutil.NewImageFromFile("Brick.png")
+	cobble, _, err = ebitenutil.NewImageFromFile("Barrel.jpg")
 
-	//runtime.GOMAXPROCS(runtime.NumCPU())
+	runtime.GOMAXPROCS(runtime.NumCPU() * 2)
 
 	if err != nil {
 		log.Fatal(err)
@@ -1154,11 +1156,11 @@ func main() {
 
 	ebiten.SetWindowSize(width, height)
 	ebiten.SetWindowTitle("Polygon Core - V2")
-	ebiten.SetVsyncEnabled(true)
+	ebiten.SetVsyncEnabled(false)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	ebiten.SetFullscreen(false)
+	ebiten.SetFullscreen(true)
 
 	cameraPosition.z -= 3
 
@@ -1177,6 +1179,7 @@ func main() {
 
 	modelList = append(modelList, NewModel("Cube.obj"))
 	modelList = append(modelList, NewModel("Torus.obj"))
+	modelList = append(modelList, NewModel("Barrel.obj"))
 	modelList = append(modelList, NewModel("car.obj"))
 	modelList = append(modelList, NewModel("bunny.obj"))
 	modelList = append(modelList, NewModel("teapot.obj"))
@@ -1186,7 +1189,7 @@ func main() {
 
 	fmt.Println("Triangle Data Initialized")
 
-	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryMetal, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
+	if err := ebiten.RunGameWithOptions(&Game{}, &ebiten.RunGameOptions{GraphicsLibrary: ebiten.GraphicsLibraryDirectX, InitUnfocused: false, ScreenTransparent: false, SkipTaskbar: false}); err != nil {
 		log.Fatal(err)
 	}
 }

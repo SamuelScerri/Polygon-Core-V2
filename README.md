@@ -18,6 +18,7 @@ The future iterations of Polygon Core will utilize a Super Resolution Model to i
 - Frustum Culling
 - Translation & Rotation Support
 - Wavefront OBJ Support
+- Basic Diffuse Lighting
 
 # Features That Will Be Added:
 - Super Resolution Upscaling
@@ -25,6 +26,4 @@ The future iterations of Polygon Core will utilize a Super Resolution Model to i
 # Features That MIGHT Be Added:
 - SDL2 Version
 - Occlusion Culling
-- Basic Diffuse Lighting
-- Basic Shadow Mapping
 - Normal Mapping

@@ -7,6 +7,7 @@ The future iterations of Polygon Core will utilize a Super Resolution Model to i
 # Libraries Used:
 - Ebiten: For Rendering The Screen Buffer & Keyboard Input
 - Math32: For Fast Single Precision Math (Golang Used Double Precision Math Functions In The Default Library)
+- Vek (For SIMD Accelerated Vector Functions)
 
 # Current Features:
 - Barycentric Triangle Rasterization
@@ -22,8 +23,4 @@ The future iterations of Polygon Core will utilize a Super Resolution Model to i
 
 # Features That Will Be Added:
 - Super Resolution Upscaling
-
-# Features That MIGHT Be Added:
-- SDL2 Version
-- Occlusion Culling
-- Normal Mapping
+- SIMD Acceleration (Requres An Entire Rewrite)

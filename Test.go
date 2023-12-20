@@ -225,6 +225,8 @@ func RenderTriangle(triangle *Triangle, xTileMin, xTileMax, yTileMin, yTileMax i
 		triangle.v1, triangle.v2 = triangle.v2, triangle.v1
 	}
 
+	//fmt.Println(triangle.v1[Y], triangle.v2[Y], triangle.v3[Y])
+
 	var splitVertex Vertex = Vertex{
 		triangle.v1[X] + ((triangle.v2[Y]-triangle.v1[Y])/(triangle.v3[Y]-triangle.v1[Y]))*(triangle.v3[X]-triangle.v1[X]),
 		triangle.v2[Y],
@@ -239,6 +241,11 @@ func RenderTriangle(triangle *Triangle, xTileMin, xTileMax, yTileMin, yTileMax i
 	difference := upperPosition - int(triangle.v1[Y])
 
 	var curX1, curX2 float32 = triangle.v1[X] + (invSlope1 * float32(difference)), triangle.v1[X] + (invSlope2 * float32(difference))
+
+	if invSlope1 > invSlope2 {
+		invSlope1, invSlope2 = invSlope2, invSlope1
+		curX1, curX2 = curX2, curX1
+	}
 
 	for y := upperPosition; y < lowerPosition; y++ {
 		for x := clamp(int(curX1), xTileMin, xTileMax); x < clamp(int(curX2), xTileMin, xTileMax); x++ {
@@ -260,6 +267,11 @@ func RenderTriangle(triangle *Triangle, xTileMin, xTileMax, yTileMin, yTileMax i
 
 	curX1 = triangle.v3[X] - (invSlope1 * float32(difference))
 	curX2 = triangle.v3[X] - (invSlope2 * float32(difference))
+
+	if invSlope1 < invSlope2 {
+		invSlope1, invSlope2 = invSlope2, invSlope1
+		curX1, curX2 = curX2, curX1
+	}
 
 	for y := upperPosition - 1; y > lowerPosition; y-- {
 		for x := clamp(int(curX1), xTileMin, xTileMax); x < clamp(int(curX2), xTileMin, xTileMax); x++ {
@@ -434,8 +446,8 @@ func main() {
 
 	var v1 Vertex = Vertex{
 		0, .25, -3, 1,
-		-.5, -.5, -3, 1,
-		.75, -.75, -3, 1,
+		-.5, -.75, -3, 1,
+		.5, -.5, -3, 1,
 	}
 
 	bundle.AddToBundle(&v1)

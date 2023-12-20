@@ -7,9 +7,10 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"strconv"
 	"sync"
+
+	"math/rand"
 
 	"github.com/chewxy/math32"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -233,13 +234,11 @@ func RenderTriangle(triangle Triangle, xTileMin, xTileMax, yTileMin, yTileMax in
 	var secondHalfEqual bool = t1 == t0
 
 	//Temporary Variable Definitions
-	var segmentHeight, betaHalf int
-	var i int
+	var segmentHeight, betaHalf, i, furthestRight int
 	var secondHalf bool
 	var alpha, beta float32
 
 	var a, b Vertex
-	var furthestRight int
 
 	for yPos := clamp(t0, yTileMin, yTileMax); yPos < lowerPosition; yPos++ {
 		i = yPos - t0
@@ -323,7 +322,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	perCore -= remainingCore
 
-	currentRotation[Z] += .25
+	currentRotation[Z] += 0
 
 	t := CreateTransformationMatrix(currentLocation, Vertex{0, 0, 0, 0})
 	r := CreateTransformationMatrix(Vertex{0, 0, 0, 0}, currentRotation.convertToQuaternion())
@@ -361,6 +360,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			mu.Lock()
 
 			for n := i * perCore; n < i*perCore+perCore; n += 12 {
+				//
 				//We Get The Tile Positions Necessary
 				vek32.Gather_Into(compareBundle.buffer, temporaryBundle.buffer, []int{n, n + 4, n + 8})
 				var xMin int = clamp(int(math32.Floor(vek32.Min(compareBundle.buffer))), 0, 4)

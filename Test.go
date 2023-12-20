@@ -7,10 +7,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"strconv"
 	"sync"
-
-	"math/rand"
 
 	"github.com/chewxy/math32"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -209,7 +208,7 @@ func clampf(value, min, max float32) float32 {
 	return value
 }
 
-func RenderTriangle(triangle Triangle, xTileMin, xTileMax, yTileMin, yTileMax int) {
+func RenderTriangle(triangle *Triangle, xTileMin, xTileMax, yTileMin, yTileMax int) {
 	//Line-Sweep Rendering
 	//We First Order The Y Values Accordingly
 	//var triangleCopy Triangle = triangle
@@ -218,70 +217,58 @@ func RenderTriangle(triangle Triangle, xTileMin, xTileMax, yTileMin, yTileMax in
 		triangle.v1, triangle.v2 = triangle.v2, triangle.v1
 	}
 
-	if triangle.v1[Y] > triangle.v3[Y] {
-		triangle.v1, triangle.v3 = triangle.v3, triangle.v1
-	}
-
 	if triangle.v2[Y] > triangle.v3[Y] {
 		triangle.v2, triangle.v3 = triangle.v3, triangle.v2
 	}
 
-	var t0, t1, t2 int = int(triangle.v1[Y]), int(triangle.v2[Y]), int(triangle.v3[Y])
-	var lowerPosition int = clamp(t2, yTileMin, yTileMax)
+	if triangle.v1[Y] > triangle.v2[Y] {
+		triangle.v1, triangle.v2 = triangle.v2, triangle.v1
+	}
 
-	var totalHeight int = t2 - t0
-	var segmentHeightTrue, segmentHeightFalse = t2 - t1, t1 - t0
-	var secondHalfEqual bool = t1 == t0
+	var splitVertex Vertex = Vertex{
+		triangle.v1[X] + ((triangle.v2[Y]-triangle.v1[Y])/(triangle.v3[Y]-triangle.v1[Y]))*(triangle.v3[X]-triangle.v1[X]),
+		triangle.v2[Y],
+	}
 
-	//Temporary Variable Definitions
-	var segmentHeight, betaHalf, i, furthestRight int
-	var secondHalf bool
-	var alpha, beta float32
+	var invSlope1, invSlope2 float32 = (triangle.v2[X] - triangle.v1[X]) / (triangle.v2[Y] - triangle.v1[Y]),
+		(splitVertex[X] - triangle.v1[X]) / (splitVertex[Y] - triangle.v1[Y])
 
-	var a, b Vertex
+	upperPosition := clamp(int(triangle.v1[Y]), yTileMin, yTileMax)
+	lowerPosition := clamp(int(triangle.v2[Y]), yTileMin, yTileMax)
 
-	for yPos := clamp(t0, yTileMin, yTileMax); yPos < lowerPosition; yPos++ {
-		i = yPos - t0
-		secondHalf = i > segmentHeightFalse || secondHalfEqual
+	difference := upperPosition - int(triangle.v1[Y])
 
-		if secondHalf {
-			segmentHeight = segmentHeightTrue
-			betaHalf = segmentHeightFalse
-		} else {
-			segmentHeight = segmentHeightFalse
-		}
+	var curX1, curX2 float32 = triangle.v1[X] + (invSlope1 * float32(difference)), triangle.v1[X] + (invSlope2 * float32(difference))
 
-		alpha = float32(i) / float32(totalHeight)
-		beta = float32(i-betaHalf) / float32(segmentHeight)
-
-		a = Vertex{
-			triangle.v1[X] + ((triangle.v3[X] - triangle.v1[X]) * alpha),
-			triangle.v1[Y] + ((triangle.v3[Y] - triangle.v1[Y]) * alpha),
-		}
-
-		if secondHalf {
-			b = Vertex{
-				triangle.v2[X] + ((triangle.v3[X] - triangle.v2[X]) * beta),
-				triangle.v2[Y] + ((triangle.v3[Y] - triangle.v2[Y]) * beta),
-			}
-		} else {
-			b = Vertex{
-				triangle.v1[X] + ((triangle.v2[X] - triangle.v1[X]) * beta),
-				triangle.v1[Y] + ((triangle.v2[Y] - triangle.v1[Y]) * beta),
-			}
-		}
-
-		if a[X] > b[X] {
-			a, b = b, a
-		}
-
-		furthestRight = clamp(int(b[X]), xTileMin, xTileMax)
-
-		for xPos := clamp(int(a[X]), xTileMin, xTileMax); xPos < furthestRight; xPos++ {
-			var position int = (yPos*width + xPos) * 4
-
+	for y := upperPosition; y < lowerPosition; y++ {
+		for x := clamp(int(curX1), xTileMin, xTileMax); x < clamp(int(curX2), xTileMin, xTileMax); x++ {
+			var position int = (y*width + x) * 4
 			screenBuffer[position] = 255
 		}
+
+		curX1 += invSlope1
+		curX2 += invSlope2
+	}
+
+	invSlope1 = (triangle.v3[X] - triangle.v2[X]) / (triangle.v3[Y] - triangle.v2[Y])
+	invSlope2 = (triangle.v3[X] - splitVertex[X]) / (triangle.v3[Y] - splitVertex[Y])
+
+	upperPosition = clamp(int(triangle.v3[Y]), yTileMin, yTileMax)
+	lowerPosition = clamp(int(triangle.v2[Y]), yTileMin, yTileMax) - 1
+
+	difference = int(triangle.v3[Y]) - upperPosition
+
+	curX1 = triangle.v3[X] - (invSlope1 * float32(difference))
+	curX2 = triangle.v3[X] - (invSlope2 * float32(difference))
+
+	for y := upperPosition - 1; y > lowerPosition; y-- {
+		for x := clamp(int(curX1), xTileMin, xTileMax); x < clamp(int(curX2), xTileMin, xTileMax); x++ {
+			var position int = (y*width + x) * 4
+			screenBuffer[position] = 255
+		}
+
+		curX1 -= invSlope1
+		curX2 -= invSlope2
 	}
 }
 
@@ -360,7 +347,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			mu.Lock()
 
 			for n := i * perCore; n < i*perCore+perCore; n += 12 {
-				//
 				//We Get The Tile Positions Necessary
 				vek32.Gather_Into(compareBundle.buffer, temporaryBundle.buffer, []int{n, n + 4, n + 8})
 				var xMin int = clamp(int(math32.Floor(vek32.Min(compareBundle.buffer))), 0, 4)
@@ -398,7 +384,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				for t := 0; t < tileData[xPos][yPos].capacity; t++ {
 					var triangle Triangle = tileData[xPos][yPos].ObtainTriangle(t)
 
-					RenderTriangle(triangle, xPos*tileSizeX, xPos*tileSizeX+tileSizeX, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
+					RenderTriangle(&triangle, xPos*tileSizeX, xPos*tileSizeX+tileSizeX, yPos*tileSizeY, yPos*tileSizeY+tileSizeY)
 				}
 
 				tileData[xPos][yPos].capacity = 0
@@ -447,15 +433,16 @@ func main() {
 	fmt.Println(vek32.Info())
 
 	var v1 Vertex = Vertex{
-		0, .5, -3, 1,
+		0, .25, -3, 1,
 		-.5, -.5, -3, 1,
-		.5, -.5, -3, 1,
+		.75, -.75, -3, 1,
 	}
 
 	bundle.AddToBundle(&v1)
 
-	for i := 0; i < 2000; i++ {
+	for i := 0; i < 1152; i++ {
 		t := CreateTransformationMatrix(Vertex{rand.Float32() * 8, rand.Float32() * 4, 0, 0}, Vertex{0, 0, 0, 0})
+		//t := CreateTransformationMatrix(Vertex{0, 0, 0, 0}, Vertex{0, 0, 0, 0})
 
 		var v Vertex = vek32.MatMul(v1, t, bundle.length)
 

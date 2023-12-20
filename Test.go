@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"strconv"
 	"sync"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/viterin/vek/vek32"
-	"math/rand"
 )
 
 const (
@@ -134,13 +134,13 @@ func (vertexBundle *VertexBundle) AddToBundle(vertex *Vertex) {
 	vertexBundle.buffer = append(vertexBundle.buffer, *vertex...)
 }
 
-func (vertexBundle *VertexBundle) ObtainVertex(index int) Vertex {
-	return vertexBundle.buffer[vertexBundle.length*index : vertexBundle.length*index+vertexBundle.length]
+func (vertexBundle *VertexBundle) ObtainVertex(min, max int) Vertex {
+	return vertexBundle.buffer[min:max]
 }
 
 func (vertexBundle *VertexBundle) ObtainTriangle(index int) Triangle {
 	return Triangle{
-		vertexBundle.ObtainVertex(index), vertexBundle.ObtainVertex(index + 1), vertexBundle.ObtainVertex(index + 2),
+		vertexBundle.ObtainVertex(index*12, index*12+4), vertexBundle.ObtainVertex(index*12+4, index*12+4+4), vertexBundle.ObtainVertex(index*12+4+4, index*12+4+4+4),
 	}
 }
 
@@ -253,8 +253,8 @@ func RenderTriangle(triangle Triangle, xTileMin, xTileMax, yTileMin, yTileMax in
 		}
 
 		alpha = float32(i) / float32(totalHeight)
-		beta = float32(i - betaHalf) / float32(segmentHeight)
-					
+		beta = float32(i-betaHalf) / float32(segmentHeight)
+
 		a = Vertex{
 			triangle.v1[X] + ((triangle.v3[X] - triangle.v1[X]) * alpha),
 			triangle.v1[Y] + ((triangle.v3[Y] - triangle.v1[Y]) * alpha),
@@ -269,7 +269,7 @@ func RenderTriangle(triangle Triangle, xTileMin, xTileMax, yTileMin, yTileMax in
 			b = Vertex{
 				triangle.v1[X] + ((triangle.v2[X] - triangle.v1[X]) * beta),
 				triangle.v1[Y] + ((triangle.v2[Y] - triangle.v1[Y]) * beta),
-			}							
+			}
 		}
 
 		if a[X] > b[X] {
@@ -314,8 +314,6 @@ func (g *Game) Update() error {
 		currentLocation[Z] -= .125 / 2 / 2 / 2
 	}
 
-	
-
 	return nil
 }
 
@@ -335,7 +333,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for p := 0; p < 12; p++ {
 		wg.Add(1)
 
-		go func(i int, tileData *[4][3]VertexBundle) {
+		go func(i int) {
 			defer wg.Done()
 			vek32.MatMul_Into(temporaryBundle.buffer[i*perCore:i*perCore+perCore], bundle.buffer[i*perCore:i*perCore+perCore], s, bundle.length)
 
@@ -344,7 +342,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			//Here We Have To Convert To Normalized, Because Of This We Need To Divide By Every Triangle's W Component
 			//Since We Don't Know The W Component Beforehand, We Must Do This In A For Loop
 			for n := i * perCore; n < i*perCore+perCore; n += 4 {
-				vek32.MulNumber_Inplace(temporaryBundle.buffer[n:n+3], 1 / temporaryBundle.buffer[n+3])
+				vek32.MulNumber_Inplace(temporaryBundle.buffer[n:n+3], 1/temporaryBundle.buffer[n+3])
 			}
 
 			//Here We Have To Convert To Screen Space, We Need To Add 1 To Every X & Y Component First Though
@@ -359,35 +357,34 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			//vek32.Round_Inplace(temporaryBundle.buffer[i*perCore : i*perCore+perCore])
 
 			//Now That Everything Is Processed, We Lock The Mutex To Store The Triangle Information To The Tile Array
-			
+
 			mu.Lock()
 
 			for n := i * perCore; n < i*perCore+perCore; n += 12 {
-				//
 				//We Get The Tile Positions Necessary
-				//vek32.Gather_Into(compareBundle.buffer, temporaryBundle.buffer, []int{n, n + 4, n + 8})
-				//var xMin int = clamp(int(math32.Floor(vek32.Min(compareBundle.buffer))), 0, 4)
-				//var xMax int = clamp(int(math32.Ceil(vek32.Max(compareBundle.buffer))), 0, 4)
+				vek32.Gather_Into(compareBundle.buffer, temporaryBundle.buffer, []int{n, n + 4, n + 8})
+				var xMin int = clamp(int(math32.Floor(vek32.Min(compareBundle.buffer))), 0, 4)
+				var xMax int = clamp(int(math32.Ceil(vek32.Max(compareBundle.buffer))), 0, 4)
 
-				//vek32.Gather_Into(compareBundle.buffer, temporaryBundle.buffer, []int{n + 1, n + 5, n + 9})
-				//var yMin int = clamp(int(math32.Floor(vek32.Min(compareBundle.buffer))), 0, 3)
-				//var yMax int = clamp(int(math32.Ceil(vek32.Max(compareBundle.buffer))), 0, 3)
+				vek32.Gather_Into(compareBundle.buffer, temporaryBundle.buffer, []int{n + 1, n + 5, n + 9})
+				var yMin int = clamp(int(math32.Floor(vek32.Min(compareBundle.buffer))), 0, 3)
+				var yMax int = clamp(int(math32.Ceil(vek32.Max(compareBundle.buffer))), 0, 3)
 
 				//Finally, We Add The Triangles To Their Respective Tiles
-				for y := 0; y < 3; y++ {
-					for x := 0; x < 4; x++ {
+				for y := yMin; y < yMax; y++ {
+					for x := xMin; x < xMax; x++ {
 						//Because Of Pre-Allocated Memory, We Can't Just Get The Size Through The len() Function
-						amount := (*tileData)[x][y].capacity * 12
+						amount := tileData[x][y].capacity * 12
 
 						//This Used To Append Instead Of Copy, But This Is Much Much Faster Because The Memory Is Pre-Allocated!
-						copy((*tileData)[x][y].buffer[amount:amount+12], finalizedBundle.buffer[n:n+12])
-						(*tileData)[x][y].capacity++
+						copy(tileData[x][y].buffer[amount:amount+12], finalizedBundle.buffer[n:n+12])
+						tileData[x][y].capacity++
 					}
 				}
 			}
 
 			mu.Unlock()
-		}(p, &tileData)
+		}(p)
 	}
 
 	wg.Wait()
@@ -458,7 +455,7 @@ func main() {
 	bundle.AddToBundle(&v1)
 
 	for i := 0; i < 2000; i++ {
-		t := CreateTransformationMatrix(Vertex{rand.Float32()*8, rand.Float32()*4, 0, 0}, Vertex{0, 0, 0, 0})
+		t := CreateTransformationMatrix(Vertex{rand.Float32() * 8, rand.Float32() * 4, 0, 0}, Vertex{0, 0, 0, 0})
 
 		var v Vertex = vek32.MatMul(v1, t, bundle.length)
 

@@ -208,11 +208,22 @@ func clampf(value, min, max float32) float32 {
 	return value
 }
 
-func RenderTriangle(triangle *Triangle, xTileMin, xTileMax, yTileMin, yTileMax int) {
-	//Line-Sweep Rendering
-	//We First Order The Y Values Accordingly
-	//var triangleCopy Triangle = triangle
+func InterpolatedPosition(triangle *Triangle, x, y float32, v0, v1 *Vertex, denominator float32) (u, v, w float32) {
+	var v2X float32 = x - triangle.v1[X]
+	var v2Y float32 = y - triangle.v1[Y]
 
+	v = (v2X * (*v1)[Y] - (*v1)[X] * v2Y) * denominator
+	w = ((*v0)[X] * v2Y - v2X * (*v0)[Y]) * denominator
+	u = 1 - v - w
+
+	return
+}
+
+func QuickInterpolatedPosition(u, v, w, t float32) (u1, v1, w1 float32) {
+	return
+}
+
+func RenderTriangle(triangle *Triangle, xTileMin, xTileMax, yTileMin, yTileMax int) {
 	if triangle.v1[Y] > triangle.v2[Y] {
 		triangle.v1, triangle.v2 = triangle.v2, triangle.v1
 	}
@@ -224,8 +235,6 @@ func RenderTriangle(triangle *Triangle, xTileMin, xTileMax, yTileMin, yTileMax i
 	if triangle.v1[Y] > triangle.v2[Y] {
 		triangle.v1, triangle.v2 = triangle.v2, triangle.v1
 	}
-
-	//fmt.Println(triangle.v1[Y], triangle.v2[Y], triangle.v3[Y])
 
 	var splitVertex Vertex = Vertex{
 		triangle.v1[X] + ((triangle.v2[Y]-triangle.v1[Y])/(triangle.v3[Y]-triangle.v1[Y]))*(triangle.v3[X]-triangle.v1[X]),
@@ -247,11 +256,85 @@ func RenderTriangle(triangle *Triangle, xTileMin, xTileMax, yTileMin, yTileMax i
 		curX1, curX2 = curX2, curX1
 	}
 
+	var u, v, w float32
+	var position int
+
+	var fragColor []byte = make([]byte, 3)
+
+	v0 := Vertex{
+		triangle.v2[X] - triangle.v1[X],
+		triangle.v2[Y] - triangle.v1[Y],
+	}
+
+	v1 := Vertex{
+		triangle.v3[X] - triangle.v1[X],
+		triangle.v3[Y] - triangle.v1[Y],		
+	}
+
+	leftestVertex := clamp(int(vek32.Min([]float32{triangle.v1[X], triangle.v2[X], triangle.v3[X]})), xTileMin, xTileMax)
+	rightestVertex := clamp(int(vek32.Max([]float32{triangle.v1[X], triangle.v2[X], triangle.v3[X]})), xTileMin, xTileMax)
+
+	differenceVertex := rightestVertex - leftestVertex
+
+	//A Highly Optimized Version Of Gathering Barycentric Coordinates
+	var denominator float32 = 1 / (v0[X] * v1[Y] - v1[X] * v0[Y])
+	var xCoordinates []float32 = vek32.Range(float32(leftestVertex), float32(rightestVertex))
+
+	//We Create The Arrays, Its Important That These Are As TIGHT As Possible To Save Some Memory & Performance
+	var vCoordinates []float32 = vek32.Zeros(rightestVertex - leftestVertex)
+	var wCoordinates []float32 = vek32.Zeros(rightestVertex - leftestVertex)
+	//var uCoordinates []float32 = vek32.Zeros(xTileMax - xTilemIn)
+
+	//We Pre-Subtract All Values Of The X-Coordinate, This Will Only Be Done Once
+	vek32.SubNumber_Inplace(xCoordinates, triangle.v1[X])
+
 	for y := upperPosition; y < lowerPosition; y++ {
-		for x := clamp(int(curX1), xTileMin, xTileMax); x < clamp(int(curX2), xTileMin, xTileMax); x++ {
-			var position int = (y*width + x) * 4
-			screenBuffer[position] = 255
-		}
+		var curDifference int = clamp(int(curX2), xTileMin, xTileMax) - clamp(int(curX1), xTileMin, xTileMax)
+		var subtractedCoordinateY float32 = float32(y) - triangle.v1[Y]
+
+		//We Obtain The Range As We Don't Need To Process Anything Outside Of It
+		//var curXMin int = clamp(int(curX1), xTileMin, xTileMax)
+		//var curXMax int = clamp(int(curX2), xTileMin, xTileMax)
+
+		//if differenceVertex != 0 {
+		//	curXMin %= differenceVertex
+		//	curXMax %= differenceVertex
+		//}
+
+
+
+		vek32.MulNumber_Into(vCoordinates[0:curDifference], xCoordinates[0:curXMin], v1[Y])
+		vek32.SubNumber_Inplace(vCoordinates[0:curDifference], v1[X] * subtractedCoordinateY)
+		vek32.MulNumber_Inplace(vCoordinates[0:curDifference], denominator)
+
+		vek32.MulNumber_Into(wCoordinates[0:curDifference], xCoordinates, subtractedCoordinateY)
+		vek32.MulNumber_Inplace(wCoordinates[0:curDifference], denominator)
+
+		/*var v2X float32 = x - triangle.v1[X]
+	var v2Y float32 = y - triangle.v1[Y]
+
+	v = (v2X * (*v1)[Y] - (*v1)[X] * v2Y) * denominator
+	w = ((*v0)[X] * v2Y - v2X * (*v0)[Y]) * denominator
+	u = 1 - v - w
+
+	return	*/
+
+		
+
+		/*for x := clamp(int(curX1), xTileMin, xTileMax); x < clamp(int(curX2), xTileMin, xTileMax); x++ {
+			u, v, w = InterpolatedPosition(triangle, float32(x), float32(y), &v0, &v1, denominator)
+
+			fragColor[0] = byte((u * 1 + v * 0 + w * 0)*255)
+			fragColor[1] = byte((u * 0 + v * 1 + w * 0)*255)
+			fragColor[2] = byte((u * 0 + v * 0 + w * 1)*255)
+
+			position = (y*width + x)
+			copy(screenBuffer[position*4:position*4+3], fragColor)	
+
+			//fmt.Println((y*width + int(curX1)) * 4, (y*width + int(curX2))*4)
+
+			//fmt.Println(screenBuffer[(y*width + int(curX1))*4:(y*width + int(curX2))*4+3])
+		}*/
 
 		curX1 += invSlope1
 		curX2 += invSlope2
@@ -275,8 +358,14 @@ func RenderTriangle(triangle *Triangle, xTileMin, xTileMax, yTileMin, yTileMax i
 
 	for y := upperPosition - 1; y > lowerPosition; y-- {
 		for x := clamp(int(curX1), xTileMin, xTileMax); x < clamp(int(curX2), xTileMin, xTileMax); x++ {
-			var position int = (y*width + x) * 4
-			screenBuffer[position] = 255
+			u, v, w = InterpolatedPosition(triangle, float32(x), float32(y), &v0, &v1, denominator)
+
+			fragColor[0] = byte((u * 1 + v * 0 + w * 0)*255)
+			fragColor[1] = byte((u * 0 + v * 1 + w * 0)*255)
+			fragColor[2] = byte((u * 0 + v * 0 + w * 1)*255)
+
+			position = (y*width + x) * 4
+			copy(screenBuffer[position:position+3], fragColor)
 		}
 
 		curX1 -= invSlope1
@@ -352,7 +441,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			//Get The Position Of The Triangle & Convert It To Tile Space, Round The Value To Avoid Errors
 			//Now We Know In What Tile Index Every Vertex Is In!
 			vek32.MatMul_Into(temporaryBundle.buffer[i*perCore:i*perCore+perCore], finalizedBundle.buffer[i*perCore:i*perCore+perCore], tileSpaceMatrix, 4)
-			//vek32.Round_Inplace(temporaryBundle.buffer[i*perCore : i*perCore+perCore])
 
 			//Now That Everything Is Processed, We Lock The Mutex To Store The Triangle Information To The Tile Array
 

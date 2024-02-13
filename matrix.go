@@ -18,6 +18,6 @@ func (m1 *Matrix) Multiply(m2 *Matrix) Matrix {
 	return result
 }
 
-func (m1 Matrix) Vertex() Vertex {
-	return m1[0][:]
+func (m1 *Matrix) Vertex() Vertex {
+	return (*m1)[0][:]
 }

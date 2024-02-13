@@ -41,6 +41,10 @@ func (v1 *Vertex) Cross(v2 *Vertex) Vertex {
 	}
 }
 
+func (v1 *Vertex) CrossProduct(v2 *Vertex) float32 {
+	return (*v1)[X]*(*v2)[Y] - (*v1)[Y]*(*v2)[X]
+}
+
 func (v1 Vertex) Interpolate(v2 *Vertex, factor float32) Vertex {
 	for index := range v1 {
 		v1[index] = v1[index]*(1-factor) + (*v2)[index]*factor

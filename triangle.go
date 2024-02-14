@@ -8,11 +8,34 @@ type Triangle struct {
 }
 
 func (triangle Triangle) Multiply(m2 *Matrix) Triangle {
-	for i := range triangle.vertices {
-		var matrix Matrix = triangle.vertices[i].Matrix()
+	for index := range triangle.vertices {
+		var matrix Matrix = triangle.vertices[index].Matrix()
 		matrix = matrix.Multiply(m2)
 
-		triangle.vertices[i] = matrix.Vertex()
+		triangle.vertices[index] = matrix.Vertex()
+	}
+
+	return triangle
+}
+
+func (triangle Triangle) ScreenSpace() Triangle {
+	for index := range triangle.vertices {
+		triangle.vertices[index] = triangle.vertices[index].ScreenSpace()
+	}
+
+	return triangle
+}
+
+func (triangle Triangle) Sort() Triangle {
+	for i := range triangle.vertices {
+		for j := i + 1; j < len(triangle.vertices); j++ {
+			if triangle.vertices[i][Y] > triangle.vertices[j][Y] {
+
+				triangle.vertices[i].Swap(&triangle.vertices[j])
+				triangle.normals[i].Swap(&triangle.normals[j])
+				triangle.uv[i].Swap(&triangle.uv[j])
+			}
+		}
 	}
 
 	return triangle

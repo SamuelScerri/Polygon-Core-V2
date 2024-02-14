@@ -10,24 +10,24 @@ const (
 type Vertex []float32
 
 func (v1 Vertex) Sum(v2 *Vertex) Vertex {
-	for index := range v1 {
-		v1[index] += (*v2)[index]
+	for index, vertex := range v1 {
+		vertex += (*v2)[index]
 	}
 
 	return v1
 }
 
 func (v1 Vertex) Multiply(v2 *Vertex) Vertex {
-	for index := range v1 {
-		v1[index] *= (*v2)[index]
+	for index, vertex := range v1 {
+		vertex *= (*v2)[index]
 	}
 
 	return v1
 }
 
 func (v1 *Vertex) Dot(v2 *Vertex) (result float32) {
-	for index := range *v1 {
-		result += (*v1)[index] * (*v2)[index]
+	for index, vertex := range *v1 {
+		result += vertex * (*v2)[index]
 	}
 
 	return
@@ -46,9 +46,16 @@ func (v1 *Vertex) CrossProduct(v2 *Vertex) float32 {
 }
 
 func (v1 Vertex) Interpolate(v2 *Vertex, factor float32) Vertex {
-	for index := range v1 {
-		v1[index] = v1[index]*(1-factor) + (*v2)[index]*factor
+	for index, vertex := range v1 {
+		vertex = vertex*(1-factor) + (*v2)[index]*factor
 	}
+
+	return v1
+}
+
+func (v1 Vertex) ScreenSpace() Vertex {
+	v1[X] = ((v1[X] + 1) * float32(Width)) / 2
+	v1[Y] = ((v1[Y] + 1) * float32(Height)) / 2
 
 	return v1
 }
@@ -65,4 +72,10 @@ func (v1 Vertex) Normalize() Vertex {
 
 func (v1 Vertex) Matrix() Matrix {
 	return Matrix{v1[:]}
+}
+
+func (v1 *Vertex) Swap(v2 *Vertex) {
+	var temporary Vertex = *v1
+	*v1 = *v2
+	*v2 = temporary
 }

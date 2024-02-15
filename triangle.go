@@ -42,7 +42,7 @@ func (triangle *Triangle) Span() (Vertex, Vertex) {
 
 func (triangle *Triangle) Barycentric(vs1, vs2 *Vertex, span float32, x, y int) (float32, float32, float32) {
 	var q Vertex = Vertex{float32(x) - triangle.Vertices[0][X], float32(y) - triangle.Vertices[0][Y]}
-	
+
 	var s float32 = q.CrossProduct(vs2) * span
 	var t float32 = vs1.CrossProduct(&q) * span
 

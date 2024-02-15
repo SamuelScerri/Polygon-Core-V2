@@ -1,14 +1,20 @@
 package main
 
 import (
-	//"fmt"
 	"github.com/veandco/go-sdl2/sdl"
-	//"time"
 )
 
 const Cores = 12
 const Width, Height = 640, 360
 const TileXSize, TileYSize = Width / 4, Height / 3
+
+func BasicShader(x, y int, s, t, w float32) (r, g, b float32) {
+	r = s
+	g = t
+	b = w
+
+	return
+}
 
 func main() {
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
@@ -52,7 +58,7 @@ func main() {
 		}
 
 		frameBuffer.Clear(16, 16, 16)
-		frameBuffer.Rasterize(&triangle)
+		frameBuffer.Rasterize(&triangle, BasicShader)
 
 		window.UpdateSurface()
 

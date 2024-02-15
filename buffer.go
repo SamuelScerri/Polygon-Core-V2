@@ -10,6 +10,8 @@ const (
 	B = 0
 )
 
+type Shader func(x, y int, s, t, w float32) (float32, float32, float32)
+
 type Buffer struct {
 	Frame []byte
 	Depth []float32
@@ -29,17 +31,14 @@ func Clamp(value float32, min, max int) float32 {
 	return value
 }
 
-func (buffer *Buffer) Fragment(triangle *Triangle, vs1, vs2 *Vertex, span float32, x, y int) {
-	s, t, w := triangle.Barycentric(vs1, vs2, span, x, y)
-
-	var r float32 = s
-	var g float32 = t
-	var b float32 = w
+func (buffer *Buffer) Fragment(triangle *Triangle, vs1, vs2 *Vertex, span float32, x, y int, shader Shader) {
+	var s, t, w float32 = triangle.Barycentric(vs1, vs2, span, x, y)
+	var r, g, b float32 = shader(x, y, s, t, w)
 
 	buffer.Set(x, y, byte(r*255), byte(g*255), byte(b*255))
 }
 
-func (buffer *Buffer) RasterizeBottomFlat(triangle *Triangle, split, vs1, vs2 *Vertex, span float32, tx, ty int) {
+func (buffer *Buffer) RasterizeBottomFlat(triangle *Triangle, split, vs1, vs2 *Vertex, span float32, tx, ty int, shader Shader) {
 	var invSlope1 float32 = (triangle.Vertices[1][X] - triangle.Vertices[0][X]) / (triangle.Vertices[1][Y] - triangle.Vertices[0][Y])
 	var invSlope2 float32 = ((*split)[X] - triangle.Vertices[0][X]) / ((*split)[Y] - triangle.Vertices[0][Y])
 
@@ -51,7 +50,7 @@ func (buffer *Buffer) RasterizeBottomFlat(triangle *Triangle, split, vs1, vs2 *V
 
 	for y := int(clampedUp); y <= int(Clamp(triangle.Vertices[1][Y], ty, ty+TileYSize)); y++ {
 		for x := int(Clamp(curX1, tx, tx+TileXSize)); x < int(Clamp(curX2, tx, tx+TileXSize)); x++ {
-			buffer.Fragment(triangle, vs1, vs2, span, x, y)
+			buffer.Fragment(triangle, vs1, vs2, span, x, y, shader)
 		}
 
 		curX1 += invSlope1
@@ -59,7 +58,7 @@ func (buffer *Buffer) RasterizeBottomFlat(triangle *Triangle, split, vs1, vs2 *V
 	}
 }
 
-func (buffer *Buffer) RasterizeTopFlat(triangle *Triangle, split, vs1, vs2 *Vertex, span float32, tx, ty int) {
+func (buffer *Buffer) RasterizeTopFlat(triangle *Triangle, split, vs1, vs2 *Vertex, span float32, tx, ty int, shader Shader) {
 	var invSlope1 float32 = (triangle.Vertices[2][X] - triangle.Vertices[1][X]) / (triangle.Vertices[2][Y] - triangle.Vertices[1][Y])
 	var invSlope2 float32 = (triangle.Vertices[2][X] - (*split)[X]) / (triangle.Vertices[2][Y] - (*split)[Y])
 
@@ -71,7 +70,7 @@ func (buffer *Buffer) RasterizeTopFlat(triangle *Triangle, split, vs1, vs2 *Vert
 
 	for y := int(clampedDown); y > int(Clamp(triangle.Vertices[1][Y], ty, ty+TileYSize)); y-- {
 		for x := int(Clamp(curX1, tx, tx+TileXSize)); x < int(Clamp(curX2, tx, tx+TileXSize)); x++ {
-			buffer.Fragment(triangle, vs1, vs2, span, x, y)
+			buffer.Fragment(triangle, vs1, vs2, span, x, y, shader)
 		}
 
 		curX1 -= invSlope1
@@ -79,14 +78,14 @@ func (buffer *Buffer) RasterizeTopFlat(triangle *Triangle, split, vs1, vs2 *Vert
 	}
 }
 
-func (buffer *Buffer) RasterizeChunk(triangle *Triangle, split, vs1, vs2 *Vertex, span float32, tx, ty int) {
-	buffer.RasterizeBottomFlat(triangle, split, vs1, vs2, span, tx, ty)
-	buffer.RasterizeTopFlat(triangle, split, vs1, vs2, span, tx, ty)
+func (buffer *Buffer) RasterizeChunk(triangle *Triangle, split, vs1, vs2 *Vertex, span float32, tx, ty int, shader Shader) {
+	buffer.RasterizeBottomFlat(triangle, split, vs1, vs2, span, tx, ty, shader)
+	buffer.RasterizeTopFlat(triangle, split, vs1, vs2, span, tx, ty, shader)
 
 	buffer.WaitGroup.Done()
 }
 
-func (buffer *Buffer) Rasterize(triangle *Triangle) {
+func (buffer *Buffer) Rasterize(triangle *Triangle, shader Shader) {
 	triangle.Sort()
 
 	var split Vertex = Vertex{
@@ -97,14 +96,14 @@ func (buffer *Buffer) Rasterize(triangle *Triangle) {
 	split.ScreenSpace()
 	triangle.ScreenSpace()
 
-	vs1, vs2 := triangle.Span()
+	var vs1, vs2 Vertex = triangle.Span()
 	var span float32 = 1 / vs1.CrossProduct(&vs2)
 
 	buffer.WaitGroup.Add(12)
 
 	for ty := 0; ty < Height; ty += TileYSize {
 		for tx := 0; tx < Width; tx += TileXSize {
-			go buffer.RasterizeChunk(triangle, &split, &vs1, &vs2, span, tx, ty)
+			go buffer.RasterizeChunk(triangle, &split, &vs1, &vs2, span, tx, ty, shader)
 		}
 	}
 

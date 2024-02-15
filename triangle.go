@@ -22,6 +22,12 @@ func (triangle *Triangle) ScreenSpace() {
 	}
 }
 
+func (triangle *Triangle) Normalize() {
+	for index := range triangle.Vertices {
+		triangle.Vertices[index].Normalize()
+	}
+}
+
 func (triangle *Triangle) Sort() {
 	for i := range triangle.Vertices {
 		for j := i + 1; j < len(triangle.Vertices); j++ {

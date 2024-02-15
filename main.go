@@ -30,6 +30,8 @@ func main() {
 
 	running := true
 	for running {
+		//benchmark := time.Now()
+
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch event.(type) {
 			case *sdl.QuitEvent:
@@ -40,10 +42,10 @@ func main() {
 		}
 
 		var triangle Triangle = Triangle{
-			vertices: [3]Vertex{
+			Vertices: [3]Vertex{
 				{0, -.5, 0},
 				{-.5, .5, 0},
-				{.5, .5, 0},
+				{.5, .75, 0},
 			},
 		}
 
@@ -51,5 +53,7 @@ func main() {
 		frameBuffer.Rasterize(&triangle)
 
 		window.UpdateSurface()
+
+		//fmt.Println(1 / float32(time.Since(benchmark).Seconds()))
 	}
 }

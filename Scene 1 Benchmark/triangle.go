@@ -10,6 +10,12 @@ type Triangle struct {
 	Normals [3]Vertex
 }
 
+type TriangleSpan struct {
+	VS1, VS2 Vertex
+
+	Span float32
+}
+
 func (triangle *Triangle) Transform(m2 *Matrix) {
 	for index := range triangle.Vertices {
 		var matrix Matrix = triangle.Vertices[index].Matrix()
@@ -44,9 +50,8 @@ func (triangle *Triangle) Sort() {
 	}
 }
 
-func (triangle *Triangle) Bounds() Vertex {
-	return Vertex{
-		float32(math.Max(float64(triangle.Vertices[0][X]),
+func (triangle *Triangle) Bounds() (float32, float32, float32, float32) {
+	return float32(math.Max(float64(triangle.Vertices[0][X]),
 			math.Max(float64(triangle.Vertices[1][X]), float64(triangle.Vertices[2][X])))),
 
 		float32(math.Max(float64(triangle.Vertices[0][Y]),
@@ -56,8 +61,7 @@ func (triangle *Triangle) Bounds() Vertex {
 			math.Min(float64(triangle.Vertices[1][X]), float64(triangle.Vertices[2][X])))),
 
 		float32(math.Min(float64(triangle.Vertices[0][Y]),
-			math.Min(float64(triangle.Vertices[1][Y]), float64(triangle.Vertices[2][Y])))),
-	}
+			math.Min(float64(triangle.Vertices[1][Y]), float64(triangle.Vertices[2][Y]))))
 }
 
 func (triangle *Triangle) EdgeSpan(x, y int) (float32, float32, float32) {
@@ -76,10 +80,11 @@ func (triangle *Triangle) Span() (Vertex, Vertex) {
 		Vertex{triangle.Vertices[2][X] - triangle.Vertices[0][X], triangle.Vertices[2][Y] - triangle.Vertices[0][Y]}
 }
 
-func (triangle *Triangle) Copy() (copiedTriangle Triangle) {
-	copy(triangle.UV[:], copiedTriangle.UV[:])
-	copy(triangle.Vertices[:], triangle.Vertices[:])
-	copy(triangle.Normals[:], copiedTriangle.Normals[:])
+func (triangle *Triangle) Barycentric(span *TriangleSpan, x, y int) (float32, float32, float32) {
+	var q Vertex = Vertex{float32(x) - triangle.Vertices[0][X], float32(y) - triangle.Vertices[0][Y]}
 
-	return
+	var s float32 = q.CrossProduct(&span.VS2) * span.Span
+	var t float32 = span.VS1.CrossProduct(&q) * span.Span
+
+	return s, t, 1 - s - t
 }

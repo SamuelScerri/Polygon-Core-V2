@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/veandco/go-sdl2/sdl"
 )
@@ -87,26 +88,15 @@ func main() {
 		panic(err)
 	}
 
-	var tiles [4][3]Tile
+	var frameBuffer Buffer = Buffer{Frame: surface.Pixels(), Depth: make([]float32, Width*Height), Pitch: int(surface.Pitch), BytesPerPixel: surface.BytesPerPixel()}
 
-	for y := range tiles[0] {
-		for x := range tiles {
-
-			tiles[x][y].X = x * TileXSize
-			tiles[x][y].Y = y * TileYSize
-			tiles[x][y].Frame = surface.Pixels()
-		}
-	}
-
-	Pitch = int(surface.Pitch)
-	BytesPerPixel = surface.BytesPerPixel()
-
-	//var frameBuffer Tile = Tile{Frame: surface.Pixels(), Depth: make([]float32, Width*Height), Pitch: int(surface.Pitch), BytesPerPixel: surface.BytesPerPixel()}
-
-	var projectionMatrix Matrix = ProjectionMatrix()
+	//var projectionMatrix Matrix = ProjectionMatrix()
 	var position Vertex = Vertex{0, 0, 0, 0}
 
 	running := true
+
+	var iteration int = 0
+	currentTime := time.Now()
 
 	for running {
 		//benchmark := time.Now()
@@ -148,31 +138,29 @@ func main() {
 
 		var triangle Triangle = Triangle{
 			Vertices: [3]Vertex{
-				{0, -.5, 0, 1},
-				{-.5, .5, 0, 1},
-				{.5, .5, 0, 1},
+				{-1, -1, 0, 1},
+				{-1, 1, 0, 1},
+				{1, 1, 0, 1},
 			},
 		}
 
-		var matrix Matrix = TransformationMatrix(position, Vertex{0, 0, 0, 0})
+		//var matrix Matrix = TransformationMatrix(position, Vertex{0, 0, 0, 0})
 
-		triangle.Transform(&matrix)
-		triangle.Transform(&projectionMatrix)
+		//triangle.Transform(&matrix)
+		//triangle.Transform(&projectionMatrix)
 
-		WaitGroup.Add(12)
-
-		for y := range tiles[0] {
-			for x := range tiles {
-				go tiles[x][y].Clear(byte(x+y)*4, byte(x+y)*4, byte(x+y)*4)
-				//go tiles[x][y].Rasterize()
-			}
-		}
-
-		WaitGroup.Wait()
-
-		//frameBuffer.Clear(16, 16, 16)
-		//frameBuffer.Rasterize(&triangle, BasicShader)
+		frameBuffer.Clear(16, 16, 16)
+		frameBuffer.Rasterize(&triangle, BasicShader)
 
 		window.UpdateSurface()
+
+		//fmt.Println(1 / float32(time.Since(benchmark).Seconds()))
+
+		iteration++
+
+		if iteration > 10000 {
+			fmt.Println("\nTime Taken: ", time.Since(currentTime).Milliseconds(), "Milliseconds")
+			break
+		}
 	}
 }

@@ -84,7 +84,7 @@ func main() {
 		panic(err)
 	}
 
-	var tiles [1][1]Tile
+	var tiles [4][3]Tile
 
 	for y := range tiles[0] {
 		for x := range tiles {
@@ -98,9 +98,7 @@ func main() {
 	Pitch = int(surface.Pitch)
 	BytesPerPixel = surface.BytesPerPixel()
 
-	//var frameBuffer Tile = Tile{Frame: surface.Pixels(), Depth: make([]float32, Width*Height), Pitch: int(surface.Pitch), BytesPerPixel: surface.BytesPerPixel()}
-
-	//var projectionMatrix Matrix = ProjectionMatrix()
+	var projectionMatrix Matrix = ProjectionMatrix()
 	var position Vertex = Vertex{0, 0, 0, 0}
 
 	running := true
@@ -150,10 +148,12 @@ func main() {
 			},
 		}
 
+		triangle.Shader = BasicShader
+
 		var matrix Matrix = TransformationMatrix(position, Vertex{0, 0, 0, 1})
 
 		triangle.Transform(&matrix)
-		//triangle.Transform(&projectionMatrix)
+		triangle.Transform(&projectionMatrix)
 
 		WaitGroup.Add(Cores)
 

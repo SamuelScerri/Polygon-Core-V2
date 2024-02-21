@@ -10,6 +10,8 @@ type Triangle struct {
 	Vertices [3]Vertex
 
 	Normals [3]Vertex
+
+	Shader Shader
 }
 
 func (triangle *Triangle) Transform(m2 *Matrix) {
@@ -80,10 +82,12 @@ func (triangle *Triangle) Span() (Vertex, Vertex) {
 
 func (triangle *Triangle) Copy() (copiedTriangle Triangle) {
 	for index := range triangle.Vertices {
+		copiedTriangle.UV[index] = triangle.UV[index].Copy()
 		copiedTriangle.Vertices[index] = triangle.Vertices[index].Copy()
 		copiedTriangle.Normals[index] = triangle.Normals[index].Copy()
-		copiedTriangle.UV[index] = triangle.UV[index].Copy()
 	}
+
+	copiedTriangle.Shader = triangle.Shader
 
 	return
 }

@@ -37,9 +37,10 @@ type Tile struct {
 func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 	for y := tile.Y; y < tile.Y+TileYSize-1; y++ {
 		for x := tile.X; x < tile.X+TileXSize-1; x++ {
+
 			if inside, s, t, w := triangle.Inside(x, y); inside {
-				//var r, g, b float32 = shader(s, t, w)
-				tile.Set(x, y, byte(s*255), byte(t*255), byte(w*255))
+				var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
+				tile.Set(x, y, byte(r*255), byte(g*255), byte(b*255))
 			}
 		}
 	}
@@ -47,6 +48,8 @@ func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 
 func (tile *Tile) Rasterize(shader Shader) {
 	for index := range tile.Triangles {
+		//fmt.Println(tile.Triangles[index].Triangle)
+
 		tile.Barycentric(&tile.Triangles[index])
 	}
 

@@ -31,7 +31,7 @@ func Process(triangle *Triangle) ProcessedTriangle {
 	(triangle.Vertices[2][Y]-triangle.Vertices[0][Y]))*
 	(triangle.Vertices[2][X]-triangle.Vertices[0][X])*/
 
-	var vs1, vs2 Vertex = triangle.Span()
+	var vs1, vs2 Vertex = copiedTriangle.Span()
 
 	return ProcessedTriangle{
 		copiedTriangle,
@@ -51,6 +51,8 @@ func (ts *ProcessedTriangle) Barycentric(x, y int) (float32, float32, float32) {
 
 func (ts *ProcessedTriangle) Inside(x, y int) (bool, float32, float32, float32) {
 	var s, t, w float32 = ts.Barycentric(x, y)
+
+	//fmt.Println(s, t, w)
 
 	return (s >= 0 && t >= 0 && s+t <= 1),
 		s, t, w

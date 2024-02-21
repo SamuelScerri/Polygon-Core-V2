@@ -23,7 +23,9 @@ func Process(triangle *Triangle) ProcessedTriangle {
 
 	copiedTriangle.Normalize()
 	copiedTriangle.ScreenSpace()
-	copiedTriangle.Sort()
+
+	//fmt.Println(copiedTriangle)
+	//copiedTriangle.Sort()
 
 	/*var split float32 = triangle.Vertices[0][X] + ((triangle.Vertices[1][Y]-triangle.Vertices[0][Y])/
 	(triangle.Vertices[2][Y]-triangle.Vertices[0][Y]))*

@@ -43,7 +43,7 @@ func (v1 *Vertex) CrossProduct(v2 *Vertex) float32 {
 
 func (v1 *Vertex) Interpolate(v2 *Vertex, factor float32) {
 	for index, vertex := range *v1 {
-		vertex = vertex*(1-factor) + (*v2)[index]*factor
+		(*v1)[index] = vertex*(1-factor) + (*v2)[index]*factor
 	}
 }
 
@@ -68,4 +68,11 @@ func (v1 *Vertex) Swap(v2 *Vertex) {
 	var temporary Vertex = *v1
 	*v1 = *v2
 	*v2 = temporary
+}
+
+func (v1 *Vertex) Copy() Vertex {
+	var copiedVertex Vertex = make(Vertex, len(*v1))
+	copy(copiedVertex, *v1)
+
+	return copiedVertex
 }

@@ -1,6 +1,8 @@
 package main
 
-import "math"
+import (
+	"math"
+)
 
 type Triangle struct {
 	UV [3]Vertex
@@ -77,9 +79,11 @@ func (triangle *Triangle) Span() (Vertex, Vertex) {
 }
 
 func (triangle *Triangle) Copy() (copiedTriangle Triangle) {
-	copy(triangle.UV[:], copiedTriangle.UV[:])
-	copy(triangle.Vertices[:], triangle.Vertices[:])
-	copy(triangle.Normals[:], copiedTriangle.Normals[:])
+	for index := range triangle.Vertices {
+		copiedTriangle.Vertices[index] = triangle.Vertices[index].Copy()
+		copiedTriangle.Normals[index] = triangle.Normals[index].Copy()
+		copiedTriangle.UV[index] = triangle.UV[index].Copy()
+	}
 
 	return
 }

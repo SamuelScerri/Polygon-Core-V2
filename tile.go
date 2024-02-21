@@ -45,33 +45,18 @@ func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 	}
 }
 
-func (tile *Tile) RasterizeChunk(triangle *ProcessedTriangle) {
-	switch AlgorithmUsed {
-	//case SweepLineAlgorithm:
-	//	tile.SweepLine(triangle)
-	//	break
-	case BarycentricAlgorithm:
-		tile.Barycentric(triangle)
-		break
-
-		//case EdgeTestAlgorithm:
-		//	tile.EdgeTest(triangle)
-		//	break
-	}
-}
-
 func (tile *Tile) Rasterize(shader Shader) {
 	for index := range tile.Triangles {
-		tile.RasterizeChunk(&tile.Triangles[index])
+		tile.Barycentric(&tile.Triangles[index])
 	}
 
 	tile.Triangles = nil
-
-	WaitGroup.Done()
 }
 
 func (tile *Tile) Add(triangle *Triangle) {
 	tile.Triangles = append(tile.Triangles, Process(triangle))
+
+	//fmt.Println(tile.Triangles[0].Triangle.Vertices)
 }
 
 func (tile *Tile) Set(x, y int, r, g, b byte) {
@@ -88,6 +73,4 @@ func (tile *Tile) Clear(r, g, b byte) {
 			tile.Set(x, y, r, g, b)
 		}
 	}
-
-	WaitGroup.Done()
 }

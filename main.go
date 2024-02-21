@@ -45,13 +45,10 @@ func main() {
 	switch algorithm {
 	case '1':
 		AlgorithmUsed = SweepLineAlgorithm
-		break
 	case '2':
 		AlgorithmUsed = BarycentricAlgorithm
-		break
 	case '3':
 		AlgorithmUsed = EdgeTestAlgorithm
-		break
 	}
 
 	fmt.Println("")
@@ -87,7 +84,7 @@ func main() {
 		panic(err)
 	}
 
-	var tiles [4][3]Tile
+	var tiles [1][1]Tile
 
 	for y := range tiles[0] {
 		for x := range tiles {
@@ -103,7 +100,7 @@ func main() {
 
 	//var frameBuffer Tile = Tile{Frame: surface.Pixels(), Depth: make([]float32, Width*Height), Pitch: int(surface.Pitch), BytesPerPixel: surface.BytesPerPixel()}
 
-	var projectionMatrix Matrix = ProjectionMatrix()
+	//var projectionMatrix Matrix = ProjectionMatrix()
 	var position Vertex = Vertex{0, 0, 0, 0}
 
 	running := true
@@ -116,34 +113,33 @@ func main() {
 			case *sdl.QuitEvent:
 				println("Quit")
 				running = false
-				break
 			}
 		}
 
 		var state []uint8 = sdl.GetKeyboardState()
 
 		if state[sdl.SCANCODE_W] == 1 {
-			position[Z] -= .0078125
+			position[Z] -= 0.0078125
 		}
 
 		if state[sdl.SCANCODE_S] == 1 {
-			position[Z] += .0078125
+			position[Z] += 0.0078125
 		}
 
 		if state[sdl.SCANCODE_LEFT] == 1 {
-			position[X] -= .001953125
+			position[X] -= 0.001953125
 		}
 
 		if state[sdl.SCANCODE_RIGHT] == 1 {
-			position[X] += .001953125
+			position[X] += 0.001953125
 		}
 
 		if state[sdl.SCANCODE_UP] == 1 {
-			position[Y] -= .001953125
+			position[Y] -= 0.001953125
 		}
 
 		if state[sdl.SCANCODE_DOWN] == 1 {
-			position[Y] += .001953125
+			position[Y] += 0.001953125
 		}
 
 		var triangle Triangle = Triangle{
@@ -154,24 +150,27 @@ func main() {
 			},
 		}
 
-		var matrix Matrix = TransformationMatrix(position, Vertex{0, 0, 0, 0})
+		var matrix Matrix = TransformationMatrix(position, Vertex{0, 0, 0, 1})
 
 		triangle.Transform(&matrix)
-		triangle.Transform(&projectionMatrix)
+		//triangle.Transform(&projectionMatrix)
 
-		WaitGroup.Add(12)
+		WaitGroup.Add(Cores)
 
 		for y := range tiles[0] {
 			for x := range tiles {
-				go tiles[x][y].Clear(byte(x+y)*4, byte(x+y)*4, byte(x+y)*4)
-				//go tiles[x][y].Rasterize()
+				tiles[x][y].Add(&triangle)
+
+				go func(x, y int) {
+					tiles[x][y].Clear(byte(x+y)*4, byte(x+y)*4, byte(x+y)*4)
+					tiles[x][y].Rasterize(nil)
+
+					WaitGroup.Done()
+				}(x, y)
 			}
 		}
 
 		WaitGroup.Wait()
-
-		//frameBuffer.Clear(16, 16, 16)
-		//frameBuffer.Rasterize(&triangle, BasicShader)
 
 		window.UpdateSurface()
 	}

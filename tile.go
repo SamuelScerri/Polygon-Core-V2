@@ -18,12 +18,6 @@ const (
 	SweepLineAlgorithm = 2
 )
 
-var AlgorithmUsed int = SweepLineAlgorithm
-
-var Pitch int
-var BytesPerPixel int
-var WaitGroup sync.WaitGroup
-
 type Shader func(s, t, w float32) (float32, float32, float32)
 
 type Tile struct {
@@ -33,6 +27,12 @@ type Tile struct {
 
 	X, Y int
 }
+
+var AlgorithmUsed int = SweepLineAlgorithm
+
+var Pitch int
+var BytesPerPixel int
+var WaitGroup sync.WaitGroup
 
 func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 	for y := tile.Y; y < tile.Y+TileYSize-1; y++ {
@@ -56,10 +56,8 @@ func (tile *Tile) Rasterize(shader Shader) {
 	tile.Triangles = nil
 }
 
-func (tile *Tile) Add(triangle *Triangle) {
-	tile.Triangles = append(tile.Triangles, Process(triangle))
-
-	//fmt.Println(tile.Triangles[0].Triangle.Vertices)
+func (tile *Tile) Add(triangle *ProcessedTriangle) {
+	tile.Triangles = append(tile.Triangles, *triangle)
 }
 
 func (tile *Tile) Set(x, y int, r, g, b byte) {

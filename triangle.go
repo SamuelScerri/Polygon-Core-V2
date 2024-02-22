@@ -4,6 +4,13 @@ import (
 	"math"
 )
 
+const (
+	XMAX = 0
+	YMAX = 1
+	XMIN = 2
+	YMIN = 3
+)
+
 type Triangle struct {
 	UV [3]Vertex
 

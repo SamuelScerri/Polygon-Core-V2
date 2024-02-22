@@ -155,12 +155,12 @@ func main() {
 		triangle.Transform(&matrix)
 		triangle.Transform(&projectionMatrix)
 
+		Process(&triangle, &tiles)
+
 		WaitGroup.Add(Cores)
 
 		for y := range tiles[0] {
 			for x := range tiles {
-				tiles[x][y].Add(&triangle)
-
 				go func(x, y int) {
 					tiles[x][y].Clear(byte(x+y)*4, byte(x+y)*4, byte(x+y)*4)
 					tiles[x][y].Rasterize(nil)

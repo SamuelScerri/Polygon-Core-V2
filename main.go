@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
 
 	"github.com/veandco/go-sdl2/sdl"
@@ -10,7 +11,7 @@ import (
 
 var Cores = 1
 
-const Width, Height = 640, 360
+const Width, Height = 480, 270
 const FOV = 90
 
 const Near, Far = .1, 1000
@@ -103,8 +104,36 @@ func main() {
 
 	running := true
 
+	var triangles []Triangle
+
+	for i := 0; i < 1000; i++ {
+		var triangle Triangle = Triangle{
+			Vertices: [3]Vertex{
+				{0, -.5, 0, 1},
+				{-.5, .5, 0, 1},
+				{.5, .5, 0, 1},
+			},
+		}
+
+		var matrix Matrix = TransformationMatrix(Vertex{rand.Float32() * 4, rand.Float32() * 4, -10, 0}, Vertex{0, 0, 0, 0})
+		triangle.Transform(&matrix)
+
+		triangle.Shader = BasicShader
+
+		triangles = append(triangles, triangle)
+	}
+
+	var now uint64 = sdl.GetPerformanceCounter()
+	var last uint64 = 0
+	var deltaTime float32
+	var moveSpeed float32 = .0625
+
 	for running {
 		//benchmark := time.Now()
+		last = now
+		now = sdl.GetPerformanceCounter()
+
+		deltaTime = float32((now - last)) * 1000 / float32(sdl.GetPerformanceFrequency())
 
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch event.(type) {
@@ -117,45 +146,38 @@ func main() {
 		var state []uint8 = sdl.GetKeyboardState()
 
 		if state[sdl.SCANCODE_W] == 1 {
-			position[Z] -= 0.0078125
+			position[Z] -= deltaTime * moveSpeed
 		}
 
 		if state[sdl.SCANCODE_S] == 1 {
-			position[Z] += 0.0078125
+			position[Z] += deltaTime * moveSpeed
 		}
 
 		if state[sdl.SCANCODE_LEFT] == 1 {
-			position[X] -= 0.001953125
+			position[X] -= deltaTime * moveSpeed
 		}
 
 		if state[sdl.SCANCODE_RIGHT] == 1 {
-			position[X] += 0.001953125
+			position[X] += deltaTime * moveSpeed
 		}
 
 		if state[sdl.SCANCODE_UP] == 1 {
-			position[Y] -= 0.001953125
+			position[Y] -= deltaTime * moveSpeed
 		}
 
 		if state[sdl.SCANCODE_DOWN] == 1 {
-			position[Y] += 0.001953125
+			position[Y] += deltaTime * moveSpeed
 		}
-
-		var triangle Triangle = Triangle{
-			Vertices: [3]Vertex{
-				{0, -.5, 0, 1},
-				{-.5, .5, 0, 1},
-				{.5, .5, 0, 1},
-			},
-		}
-
-		triangle.Shader = BasicShader
 
 		var matrix Matrix = TransformationMatrix(position, Vertex{0, 0, 0, 1})
+		matrix = matrix.Multiply(&projectionMatrix)
 
-		triangle.Transform(&matrix)
-		triangle.Transform(&projectionMatrix)
+		for index := range triangles {
+			var copiedTriangle Triangle = triangles[index].Copy()
 
-		Process(&triangle, &tiles)
+			copiedTriangle.Transform(&matrix)
+			Process(&copiedTriangle, &tiles)
+		}
 
 		WaitGroup.Add(Cores)
 
@@ -163,7 +185,7 @@ func main() {
 			for x := range tiles {
 				go func(x, y int) {
 					tiles[x][y].Clear(byte(x+y)*4, byte(x+y)*4, byte(x+y)*4)
-					tiles[x][y].Rasterize(nil)
+					tiles[x][y].Rasterize()
 
 					WaitGroup.Done()
 				}(x, y)
@@ -173,5 +195,7 @@ func main() {
 		WaitGroup.Wait()
 
 		window.UpdateSurface()
+
+		//fmt.Println(1000 / float32(time.Since(benchmark).Milliseconds()))
 	}
 }

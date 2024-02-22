@@ -35,9 +35,13 @@ var BytesPerPixel int
 var WaitGroup sync.WaitGroup
 
 func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
-	for y := tile.Y; y < tile.Y+TileYSize-1; y++ {
-		for x := tile.X; x < tile.X+TileXSize-1; x++ {
+	var xMin, yMin, xMax, yMax int = int(Clamp(triangle.Bounds[XMIN], tile.X, tile.X+TileXSize-1)),
+		int(Clamp(triangle.Bounds[YMIN], tile.Y, tile.Y+TileYSize-1)),
+		int(Clamp(triangle.Bounds[XMAX], tile.X, tile.X+TileXSize-1)),
+		int(Clamp(triangle.Bounds[YMAX], tile.Y, tile.Y+TileYSize-1))
 
+	for y := yMin; y < yMax; y++ {
+		for x := xMin; x < xMax; x++ {
 			if inside, s, t, w := triangle.Inside(x, y); inside {
 				var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
 				tile.Set(x, y, byte(r*255), byte(g*255), byte(b*255))
@@ -46,10 +50,8 @@ func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 	}
 }
 
-func (tile *Tile) Rasterize(shader Shader) {
+func (tile *Tile) Rasterize() {
 	for index := range tile.Triangles {
-		//fmt.Println(tile.Triangles[index].Triangle)
-
 		tile.Barycentric(&tile.Triangles[index])
 	}
 

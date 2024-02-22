@@ -19,21 +19,19 @@ func Clamp(value float32, min, max int) float32 {
 }
 
 func Process(triangle *Triangle, tiles *([4][3]Tile)) {
-	var copiedTriangle Triangle = triangle.Copy()
-
-	copiedTriangle.Normalize()
-	copiedTriangle.ScreenSpace()
+	triangle.Normalize()
+	triangle.ScreenSpace()
 	//copiedTriangle.Sort()
 
 	/*var split float32 = triangle.Vertices[0][X] + ((triangle.Vertices[1][Y]-triangle.Vertices[0][Y])/
 	(triangle.Vertices[2][Y]-triangle.Vertices[0][Y]))*
 	(triangle.Vertices[2][X]-triangle.Vertices[0][X])*/
 
-	var vs1, vs2 Vertex = copiedTriangle.Span()
+	var vs1, vs2 Vertex = triangle.Span()
 
 	var processedTriangle ProcessedTriangle = ProcessedTriangle{
-		copiedTriangle,
-		copiedTriangle.Bounds(), vs1, vs2,
+		*triangle,
+		triangle.Bounds(), vs1, vs2,
 		1 / vs1.CrossProduct(&vs2),
 	}
 

@@ -11,7 +11,7 @@ import (
 
 var Cores = 1
 
-const Width, Height = 480, 270
+const Width, Height = 640, 360
 const FOV = 90
 
 const Near, Far = .1, 1000
@@ -86,6 +86,7 @@ func main() {
 	}
 
 	var tiles [4][3]Tile
+	//tiles = make([][]Tile, )
 
 	for y := range tiles[0] {
 		for x := range tiles {
@@ -115,7 +116,7 @@ func main() {
 			},
 		}
 
-		var matrix Matrix = TransformationMatrix(Vertex{rand.Float32() * 4, rand.Float32() * 4, -10, 0}, Vertex{0, 0, 0, 0})
+		var matrix Matrix = TransformationMatrix(Vertex{rand.Float32()*4 - 2, rand.Float32()*4 - 2, -20, 0}, Vertex{0, 0, 0, 0})
 		triangle.Transform(&matrix)
 
 		triangle.Shader = BasicShader
@@ -125,15 +126,16 @@ func main() {
 
 	var now uint64 = sdl.GetPerformanceCounter()
 	var last uint64 = 0
-	var deltaTime float32
 	var moveSpeed float32 = .0625
+	var totalFrames int = 0
+
+	var timePassed float32 = 0
 
 	for running {
-		//benchmark := time.Now()
 		last = now
 		now = sdl.GetPerformanceCounter()
 
-		deltaTime = float32((now - last)) * 1000 / float32(sdl.GetPerformanceFrequency())
+		var deltaTime float32 = float32((now - last)) * 1000 / float32(sdl.GetPerformanceFrequency())
 
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch event.(type) {
@@ -182,7 +184,16 @@ func main() {
 					var copiedTriangle Triangle = triangles[p].Copy()
 					copiedTriangle.Transform(&matrix)
 
-					Process(&copiedTriangle, &tiles)
+					var processedTriangle ProcessedTriangle = Process(&copiedTriangle, &tiles)
+					var xMin, yMin, xMax, yMax int = processedTriangle.TileBoundary(&tiles)
+
+					for y := yMin; y < yMax; y++ {
+						for x := xMin; x < xMax; x++ {
+							Mutex.Lock()
+							tiles[x][y].Add(&processedTriangle)
+							Mutex.Unlock()
+						}
+					}
 				}
 
 				WaitGroup.Done()
@@ -190,13 +201,6 @@ func main() {
 		}
 
 		WaitGroup.Wait()
-
-		/*for index := range triangles {
-			var copiedTriangle Triangle = triangles[index].Copy()
-
-			copiedTriangle.Transform(&matrix)
-			Process(&copiedTriangle, &tiles)
-		}*/
 
 		WaitGroup.Add(Cores)
 
@@ -215,6 +219,12 @@ func main() {
 
 		window.UpdateSurface()
 
-		//fmt.Println(1000 / float32(time.Since(benchmark).Milliseconds()))
+		totalFrames++
+		timePassed += deltaTime
+
+		if timePassed > 1000 {
+			running = false
+			fmt.Println(totalFrames)
+		}
 	}
 }

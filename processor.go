@@ -5,11 +5,11 @@ import (
 )
 
 type ProcessedTriangle struct {
-	Triangle Triangle
+	Triangle *Triangle
 
 	Bounds, VS1, VS2 Vertex
 
-	Span float32
+	Span, Split float32
 }
 
 func Clamp(value float32, min, max int) float32 {
@@ -22,34 +22,22 @@ func Clamp(value float32, min, max int) float32 {
 	return value
 }
 
-func Process(triangle *Triangle, tiles *([4][3]Tile)) {
+func Process(triangle *Triangle, tiles *([4][3]Tile)) ProcessedTriangle {
 	triangle.Normalize()
 	triangle.ScreenSpace()
 	//copiedTriangle.Sort()
 
-	/*var split float32 = triangle.Vertices[0][X] + ((triangle.Vertices[1][Y]-triangle.Vertices[0][Y])/
-	(triangle.Vertices[2][Y]-triangle.Vertices[0][Y]))*
-	(triangle.Vertices[2][X]-triangle.Vertices[0][X])*/
+	var split float32 = triangle.Vertices[0][X] + ((triangle.Vertices[1][Y]-triangle.Vertices[0][Y])/
+		(triangle.Vertices[2][Y]-triangle.Vertices[0][Y]))*
+		(triangle.Vertices[2][X]-triangle.Vertices[0][X])
 
 	var vs1, vs2 Vertex = triangle.Span()
 
-	var processedTriangle ProcessedTriangle = ProcessedTriangle{
-		*triangle,
+	return ProcessedTriangle{
+		triangle,
 		triangle.Bounds(), vs1, vs2,
-		1 / vs1.CrossProduct(&vs2),
+		1 / vs1.CrossProduct(&vs2), split,
 	}
-
-	var xMin, yMin, xMax, yMax int = processedTriangle.TileBoundary(tiles)
-
-	Mutex.Lock()
-
-	for y := yMin; y < yMax; y++ {
-		for x := xMin; x < xMax; x++ {
-			tiles[x][y].Add(&processedTriangle)
-		}
-	}
-
-	Mutex.Unlock()
 }
 
 func (ts *ProcessedTriangle) TileBoundary(tiles *([4][3]Tile)) (int, int, int, int) {

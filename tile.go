@@ -23,7 +23,7 @@ type Shader func(s, t, w float32) (float32, float32, float32)
 type Tile struct {
 	Frame []byte
 
-	Triangles []ProcessedTriangle
+	Triangles []*ProcessedTriangle
 
 	X, Y int
 }
@@ -51,16 +51,72 @@ func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 	}
 }
 
+func (tile *Tile) SweepLine(triangle *ProcessedTriangle) {
+	var invSlope1 float32 = (triangle.Triangle.Vertices[1][X] - triangle.Triangle.Vertices[0][X]) /
+		(triangle.Triangle.Vertices[1][Y] - triangle.Triangle.Vertices[0][Y])
+
+	var invSlope2 float32 = (triangle.Split - triangle.Triangle.Vertices[0][X]) /
+		(triangle.Triangle.Vertices[1][Y] - triangle.Triangle.Vertices[0][Y])
+
+	var clampedUp float32 = Clamp(triangle.Triangle.Vertices[0][Y], tile.Y, tile.Y+TileYSize)
+	var clampedMiddle float32 = Clamp(triangle.Triangle.Vertices[1][Y], tile.Y, tile.Y+TileYSize)
+	var clampedDown float32 = Clamp(triangle.Triangle.Vertices[2][Y], tile.Y, tile.Y+TileYSize)
+
+	var difference float32 = clampedUp - triangle.Triangle.Vertices[0][Y]
+	var curX1, curX2 float32 = triangle.Triangle.Vertices[0][X] + invSlope1*difference,
+		triangle.Triangle.Vertices[0][X] + invSlope2*difference
+
+	for y := int(clampedUp); y < int(clampedMiddle); y++ {
+		for x := int(Clamp(curX1, tile.X, tile.X+TileXSize)); x < int(Clamp(curX2, tile.X, tile.X+TileXSize)); x++ {
+			var s, t, w float32 = triangle.Barycentric(x, y)
+			var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
+
+			tile.Set(x, y, byte(r*255), byte(g*255), byte(b*255))
+		}
+
+		curX1 += invSlope1
+		curX2 += invSlope2
+	}
+
+	invSlope1 = (triangle.Triangle.Vertices[2][X] - triangle.Triangle.Vertices[1][X]) /
+		(triangle.Triangle.Vertices[2][Y] - triangle.Triangle.Vertices[1][Y])
+
+	invSlope2 = (triangle.Triangle.Vertices[2][X] - triangle.Split) /
+		(triangle.Triangle.Vertices[2][Y] - triangle.Triangle.Vertices[1][Y])
+
+	difference = triangle.Triangle.Vertices[2][Y] - clampedDown
+	curX1, curX2 = triangle.Triangle.Vertices[2][X]-invSlope1*difference, triangle.Triangle.Vertices[2][X]-invSlope2*difference
+
+	for y := int(clampedDown) - 1; y > int(clampedMiddle)-1; y-- {
+		for x := int(Clamp(curX1, tile.X, tile.X+TileXSize)); x < int(Clamp(curX2, tile.X, tile.X+TileXSize)); x++ {
+			var s, t, w float32 = triangle.Barycentric(x, y)
+			var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
+
+			tile.Set(x, y, byte(r*255), byte(g*255), byte(b*255))
+		}
+
+		curX1 -= invSlope1
+		curX2 -= invSlope2
+	}
+}
+
 func (tile *Tile) Rasterize() {
-	for index := range tile.Triangles {
-		tile.Barycentric(&tile.Triangles[index])
+	switch AlgorithmUsed {
+	case BarycentricAlgorithm:
+		for index := range tile.Triangles {
+			tile.Barycentric(tile.Triangles[index])
+		}
+	case SweepLineAlgorithm:
+		for index := range tile.Triangles {
+			tile.SweepLine(tile.Triangles[index])
+		}
 	}
 
 	tile.Triangles = nil
 }
 
 func (tile *Tile) Add(triangle *ProcessedTriangle) {
-	tile.Triangles = append(tile.Triangles, *triangle)
+	tile.Triangles = append(tile.Triangles, triangle)
 }
 
 func (tile *Tile) Set(x, y int, r, g, b byte) {

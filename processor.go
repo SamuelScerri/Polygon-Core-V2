@@ -1,5 +1,9 @@
 package main
 
+import (
+	"math"
+)
+
 type ProcessedTriangle struct {
 	Triangle Triangle
 
@@ -37,18 +41,22 @@ func Process(triangle *Triangle, tiles *([4][3]Tile)) {
 
 	var xMin, yMin, xMax, yMax int = processedTriangle.TileBoundary(tiles)
 
-	for y := yMin; y <= yMax; y++ {
-		for x := xMin; x <= xMax; x++ {
+	Mutex.Lock()
+
+	for y := yMin; y < yMax; y++ {
+		for x := xMin; x < xMax; x++ {
 			tiles[x][y].Add(&processedTriangle)
 		}
 	}
+
+	Mutex.Unlock()
 }
 
 func (ts *ProcessedTriangle) TileBoundary(tiles *([4][3]Tile)) (int, int, int, int) {
-	return int(Clamp(ts.Triangle.Bounds()[XMIN]/float32(TileXSize), 0, 3)),
-		int(Clamp(ts.Triangle.Bounds()[YMIN]/float32(TileYSize), 0, 2)),
-		int(Clamp(ts.Triangle.Bounds()[XMAX]/float32(TileXSize), 0, 3)),
-		int(Clamp(ts.Triangle.Bounds()[YMAX]/float32(TileYSize), 0, 2))
+	return int(Clamp(float32(math.Floor(float64(ts.Triangle.Bounds()[XMIN]/float32(TileXSize)))), 0, 4)),
+		int(Clamp(float32(math.Floor(float64(ts.Triangle.Bounds()[YMIN]/float32(TileYSize)))), 0, 3)),
+		int(Clamp(float32(math.Ceil(float64(ts.Triangle.Bounds()[XMAX]/float32(TileXSize)))), 0, 4)),
+		int(Clamp(float32(math.Ceil(float64(ts.Triangle.Bounds()[YMAX]/float32(TileYSize)))), 0, 3))
 }
 
 func (ts *ProcessedTriangle) Barycentric(x, y int) (float32, float32, float32) {

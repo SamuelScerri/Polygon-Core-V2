@@ -33,6 +33,7 @@ var AlgorithmUsed int = SweepLineAlgorithm
 var Pitch int
 var BytesPerPixel int
 var WaitGroup sync.WaitGroup
+var Mutex sync.Mutex
 
 func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 	var xMin, yMin, xMax, yMax int = int(Clamp(triangle.Bounds[XMIN], tile.X, tile.X+TileXSize-1)),

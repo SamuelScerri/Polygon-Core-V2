@@ -172,12 +172,31 @@ func main() {
 		var matrix Matrix = TransformationMatrix(position, Vertex{0, 0, 0, 1})
 		matrix = matrix.Multiply(&projectionMatrix)
 
-		for index := range triangles {
+		var trianglesPerCore int = len(triangles) / Cores
+
+		WaitGroup.Add(Cores)
+
+		for i := 0; i < Cores; i++ {
+			go func(offset int) {
+				for p := offset; p < offset+trianglesPerCore; p++ {
+					var copiedTriangle Triangle = triangles[p].Copy()
+					copiedTriangle.Transform(&matrix)
+
+					Process(&copiedTriangle, &tiles)
+				}
+
+				WaitGroup.Done()
+			}(trianglesPerCore * i)
+		}
+
+		WaitGroup.Wait()
+
+		/*for index := range triangles {
 			var copiedTriangle Triangle = triangles[index].Copy()
 
 			copiedTriangle.Transform(&matrix)
 			Process(&copiedTriangle, &tiles)
-		}
+		}*/
 
 		WaitGroup.Add(Cores)
 

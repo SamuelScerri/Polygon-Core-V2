@@ -22,11 +22,7 @@ func Clamp(value float32, min, max int) float32 {
 	return value
 }
 
-func Process(triangle *Triangle, tiles *([4][3]Tile)) ProcessedTriangle {
-	triangle.Normalize()
-	triangle.ScreenSpace()
-	//copiedTriangle.Sort()
-
+func Process(triangle *Triangle) ProcessedTriangle {
 	var split float32 = triangle.Vertices[0][X] + ((triangle.Vertices[1][Y]-triangle.Vertices[0][Y])/
 		(triangle.Vertices[2][Y]-triangle.Vertices[0][Y]))*
 		(triangle.Vertices[2][X]-triangle.Vertices[0][X])
@@ -38,6 +34,37 @@ func Process(triangle *Triangle, tiles *([4][3]Tile)) ProcessedTriangle {
 		triangle.Bounds(), vs1, vs2,
 		1 / vs1.CrossProduct(&vs2), split,
 	}
+}
+
+func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle) {
+	var vertices []Vertex
+
+	for c := 0; c < 1; c++ {
+		vertices = triangle.Clip(c, -1)
+	}
+
+	if len(vertices) > 0 {
+		vertices[0].Normalize()
+		vertices[0].ScreenSpace()
+
+		vertices[1].Normalize()
+		vertices[1].ScreenSpace()
+
+		for index := 0; index < len(vertices)-2; index++ {
+			vertices[index+2].Normalize()
+			vertices[index+2].ScreenSpace()
+
+			var newTriangle Triangle
+
+			newTriangle.Vertices = [3]Vertex{vertices[0], vertices[index+1], vertices[index+2]}
+			//newTriangle.UV = [3]Vertex{vertices[0], vertices[index+1], vertices[index+2]}
+			//newTriangle.Normals = [3]Vertex{vertices[0], vertices[index+1], vertices[index+2]}
+			newTriangle.Shader = triangle.Shader
+			processedTriangles = append(processedTriangles, Process(&newTriangle))
+		}
+	}
+
+	return
 }
 
 func (ts *ProcessedTriangle) TileBoundary(tiles *([4][3]Tile)) (int, int, int, int) {

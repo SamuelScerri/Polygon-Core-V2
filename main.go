@@ -45,17 +45,17 @@ func (g *Game) Update() error {
 	return nil
 }
 
-var Position Vertex = Vertex{0, 0, 0, 0}
+var Position Vertex = Vertex{0, 0, 15, 0}
 var Projection Matrix = ProjectionMatrix()
 
 func (g *Game) Draw(screen *ebiten.Image) {
 
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		Position[X] += .125
+		Position[X] += .125 / 2 / 2
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		Position[X] -= .125
+		Position[X] -= .125 / 2 / 2
 	}
 
 	var matrix Matrix = TransformationMatrix(Position, Vertex{0, 0, 0, 1})
@@ -71,18 +71,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				var copiedTriangle Triangle = Triangles[p].Copy()
 				copiedTriangle.Transform(&matrix)
 
-				if p == 0 {
-					copiedTriangle.Clip()
-				}
+				var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)
 
-				var processedTriangle ProcessedTriangle = Process(&copiedTriangle, &Tiles)
-				var xMin, yMin, xMax, yMax int = processedTriangle.TileBoundary(&Tiles)
+				for _, triangle := range processedTriangles {
+					var xMin, yMin, xMax, yMax int = triangle.TileBoundary(&Tiles)
 
-				for y := yMin; y < yMax; y++ {
-					for x := xMin; x < xMax; x++ {
-						Mutex.Lock()
-						Tiles[x][y].Add(&processedTriangle)
-						Mutex.Unlock()
+					for y := yMin; y < yMax; y++ {
+						for x := xMin; x < xMax; x++ {
+							Mutex.Lock()
+							Tiles[x][y].Add(&triangle)
+							Mutex.Unlock()
+						}
 					}
 				}
 			}

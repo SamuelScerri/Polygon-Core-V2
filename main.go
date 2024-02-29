@@ -3,12 +3,12 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"math/rand"
-	"os"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"strconv"
 	"log"
+	"math/rand"
+	"os"
+	"strconv"
 )
 
 var Cores = 1
@@ -22,7 +22,7 @@ const Aspect = 16 / 9
 var TileXSize, TileYSize = Width, Height
 
 var Tiles [4][3]Tile
-var Buffer []byte = make([]byte, Width * Height * 4)
+var Buffer []byte = make([]byte, Width*Height*4)
 
 var Triangles []Triangle
 
@@ -150,9 +150,9 @@ func main() {
 	for i := 0; i < 1000; i++ {
 		var triangle Triangle = Triangle{
 			Vertices: [3]Vertex{
-				{0, -.5, 0, 1},
-				{-.5, .5, 0, 1},
-				{.5, .5, 0, 1},
+				{0, -.25, 0, 1},
+				{-.25, .5, 0, 1},
+				{.25, .25, 0, 1},
 			},
 		}
 
@@ -162,7 +162,7 @@ func main() {
 		Triangles = append(Triangles, triangle)
 	}
 
-	ebiten.SetWindowSize(Width * 2, Height * 2)
+	ebiten.SetWindowSize(Width*2, Height*2)
 	ebiten.SetWindowTitle("Ghetty Engine")
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)

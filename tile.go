@@ -36,15 +36,36 @@ var WaitGroup sync.WaitGroup
 var Mutex sync.Mutex
 
 func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
-	var xMin, yMin, xMax, yMax int = int(Clamp(triangle.Bounds[XMIN], tile.X, tile.X+TileXSize-1)),
-		int(Clamp(triangle.Bounds[YMIN], tile.Y, tile.Y+TileYSize-1)),
-		int(Clamp(triangle.Bounds[XMAX], tile.X, tile.X+TileXSize-1)),
-		int(Clamp(triangle.Bounds[YMAX], tile.Y, tile.Y+TileYSize-1))
+	var xMin, yMin, xMax, yMax int = int(Clamp(triangle.Bounds[XMIN], tile.X, tile.X+TileXSize)),
+		int(Clamp(triangle.Bounds[YMIN], tile.Y, tile.Y+TileYSize)),
+		int(Clamp(triangle.Bounds[XMAX], tile.X, tile.X+TileXSize)),
+		int(Clamp(triangle.Bounds[YMAX], tile.Y, tile.Y+TileYSize))
 
 	for y := yMin; y < yMax; y++ {
 		for x := xMin; x < xMax; x++ {
 			if inside, s, t, w := triangle.Inside(x, y); inside {
 				var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
+				tile.Set(x, y, byte(r*255), byte(g*255), byte(b*255))
+			}
+		}
+	}
+}
+
+func (tile *Tile) EdgeTest(triangle *ProcessedTriangle) {
+	var xMin, yMin, xMax, yMax int = int(Clamp(triangle.Bounds[XMIN], tile.X, tile.X+TileXSize)),
+		int(Clamp(triangle.Bounds[YMIN], tile.Y, tile.Y+TileYSize)),
+		int(Clamp(triangle.Bounds[XMAX], tile.X, tile.X+TileXSize)),
+		int(Clamp(triangle.Bounds[YMAX], tile.Y, tile.Y+TileYSize))
+
+	for y := yMin; y < yMax; y++ {
+		for x := xMin; x < xMax; x++ {
+
+			var w0, w1, w2 float32 = triangle.Triangle.EdgeSpan(x, y)
+
+			if w0 >= 0 && w1 >= 0 && w2 >= 0 {
+				var s, t, w float32 = triangle.Barycentric(x, y)
+				var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
+
 				tile.Set(x, y, byte(r*255), byte(g*255), byte(b*255))
 			}
 		}
@@ -67,7 +88,10 @@ func (tile *Tile) SweepLine(triangle *ProcessedTriangle) {
 		triangle.Triangle.Vertices[0][X] + invSlope2*difference
 
 	for y := int(clampedUp); y < int(clampedMiddle); y++ {
-		for x := int(Clamp(curX1, tile.X, tile.X+TileXSize)); x < int(Clamp(curX2, tile.X, tile.X+TileXSize)); x++ {
+		var clampedLeft, clampedRight int = int(Clamp(curX1, tile.X, tile.X+TileXSize)),
+			int(Clamp(curX2, tile.X, tile.X+TileXSize))
+
+		for x := clampedLeft; x < clampedRight; x++ {
 			var s, t, w float32 = triangle.Barycentric(x, y)
 			var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
 
@@ -88,7 +112,10 @@ func (tile *Tile) SweepLine(triangle *ProcessedTriangle) {
 	curX1, curX2 = triangle.Triangle.Vertices[2][X]-invSlope1*difference, triangle.Triangle.Vertices[2][X]-invSlope2*difference
 
 	for y := int(clampedDown) - 1; y > int(clampedMiddle)-1; y-- {
-		for x := int(Clamp(curX1, tile.X, tile.X+TileXSize)); x < int(Clamp(curX2, tile.X, tile.X+TileXSize)); x++ {
+		var clampedLeft, clampedRight int = int(Clamp(curX1, tile.X, tile.X+TileXSize)),
+			int(Clamp(curX2, tile.X, tile.X+TileXSize))
+
+		for x := clampedLeft; x < clampedRight; x++ {
 			var s, t, w float32 = triangle.Barycentric(x, y)
 			var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
 
@@ -110,6 +137,10 @@ func (tile *Tile) Rasterize() {
 		for index := range tile.Triangles {
 			tile.SweepLine(tile.Triangles[index])
 		}
+	case EdgeTestAlgorithm:
+		for index := range tile.Triangles {
+			tile.EdgeTest(tile.Triangles[index])
+		}
 	}
 
 	tile.Triangles = nil
@@ -120,11 +151,9 @@ func (tile *Tile) Add(triangle *ProcessedTriangle) {
 }
 
 func (tile *Tile) Set(x, y int, r, g, b byte) {
-	var position int = (y * Width + x) * 4
+	var position int = (y*Width + x) * 4
 
-	tile.Frame[position+R] = r
-	tile.Frame[position+G] = g
-	tile.Frame[position+B] = b
+	tile.Frame[position+R], tile.Frame[position+G], tile.Frame[position+B] = r, g, b
 }
 
 func (tile *Tile) Clear(r, g, b byte) {

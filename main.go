@@ -3,12 +3,13 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"log"
 	"math/rand"
 	"os"
 	"strconv"
+
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 var Cores = 1
@@ -44,12 +45,21 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func (g *Game) Draw(screen *ebiten.Image) {
-	var projectionMatrix Matrix = ProjectionMatrix()
-	var position Vertex = Vertex{0, 0, 0, 0}
+var Position Vertex = Vertex{0, 0, 0, 0}
+var Projection Matrix = ProjectionMatrix()
 
-	var matrix Matrix = TransformationMatrix(position, Vertex{0, 0, 0, 1})
-	matrix = matrix.Multiply(&projectionMatrix)
+func (g *Game) Draw(screen *ebiten.Image) {
+
+	if ebiten.IsKeyPressed(ebiten.KeyRight) {
+		Position[X] += .125
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
+		Position[X] -= .125
+	}
+
+	var matrix Matrix = TransformationMatrix(Position, Vertex{0, 0, 0, 1})
+	matrix = matrix.Multiply(&Projection)
 
 	var trianglesPerCore int = len(Triangles) / Cores
 
@@ -60,6 +70,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			for p := offset; p < offset+trianglesPerCore; p++ {
 				var copiedTriangle Triangle = Triangles[p].Copy()
 				copiedTriangle.Transform(&matrix)
+
+				if p == 0 {
+					copiedTriangle.Clip()
+				}
 
 				var processedTriangle ProcessedTriangle = Process(&copiedTriangle, &Tiles)
 				var xMin, yMin, xMax, yMax int = processedTriangle.TileBoundary(&Tiles)
@@ -147,7 +161,7 @@ func main() {
 		}
 	}
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 12; i++ {
 		var triangle Triangle = Triangle{
 			Vertices: [3]Vertex{
 				{0, -.25, 0, 1},
@@ -166,7 +180,7 @@ func main() {
 	ebiten.SetWindowTitle("Ghetty Engine")
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
-	ebiten.SetVsyncEnabled(false)
+	ebiten.SetVsyncEnabled(true)
 
 	if err := ebiten.RunGame(&Game{}); err != nil {
 		log.Fatal(err)

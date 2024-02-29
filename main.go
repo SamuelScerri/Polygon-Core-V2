@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-
-	"github.com/veandco/go-sdl2/sdl"
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"strconv"
+	"log"
 )
 
 var Cores = 1
 
-const Width, Height = 640, 360
+const Width, Height = 320, 180
 const FOV = 90
 
 const Near, Far = .1, 1000
@@ -19,12 +21,81 @@ const Aspect = 16 / 9
 
 var TileXSize, TileYSize = Width, Height
 
+var Tiles [4][3]Tile
+var Buffer []byte = make([]byte, Width * Height * 4)
+
+var Triangles []Triangle
+
+type Game struct{}
+
 func BasicShader(s, t, w float32) (r, g, b float32) {
 	r = s
 	g = t
 	b = w
 
 	return
+}
+
+func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+	return Width, Height
+}
+
+func (g *Game) Update() error {
+	return nil
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	var projectionMatrix Matrix = ProjectionMatrix()
+	var position Vertex = Vertex{0, 0, 0, 0}
+
+	var matrix Matrix = TransformationMatrix(position, Vertex{0, 0, 0, 1})
+	matrix = matrix.Multiply(&projectionMatrix)
+
+	var trianglesPerCore int = len(Triangles) / Cores
+
+	WaitGroup.Add(Cores)
+
+	for i := 0; i < Cores; i++ {
+		go func(offset int) {
+			for p := offset; p < offset+trianglesPerCore; p++ {
+				var copiedTriangle Triangle = Triangles[p].Copy()
+				copiedTriangle.Transform(&matrix)
+
+				var processedTriangle ProcessedTriangle = Process(&copiedTriangle, &Tiles)
+				var xMin, yMin, xMax, yMax int = processedTriangle.TileBoundary(&Tiles)
+
+				for y := yMin; y < yMax; y++ {
+					for x := xMin; x < xMax; x++ {
+						Mutex.Lock()
+						Tiles[x][y].Add(&processedTriangle)
+						Mutex.Unlock()
+					}
+				}
+			}
+
+			WaitGroup.Done()
+		}(trianglesPerCore * i)
+	}
+
+	WaitGroup.Wait()
+
+	WaitGroup.Add(Cores)
+
+	for y := range Tiles[0] {
+		for x := range Tiles {
+			go func(x, y int) {
+				Tiles[x][y].Clear(byte(x+y)*4, byte(x+y)*4, byte(x+y)*4)
+				Tiles[x][y].Rasterize()
+
+				WaitGroup.Done()
+			}(x, y)
+		}
+	}
+
+	WaitGroup.Wait()
+
+	screen.WritePixels(Buffer)
+	ebitenutil.DebugPrint(screen, "FPS: "+strconv.Itoa(int(ebiten.ActualFPS())))
 }
 
 func main() {
@@ -68,44 +139,13 @@ func main() {
 	fmt.Scan(&i)
 	TileYSize /= i
 
-	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
-		panic(err)
-	}
-	defer sdl.Quit()
-
-	window, err := sdl.CreateWindow("Ghetty Engine - V2", sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED,
-		Width, Height, sdl.WINDOW_SHOWN)
-	if err != nil {
-		panic(err)
-	}
-	defer window.Destroy()
-
-	surface, err := window.GetSurface()
-	if err != nil {
-		panic(err)
-	}
-
-	var tiles [4][3]Tile
-	//tiles = make([][]Tile, )
-
-	for y := range tiles[0] {
-		for x := range tiles {
-
-			tiles[x][y].X = x * TileXSize
-			tiles[x][y].Y = y * TileYSize
-			tiles[x][y].Frame = surface.Pixels()
+	for y := range Tiles[0] {
+		for x := range Tiles {
+			Tiles[x][y].X = x * TileXSize
+			Tiles[x][y].Y = y * TileYSize
+			Tiles[x][y].Frame = Buffer
 		}
 	}
-
-	Pitch = int(surface.Pitch)
-	BytesPerPixel = surface.BytesPerPixel()
-
-	var projectionMatrix Matrix = ProjectionMatrix()
-	var position Vertex = Vertex{0, 0, 0, 0}
-
-	running := true
-
-	var triangles []Triangle
 
 	for i := 0; i < 1000; i++ {
 		var triangle Triangle = Triangle{
@@ -118,113 +158,17 @@ func main() {
 
 		var matrix Matrix = TransformationMatrix(Vertex{rand.Float32()*4 - 2, rand.Float32()*4 - 2, -20, 0}, Vertex{0, 0, 0, 0})
 		triangle.Transform(&matrix)
-
 		triangle.Shader = BasicShader
-
-		triangles = append(triangles, triangle)
+		Triangles = append(Triangles, triangle)
 	}
 
-	var now uint64 = sdl.GetPerformanceCounter()
-	var last uint64 = 0
-	var moveSpeed float32 = .0625
-	var totalFrames int = 0
+	ebiten.SetWindowSize(Width * 2, Height * 2)
+	ebiten.SetWindowTitle("Ghetty Engine")
+	ebiten.SetTPS(ebiten.SyncWithFPS)
+	ebiten.SetScreenClearedEveryFrame(false)
+	ebiten.SetVsyncEnabled(false)
 
-	var timePassed float32 = 0
-
-	for running {
-		last = now
-		now = sdl.GetPerformanceCounter()
-
-		var deltaTime float32 = float32((now - last)) * 1000 / float32(sdl.GetPerformanceFrequency())
-
-		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.(type) {
-			case *sdl.QuitEvent:
-				println("Quit")
-				running = false
-			}
-		}
-
-		var state []uint8 = sdl.GetKeyboardState()
-
-		if state[sdl.SCANCODE_W] == 1 {
-			position[Z] -= deltaTime * moveSpeed
-		}
-
-		if state[sdl.SCANCODE_S] == 1 {
-			position[Z] += deltaTime * moveSpeed
-		}
-
-		if state[sdl.SCANCODE_LEFT] == 1 {
-			position[X] -= deltaTime * moveSpeed
-		}
-
-		if state[sdl.SCANCODE_RIGHT] == 1 {
-			position[X] += deltaTime * moveSpeed
-		}
-
-		if state[sdl.SCANCODE_UP] == 1 {
-			position[Y] -= deltaTime * moveSpeed
-		}
-
-		if state[sdl.SCANCODE_DOWN] == 1 {
-			position[Y] += deltaTime * moveSpeed
-		}
-
-		var matrix Matrix = TransformationMatrix(position, Vertex{0, 0, 0, 1})
-		matrix = matrix.Multiply(&projectionMatrix)
-
-		var trianglesPerCore int = len(triangles) / Cores
-
-		WaitGroup.Add(Cores)
-
-		for i := 0; i < Cores; i++ {
-			go func(offset int) {
-				for p := offset; p < offset+trianglesPerCore; p++ {
-					var copiedTriangle Triangle = triangles[p].Copy()
-					copiedTriangle.Transform(&matrix)
-
-					var processedTriangle ProcessedTriangle = Process(&copiedTriangle, &tiles)
-					var xMin, yMin, xMax, yMax int = processedTriangle.TileBoundary(&tiles)
-
-					for y := yMin; y < yMax; y++ {
-						for x := xMin; x < xMax; x++ {
-							Mutex.Lock()
-							tiles[x][y].Add(&processedTriangle)
-							Mutex.Unlock()
-						}
-					}
-				}
-
-				WaitGroup.Done()
-			}(trianglesPerCore * i)
-		}
-
-		WaitGroup.Wait()
-
-		WaitGroup.Add(Cores)
-
-		for y := range tiles[0] {
-			for x := range tiles {
-				go func(x, y int) {
-					tiles[x][y].Clear(byte(x+y)*4, byte(x+y)*4, byte(x+y)*4)
-					tiles[x][y].Rasterize()
-
-					WaitGroup.Done()
-				}(x, y)
-			}
-		}
-
-		WaitGroup.Wait()
-
-		window.UpdateSurface()
-
-		totalFrames++
-		timePassed += deltaTime
-
-		if timePassed > 1000 {
-			running = false
-			fmt.Println(totalFrames)
-		}
+	if err := ebiten.RunGame(&Game{}); err != nil {
+		log.Fatal(err)
 	}
 }

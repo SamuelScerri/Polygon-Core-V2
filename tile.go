@@ -5,9 +5,9 @@ import (
 )
 
 const (
-	R = 2
+	R = 0
 	G = 1
-	B = 0
+	B = 2
 )
 
 const (
@@ -120,11 +120,11 @@ func (tile *Tile) Add(triangle *ProcessedTriangle) {
 }
 
 func (tile *Tile) Set(x, y int, r, g, b byte) {
-	var position int = y*Pitch + x*BytesPerPixel
+	var position int = (y * Width + x) * 4
 
-	tile.Frame[position+B] = b
-	tile.Frame[position+G] = g
 	tile.Frame[position+R] = r
+	tile.Frame[position+G] = g
+	tile.Frame[position+B] = b
 }
 
 func (tile *Tile) Clear(r, g, b byte) {

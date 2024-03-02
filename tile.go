@@ -38,10 +38,10 @@ var WaitGroup sync.WaitGroup
 var Mutex sync.Mutex
 
 func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
-	var xMin, yMin, xMax, yMax int = int(Clamp(triangle.Bounds[XMIN], tile.X, tile.X+TileXSize)),
-		int(Clamp(triangle.Bounds[YMIN], tile.Y, tile.Y+TileYSize)),
-		int(Clamp(triangle.Bounds[XMAX], tile.X, tile.X+TileXSize)),
-		int(Clamp(triangle.Bounds[YMAX], tile.Y, tile.Y+TileYSize))
+	var xMin, yMin, xMax, yMax int = int(Clamp(triangle.Bounds[XMin], tile.X, tile.X+TileXSize)),
+		int(Clamp(triangle.Bounds[YMin], tile.Y, tile.Y+TileYSize)),
+		int(Clamp(triangle.Bounds[XMax], tile.X, tile.X+TileXSize)),
+		int(Clamp(triangle.Bounds[YMax], tile.Y, tile.Y+TileYSize))
 
 	for y := yMin; y < yMax; y++ {
 		for x := xMin; x < xMax; x++ {
@@ -58,10 +58,10 @@ func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 }
 
 func (tile *Tile) EdgeTest(triangle *ProcessedTriangle) {
-	var xMin, yMin, xMax, yMax int = int(Clamp(triangle.Bounds[XMIN], tile.X, tile.X+TileXSize)),
-		int(Clamp(triangle.Bounds[YMIN], tile.Y, tile.Y+TileYSize)),
-		int(Clamp(triangle.Bounds[XMAX], tile.X, tile.X+TileXSize)),
-		int(Clamp(triangle.Bounds[YMAX], tile.Y, tile.Y+TileYSize))
+	var xMin, yMin, xMax, yMax int = int(Clamp(triangle.Bounds[XMin], tile.X, tile.X+TileXSize)),
+		int(Clamp(triangle.Bounds[YMin], tile.Y, tile.Y+TileYSize)),
+		int(Clamp(triangle.Bounds[XMax], tile.X, tile.X+TileXSize)),
+		int(Clamp(triangle.Bounds[YMax], tile.Y, tile.Y+TileYSize))
 
 	for y := yMin; y < yMax; y++ {
 		for x := xMin; x < xMax; x++ {

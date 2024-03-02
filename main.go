@@ -130,15 +130,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func main() {
-	fmt.Println("Please Select Triangle Rasterization Algorithm:")
-
-	fmt.Println("")
-
 	fmt.Println("1: Sweep-Line Algorithm")
 	fmt.Println("2: Barycentric Algorithm")
 	fmt.Println("3: Edge Test Algorithm")
 
-	fmt.Println("")
+	fmt.Print("\nPlease Select Triangle Rasterization Algorithm: ")
 
 	reader := bufio.NewReader(os.Stdin)
 	algorithm, _, _ := reader.ReadRune()
@@ -178,7 +174,7 @@ func main() {
 	for i := 0; i < 1000; i++ {
 		var triangle Triangle = Triangle{
 			Vertices: [3]Vertex{
-				{0, -.25, 0, 1},
+				{0, -.25, -1, 1},
 				{.25, .25, 0, 1},
 				{-.25, .5, 0, 1},
 			},
@@ -190,9 +186,9 @@ func main() {
 			},
 
 			Color: [3]Vertex{
-				{1, 0, 0},
-				{0, 1, 0},
-				{0, 0, 1},
+				{rand.Float32(), rand.Float32(), rand.Float32()},
+				{rand.Float32(), rand.Float32(), rand.Float32()},
+				{rand.Float32(), rand.Float32(), rand.Float32()},
 			},
 		}
 

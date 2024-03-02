@@ -5,10 +5,10 @@ import (
 )
 
 const (
-	XMAX = 0
-	YMAX = 1
-	XMIN = 2
-	YMIN = 3
+	XMax = 0
+	YMax = 1
+	XMin = 2
+	YMin = 3
 )
 
 type Triangle struct {

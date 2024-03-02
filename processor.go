@@ -36,16 +36,19 @@ func Process(triangle *Triangle) ProcessedTriangle {
 	}
 }
 
-func Clip(vertices, uvs, colors []Vertex, component, direction int) (clippedVertices, clippedUVs, clippedColors []Vertex) {
+func Clip(vertices, uvs, colors []Vertex, component int, direction float32) (clippedVertices, clippedUVs, clippedColors []Vertex) {
 	var previousVertex, previousUV, previousColor *Vertex = &vertices[len(vertices)-1], &uvs[len(uvs)-1], &colors[len(colors)-1]
-	var previousInside bool = (*previousVertex)[component] <= (*previousVertex)[W]
+	var previousComponent float32 = direction * (*previousVertex)[component]
+
+	var previousInside bool = previousComponent <= (*previousVertex)[W]
 
 	for index := range vertices {
-		var currentInside bool = vertices[index][component] <= vertices[index][W]
+		var currentComponent float32 = direction * vertices[index][component]
+		var currentInside bool = currentComponent <= vertices[index][W]
 
 		if currentInside != previousInside {
-			var factor float32 = ((*previousVertex)[W] - (*previousVertex)[component]) /
-				(((*previousVertex)[W] - (*previousVertex)[component]) - (vertices[index][W] - vertices[index][component]))
+			var factor float32 = ((*previousVertex)[W] - direction*(*previousVertex)[component]) /
+				(((*previousVertex)[W] - direction*(*previousVertex)[component]) - (vertices[index][W] - currentComponent))
 
 			var copiedVertex, copiedUV, copiedColor Vertex = previousVertex.Copy(), previousUV.Copy(), previousColor.Copy()
 			copiedVertex.Interpolate(&vertices[index], factor)
@@ -62,6 +65,7 @@ func Clip(vertices, uvs, colors []Vertex, component, direction int) (clippedVert
 		}
 
 		previousVertex, previousUV, previousColor = &vertices[index], &uvs[index], &colors[index]
+		previousComponent = currentComponent
 		previousInside = currentInside
 	}
 
@@ -73,7 +77,14 @@ func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle
 
 	for component := X; component <= Y; component++ {
 		if len(vertices) > 0 {
-			vertices, uvs, colors = Clip(vertices, uvs, colors, component, 1)
+			vertices, uvs, colors = Clip(vertices, uvs, colors, component, -1)
+
+			if len(vertices) > 0 {
+				vertices, uvs, colors = Clip(vertices, uvs, colors, component, 1)
+			} else {
+				break
+			}
+
 		} else {
 			break
 		}
@@ -107,10 +118,10 @@ func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle
 }
 
 func (ts *ProcessedTriangle) TileBoundary(tiles *([][]Tile)) (int, int, int, int) {
-	return int(Clamp(float32(math.Floor(float64(ts.Triangle.Bounds()[XMIN]/float32(TileXSize)))), 0, len(*tiles))),
-		int(Clamp(float32(math.Floor(float64(ts.Triangle.Bounds()[YMIN]/float32(TileYSize)))), 0, len((*tiles)[0]))),
-		int(Clamp(float32(math.Ceil(float64(ts.Triangle.Bounds()[XMAX]/float32(TileXSize)))), 0, len(*tiles))),
-		int(Clamp(float32(math.Ceil(float64(ts.Triangle.Bounds()[YMAX]/float32(TileYSize)))), 0, len((*tiles)[0])))
+	return int(Clamp(float32(math.Floor(float64(ts.Triangle.Bounds()[XMin]/float32(TileXSize)))), 0, len(*tiles))),
+		int(Clamp(float32(math.Floor(float64(ts.Triangle.Bounds()[YMin]/float32(TileYSize)))), 0, len((*tiles)[0]))),
+		int(Clamp(float32(math.Ceil(float64(ts.Triangle.Bounds()[XMax]/float32(TileXSize)))), 0, len(*tiles))),
+		int(Clamp(float32(math.Ceil(float64(ts.Triangle.Bounds()[YMax]/float32(TileYSize)))), 0, len((*tiles)[0])))
 }
 
 func (ts *ProcessedTriangle) Barycentric(x, y int) (float32, float32, float32) {

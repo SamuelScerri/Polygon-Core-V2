@@ -57,6 +57,12 @@ func (triangle *Triangle) Sort() {
 	}
 }
 
+func (triangle *Triangle) Interpolate(w, s, t float32) (float32, float32, float32) {
+	return w*triangle.Color[0][R] + s*triangle.Color[1][R] + t*triangle.Color[2][R],
+		w*triangle.Color[0][G] + s*triangle.Color[1][G] + t*triangle.Color[2][G],
+		w*triangle.Color[0][B] + s*triangle.Color[1][B] + t*triangle.Color[2][B]
+}
+
 func (triangle *Triangle) Bounds() Vertex {
 	return Vertex{
 		float32(math.Max(float64(triangle.Vertices[0][X]),

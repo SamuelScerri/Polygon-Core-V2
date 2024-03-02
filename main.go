@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"os"
 	"strconv"
@@ -29,10 +30,18 @@ var Triangles []Triangle
 
 type Game struct{}
 
-func BasicShader(s, t, w float32) (r, g, b float32) {
-	r = s
-	g = t
-	b = w
+func BasicShader(w, s, t float32) (r, g, b float32) {
+	r = w
+	g = s
+	b = t
+
+	return
+}
+
+func WhiteShader(w, s, t float32) (r, g, b float32) {
+	r = 1
+	g = 1
+	b = 1
 
 	return
 }
@@ -168,12 +177,12 @@ func main() {
 		}
 	}
 
-	for i := 0; i < 12; i++ {
+	for i := 0; i < 1000; i++ {
 		var triangle Triangle = Triangle{
 			Vertices: [3]Vertex{
-				{0, -.5, 0, 1},
-				{.5, .25, 0, 1},
-				{-.5, .5, 0, 1},
+				{0, -.25, 0, 1},
+				{.25, .25, 0, 1},
+				{-.25, .5, 0, 1},
 			},
 
 			UV: [3]Vertex{
@@ -189,9 +198,14 @@ func main() {
 			},
 		}
 
-		var matrix Matrix = TransformationMatrix(Vertex{rand.Float32()*4 - 2, rand.Float32()*4 - 2, -30, 0}, Vertex{0, 0, 0, 0})
+		if math.Round(rand.Float64()) == 0 {
+			triangle.Shader = BasicShader
+		} else {
+			triangle.Shader = WhiteShader
+		}
+
+		var matrix Matrix = TransformationMatrix(Vertex{rand.Float32()*4 - 2, rand.Float32()*4 - 2, rand.Float32() * -30, 0}, Vertex{0, 0, 0, 0})
 		triangle.Transform(&matrix)
-		triangle.Shader = BasicShader
 		Triangles = append(Triangles, triangle)
 	}
 

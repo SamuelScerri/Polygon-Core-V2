@@ -119,7 +119,7 @@ func (ts *ProcessedTriangle) Barycentric(x, y int) (float32, float32, float32) {
 	var s float32 = q.CrossProduct(&ts.VS2) * ts.Span
 	var t float32 = ts.VS1.CrossProduct(&q) * ts.Span
 
-	return s, t, 1 - s - t
+	return 1 - s - t, s, t
 }
 
 func (ts *ProcessedTriangle) Inside(x, y int) (bool, float32, float32, float32) {

@@ -43,13 +43,8 @@ func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 
 	for y := yMin; y < yMax; y++ {
 		for x := xMin; x < xMax; x++ {
-			if inside, s, t, w := triangle.Inside(x, y); inside {
-				var r, g, b float32 = triangle.Triangle.Shader(
-					w*triangle.Triangle.Color[0][R]+s*triangle.Triangle.Color[1][R]+t*triangle.Triangle.Color[2][R],
-					w*triangle.Triangle.Color[0][G]+s*triangle.Triangle.Color[1][G]+t*triangle.Triangle.Color[2][G],
-					w*triangle.Triangle.Color[0][B]+s*triangle.Triangle.Color[1][B]+t*triangle.Triangle.Color[2][B],
-				)
-
+			if inside, w, s, t := triangle.Inside(x, y); inside {
+				var r, g, b float32 = triangle.Triangle.Shader(triangle.Triangle.Interpolate(w, s, t))
 				tile.Set(x, y, byte(r*255), byte(g*255), byte(b*255))
 			}
 		}

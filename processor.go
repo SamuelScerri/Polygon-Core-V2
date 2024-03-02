@@ -39,9 +39,7 @@ func Process(triangle *Triangle) ProcessedTriangle {
 func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle) {
 	var vertices []Vertex
 
-	for c := 0; c < 1; c++ {
-		vertices = triangle.Clip(c, -1)
-	}
+	vertices = triangle.Clip(0, 1)
 
 	if len(vertices) > 0 {
 		vertices[0].Normalize()
@@ -57,8 +55,6 @@ func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle
 			var newTriangle Triangle
 
 			newTriangle.Vertices = [3]Vertex{vertices[0], vertices[index+1], vertices[index+2]}
-			//newTriangle.UV = [3]Vertex{vertices[0], vertices[index+1], vertices[index+2]}
-			//newTriangle.Normals = [3]Vertex{vertices[0], vertices[index+1], vertices[index+2]}
 			newTriangle.Shader = triangle.Shader
 			processedTriangles = append(processedTriangles, Process(&newTriangle))
 		}

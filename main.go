@@ -73,13 +73,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 				var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)
 
-				for _, triangle := range processedTriangles {
-					var xMin, yMin, xMax, yMax int = triangle.TileBoundary(&Tiles)
+				for index := range processedTriangles {
+					var xMin, yMin, xMax, yMax int = processedTriangles[index].TileBoundary(&Tiles)
 
 					for y := yMin; y < yMax; y++ {
 						for x := xMin; x < xMax; x++ {
 							Mutex.Lock()
-							Tiles[x][y].Add(&triangle)
+							Tiles[x][y].Add(&processedTriangles[index])
 							Mutex.Unlock()
 						}
 					}
@@ -163,13 +163,13 @@ func main() {
 	for i := 0; i < 12; i++ {
 		var triangle Triangle = Triangle{
 			Vertices: [3]Vertex{
-				{0, -.25, 0, 1},
-				{-.25, .5, 0, 1},
-				{.25, .25, 0, 1},
+				{0, -.5, 0, 1},
+				{.5, .25, 0, 1},
+				{-.5, .5, 0, 1},
 			},
 		}
 
-		var matrix Matrix = TransformationMatrix(Vertex{rand.Float32()*4 - 2, rand.Float32()*4 - 2, -20, 0}, Vertex{0, 0, 0, 0})
+		var matrix Matrix = TransformationMatrix(Vertex{rand.Float32()*4 - 2, rand.Float32()*4 - 2, -30, 0}, Vertex{0, 0, 0, 0})
 		triangle.Transform(&matrix)
 		triangle.Shader = BasicShader
 		Triangles = append(Triangles, triangle)

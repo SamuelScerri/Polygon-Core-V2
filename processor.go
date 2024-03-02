@@ -36,8 +36,8 @@ func Process(triangle *Triangle) ProcessedTriangle {
 	}
 }
 
-func Clip(vertices, uvs []Vertex, component, direction int) (clippedVertices, clippedUVs []Vertex) {
-	var previousVertex, previousUV *Vertex = &vertices[len(vertices)-1], &uvs[len(uvs)-1]
+func Clip(vertices, uvs, colors []Vertex, component, direction int) (clippedVertices, clippedUVs, clippedColors []Vertex) {
+	var previousVertex, previousUV, previousColor *Vertex = &vertices[len(vertices)-1], &uvs[len(uvs)-1], &colors[len(colors)-1]
 	var previousInside bool = (*previousVertex)[component] <= (*previousVertex)[W]
 
 	for index := range vertices {
@@ -47,20 +47,21 @@ func Clip(vertices, uvs []Vertex, component, direction int) (clippedVertices, cl
 			var factor float32 = ((*previousVertex)[W] - (*previousVertex)[component]) /
 				(((*previousVertex)[W] - (*previousVertex)[component]) - (vertices[index][W] - vertices[index][component]))
 
-			var copiedVertex, copiedUV Vertex = previousVertex.Copy(), previousUV.Copy()
+			var copiedVertex, copiedUV, copiedColor Vertex = previousVertex.Copy(), previousUV.Copy(), previousColor.Copy()
 			copiedVertex.Interpolate(&vertices[index], factor)
 			copiedUV.Interpolate(&uvs[index], factor)
+			copiedColor.Interpolate(&colors[index], factor)
 
-			clippedVertices, clippedUVs = append(clippedVertices, copiedVertex),
-				append(clippedUVs, copiedUV)
+			clippedVertices, clippedUVs, clippedColors = append(clippedVertices, copiedVertex),
+				append(clippedUVs, copiedUV), append(clippedColors, copiedColor)
 		}
 
 		if currentInside {
-			clippedVertices, clippedUVs = append(clippedVertices, vertices[index]),
-				append(clippedUVs, uvs[index])
+			clippedVertices, clippedUVs, clippedColors = append(clippedVertices, vertices[index]),
+				append(clippedUVs, uvs[index]), append(clippedColors, colors[index])
 		}
 
-		previousVertex, previousUV = &vertices[index], &uvs[index]
+		previousVertex, previousUV, previousColor = &vertices[index], &uvs[index], &colors[index]
 		previousInside = currentInside
 	}
 
@@ -68,11 +69,11 @@ func Clip(vertices, uvs []Vertex, component, direction int) (clippedVertices, cl
 }
 
 func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle) {
-	var vertices, uvs []Vertex = triangle.Vertices[:], triangle.UV[:]
+	var vertices, uvs, colors []Vertex = triangle.Vertices[:], triangle.UV[:], triangle.Color[:]
 
 	for component := X; component <= Y; component++ {
 		if len(vertices) > 0 {
-			vertices, uvs = Clip(vertices, uvs, component, 1)
+			vertices, uvs, colors = Clip(vertices, uvs, colors, component, 1)
 		} else {
 			break
 		}
@@ -92,7 +93,9 @@ func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle
 			var newTriangle Triangle = Triangle{
 				[3]Vertex{uvs[0], uvs[index+1], uvs[index+2]},
 				[3]Vertex{vertices[0], vertices[index+1], vertices[index+2]},
+				[3]Vertex{colors[0], colors[index+1], colors[index+2]},
 				[3]Vertex{vertices[0], vertices[index+1], vertices[index+2]},
+
 				triangle.Shader,
 			}
 

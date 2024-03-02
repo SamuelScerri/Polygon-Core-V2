@@ -16,6 +16,8 @@ type Triangle struct {
 
 	Vertices [3]Vertex
 
+	Color [3]Vertex
+
 	Normals [3]Vertex
 
 	Shader Shader
@@ -91,6 +93,7 @@ func (triangle *Triangle) Copy() (copiedTriangle Triangle) {
 	for index := range triangle.Vertices {
 		copiedTriangle.UV[index] = triangle.UV[index].Copy()
 		copiedTriangle.Vertices[index] = triangle.Vertices[index].Copy()
+		copiedTriangle.Color[index] = triangle.Color[index].Copy()
 		copiedTriangle.Normals[index] = triangle.Normals[index].Copy()
 	}
 

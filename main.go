@@ -181,6 +181,12 @@ func main() {
 				{1, 0},
 				{0, 0},
 			},
+
+			Color: [3]Vertex{
+				{1, 0, 0},
+				{0, 1, 0},
+				{0, 0, 1},
+			},
 		}
 
 		var matrix Matrix = TransformationMatrix(Vertex{rand.Float32()*4 - 2, rand.Float32()*4 - 2, -30, 0}, Vertex{0, 0, 0, 0})

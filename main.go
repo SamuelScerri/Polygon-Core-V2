@@ -19,12 +19,13 @@ const Width, Height = 320, 180
 const FOV = 90
 
 const Near, Far = .1, 1000
-const Aspect = 16 / 9
+const Aspect = float32(Width) / float32(Height)
 
 var TileXSize, TileYSize = Width, Height
 
 var Tiles [][]Tile
 var Buffer []byte = make([]byte, Width*Height*4)
+var Depth []float32 = make([]float32, Width*Height)
 
 var Triangles []Triangle
 
@@ -170,6 +171,7 @@ func main() {
 			Tiles[x][y].X = x * TileXSize
 			Tiles[x][y].Y = y * TileYSize
 			Tiles[x][y].Frame = Buffer
+			Tiles[x][y].Depth = Depth
 		}
 	}
 

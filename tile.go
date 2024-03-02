@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"sync"
 )
 
@@ -22,6 +23,7 @@ type Shader func(s, t, w float32) (float32, float32, float32)
 
 type Tile struct {
 	Frame []byte
+	Depth []float32
 
 	Triangles []*ProcessedTriangle
 
@@ -44,8 +46,12 @@ func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 	for y := yMin; y < yMax; y++ {
 		for x := xMin; x < xMax; x++ {
 			if inside, w, s, t := triangle.Inside(x, y); inside {
-				var r, g, b float32 = triangle.Triangle.Shader(triangle.Triangle.Interpolate(w, s, t))
-				tile.Set(x, y, byte(r*255), byte(g*255), byte(b*255))
+				var depth float32 = w*triangle.Triangle.Vertices[0][Z] + s*triangle.Triangle.Vertices[1][Z] + t*triangle.Triangle.Vertices[2][Z]
+
+				if position := tile.ConvertPosition(x, y); depth < tile.Depth[position] {
+					var r, g, b float32 = triangle.Triangle.Shader(triangle.Triangle.Interpolate(w, s, t))
+					tile.Set(position, byte(r*255), byte(g*255), byte(b*255), depth)
+				}
 			}
 		}
 	}
@@ -66,7 +72,8 @@ func (tile *Tile) EdgeTest(triangle *ProcessedTriangle) {
 				var s, t, w float32 = triangle.Barycentric(x, y)
 				var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
 
-				tile.Set(x, y, byte(r*255), byte(g*255), byte(b*255))
+				tile.Set(tile.ConvertPosition(x, y),
+					byte(r*255), byte(g*255), byte(b*255), 0)
 			}
 		}
 	}
@@ -95,7 +102,8 @@ func (tile *Tile) SweepLine(triangle *ProcessedTriangle) {
 			var s, t, w float32 = triangle.Barycentric(x, y)
 			var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
 
-			tile.Set(x, y, byte(r*255), byte(g*255), byte(b*255))
+			tile.Set(tile.ConvertPosition(x, y),
+				byte(r*255), byte(g*255), byte(b*255), 0)
 		}
 
 		curX1 += invSlope1
@@ -119,7 +127,8 @@ func (tile *Tile) SweepLine(triangle *ProcessedTriangle) {
 			var s, t, w float32 = triangle.Barycentric(x, y)
 			var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
 
-			tile.Set(x, y, byte(r*255), byte(g*255), byte(b*255))
+			tile.Set(tile.ConvertPosition(x, y),
+				byte(r*255), byte(g*255), byte(b*255), 0)
 		}
 
 		curX1 -= invSlope1
@@ -150,16 +159,22 @@ func (tile *Tile) Add(triangle *ProcessedTriangle) {
 	tile.Triangles = append(tile.Triangles, triangle)
 }
 
-func (tile *Tile) Set(x, y int, r, g, b byte) {
-	var position int = (y*Width + x) * 4
+func (tile *Tile) ConvertPosition(x, y int) int {
+	return y*Width + x
+}
 
-	tile.Frame[position+R], tile.Frame[position+G], tile.Frame[position+B] = r, g, b
+func (tile *Tile) Set(position int, r, g, b byte, depth float32) {
+	var colorPosition int = position * 4
+
+	tile.Depth[position] = depth
+	tile.Frame[colorPosition+R], tile.Frame[colorPosition+G], tile.Frame[colorPosition+B] = r, g, b
 }
 
 func (tile *Tile) Clear(r, g, b byte) {
 	for y := tile.Y; y < tile.Y+TileYSize; y++ {
 		for x := tile.X; x < tile.X+TileXSize; x++ {
-			tile.Set(x, y, r, g, b)
+			tile.Set(tile.ConvertPosition(x, y),
+				r, g, b, math.MaxFloat32)
 		}
 	}
 }

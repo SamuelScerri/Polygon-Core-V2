@@ -58,6 +58,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		Position[X] -= .125 / 2 / 2
 	}
 
+	if ebiten.IsKeyPressed(ebiten.KeyDown) {
+		Position[Y] += .125 / 2 / 2
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyUp) {
+		Position[Y] -= .125 / 2 / 2
+	}
+
 	var matrix Matrix = TransformationMatrix(Position, Vertex{0, 0, 0, 1})
 	matrix = matrix.Multiply(&Projection)
 
@@ -166,6 +174,12 @@ func main() {
 				{0, -.5, 0, 1},
 				{.5, .25, 0, 1},
 				{-.5, .5, 0, 1},
+			},
+
+			UV: [3]Vertex{
+				{0.5, 1},
+				{1, 0},
+				{0, 0},
 			},
 		}
 

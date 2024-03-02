@@ -36,10 +36,47 @@ func Process(triangle *Triangle) ProcessedTriangle {
 	}
 }
 
-func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle) {
-	var vertices []Vertex
+func Clip(vertices, uvs []Vertex, component, direction int) (clippedVertices, clippedUVs []Vertex) {
+	var previousVertex, previousUV *Vertex = &vertices[len(vertices)-1], &uvs[len(uvs)-1]
+	var previousInside bool = (*previousVertex)[component] <= (*previousVertex)[W]
 
-	vertices = triangle.Clip(0, 1)
+	for index := range vertices {
+		var currentInside bool = vertices[index][component] <= vertices[index][W]
+
+		if currentInside != previousInside {
+			var factor float32 = ((*previousVertex)[W] - (*previousVertex)[component]) /
+				(((*previousVertex)[W] - (*previousVertex)[component]) - (vertices[index][W] - vertices[index][component]))
+
+			var copiedVertex, copiedUV Vertex = previousVertex.Copy(), previousUV.Copy()
+			copiedVertex.Interpolate(&vertices[index], factor)
+			copiedUV.Interpolate(&uvs[index], factor)
+
+			clippedVertices, clippedUVs = append(clippedVertices, copiedVertex),
+				append(clippedUVs, copiedUV)
+		}
+
+		if currentInside {
+			clippedVertices, clippedUVs = append(clippedVertices, vertices[index]),
+				append(clippedUVs, uvs[index])
+		}
+
+		previousVertex, previousUV = &vertices[index], &uvs[index]
+		previousInside = currentInside
+	}
+
+	return
+}
+
+func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle) {
+	var vertices, uvs []Vertex = triangle.Vertices[:], triangle.UV[:]
+
+	for component := X; component <= Y; component++ {
+		if len(vertices) > 0 {
+			vertices, uvs = Clip(vertices, uvs, component, 1)
+		} else {
+			break
+		}
+	}
 
 	if len(vertices) > 0 {
 		vertices[0].Normalize()
@@ -52,10 +89,13 @@ func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle
 			vertices[index+2].Normalize()
 			vertices[index+2].ScreenSpace()
 
-			var newTriangle Triangle
+			var newTriangle Triangle = Triangle{
+				[3]Vertex{uvs[0], uvs[index+1], uvs[index+2]},
+				[3]Vertex{vertices[0], vertices[index+1], vertices[index+2]},
+				[3]Vertex{vertices[0], vertices[index+1], vertices[index+2]},
+				triangle.Shader,
+			}
 
-			newTriangle.Vertices = [3]Vertex{vertices[0], vertices[index+1], vertices[index+2]}
-			newTriangle.Shader = triangle.Shader
 			processedTriangles = append(processedTriangles, Process(&newTriangle))
 		}
 	}

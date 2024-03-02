@@ -87,34 +87,6 @@ func (triangle *Triangle) Span() (Vertex, Vertex) {
 		Vertex{triangle.Vertices[2][X] - triangle.Vertices[0][X], triangle.Vertices[2][Y] - triangle.Vertices[0][Y]}
 }
 
-func (triangle *Triangle) Clip(component int, direction int) (vertexData []Vertex) {
-	var previousVertex *Vertex = &triangle.Vertices[2]
-	var previousInside bool = (*previousVertex)[component] <= (*previousVertex)[W]
-
-	for index := range triangle.Vertices {
-		var currentInside bool = triangle.Vertices[index][component] <= triangle.Vertices[index][W]
-
-		if currentInside != previousInside {
-			var factor float32 = ((*previousVertex)[W] - (*previousVertex)[component]) /
-				(((*previousVertex)[W] - (*previousVertex)[component]) - (triangle.Vertices[index][W] - triangle.Vertices[index][component]))
-
-			var copiedVertex Vertex = previousVertex.Copy()
-			copiedVertex.Interpolate(&triangle.Vertices[index], factor)
-
-			vertexData = append(vertexData, copiedVertex)
-		}
-
-		if currentInside {
-			vertexData = append(vertexData, triangle.Vertices[index])
-		}
-
-		previousVertex = &triangle.Vertices[index]
-		previousInside = currentInside
-	}
-
-	return
-}
-
 func (triangle *Triangle) Copy() (copiedTriangle Triangle) {
 	for index := range triangle.Vertices {
 		copiedTriangle.UV[index] = triangle.UV[index].Copy()

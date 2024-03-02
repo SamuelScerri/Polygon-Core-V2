@@ -106,11 +106,11 @@ func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle
 	return
 }
 
-func (ts *ProcessedTriangle) TileBoundary(tiles *([4][3]Tile)) (int, int, int, int) {
-	return int(Clamp(float32(math.Floor(float64(ts.Triangle.Bounds()[XMIN]/float32(TileXSize)))), 0, 4)),
-		int(Clamp(float32(math.Floor(float64(ts.Triangle.Bounds()[YMIN]/float32(TileYSize)))), 0, 3)),
-		int(Clamp(float32(math.Ceil(float64(ts.Triangle.Bounds()[XMAX]/float32(TileXSize)))), 0, 4)),
-		int(Clamp(float32(math.Ceil(float64(ts.Triangle.Bounds()[YMAX]/float32(TileYSize)))), 0, 3))
+func (ts *ProcessedTriangle) TileBoundary(tiles *([][]Tile)) (int, int, int, int) {
+	return int(Clamp(float32(math.Floor(float64(ts.Triangle.Bounds()[XMIN]/float32(TileXSize)))), 0, len(*tiles))),
+		int(Clamp(float32(math.Floor(float64(ts.Triangle.Bounds()[YMIN]/float32(TileYSize)))), 0, len((*tiles)[0]))),
+		int(Clamp(float32(math.Ceil(float64(ts.Triangle.Bounds()[XMAX]/float32(TileXSize)))), 0, len(*tiles))),
+		int(Clamp(float32(math.Ceil(float64(ts.Triangle.Bounds()[YMAX]/float32(TileYSize)))), 0, len((*tiles)[0])))
 }
 
 func (ts *ProcessedTriangle) Barycentric(x, y int) (float32, float32, float32) {

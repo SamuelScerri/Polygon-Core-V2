@@ -23,7 +23,7 @@ const Aspect = 16 / 9
 
 var TileXSize, TileYSize = Width, Height
 
-var Tiles [4][3]Tile
+var Tiles [][]Tile
 var Buffer []byte = make([]byte, Width*Height*4)
 
 var Triangles []Triangle
@@ -142,8 +142,6 @@ func main() {
 	reader := bufio.NewReader(os.Stdin)
 	algorithm, _, _ := reader.ReadRune()
 
-	var i int
-
 	switch algorithm {
 	case '1':
 		AlgorithmUsed = SweepLineAlgorithm
@@ -153,24 +151,22 @@ func main() {
 		AlgorithmUsed = EdgeTestAlgorithm
 	}
 
-	fmt.Println("")
-
-	fmt.Print("Please Type How Many Cores Will Be Utilized: ")
+	fmt.Print("\nPlease Type How Many Cores Will Be Utilized: ")
 
 	fmt.Scan(&Cores)
 
-	fmt.Print("Please Type How Cores Will Be Divided Per Row: ")
+	var yTiles int = int(math.Floor(math.Sqrt(float64(Cores))))
+	var xTiles int = Cores / yTiles
 
-	fmt.Scan(&i)
-	TileXSize /= i
+	TileXSize /= xTiles
+	TileYSize /= yTiles
 
-	fmt.Print("Please Type How Cores Will Be Divided Per Column: ")
+	Tiles = make([][]Tile, xTiles)
 
-	fmt.Scan(&i)
-	TileYSize /= i
+	for x := range Tiles {
+		Tiles[x] = make([]Tile, yTiles)
 
-	for y := range Tiles[0] {
-		for x := range Tiles {
+		for y := range Tiles[0] {
 			Tiles[x][y].X = x * TileXSize
 			Tiles[x][y].Y = y * TileYSize
 			Tiles[x][y].Frame = Buffer

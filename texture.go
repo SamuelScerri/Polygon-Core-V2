@@ -40,7 +40,7 @@ func LoadTexture(directory string) Texture {
 		for x := 0; x < texture.Width; x++ {
 			r, g, b, a := image.At(x, y).RGBA()
 
-			texture.Data = append(texture.Data, byte(r>>8), byte(g>>8), byte(b>>8), byte(a>>8))
+			texture.Data = append(texture.Data, byte(r), byte(g), byte(b), byte(a))
 		}
 	}
 

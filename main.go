@@ -15,7 +15,7 @@ import (
 
 var Cores = 1
 
-const Width, Height = 320, 180
+const Width, Height, Scale = 320, 180, 4
 const FOV = 90
 
 const Near, Far = .1, 1000
@@ -77,6 +77,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
 		Position[Y] -= .125 / 2 / 2
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyW) {
+		Position[Z] += .125
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyS) {
+		Position[Z] -= .125
 	}
 
 	var matrix Matrix = TransformationMatrix(Position, Vertex{0, 0, 0, 1})
@@ -212,11 +220,11 @@ func main() {
 		Triangles = append(Triangles, triangle)
 	}
 
-	ebiten.SetWindowSize(Width*2, Height*2)
+	ebiten.SetWindowSize(Width*Scale, Height*Scale)
 	ebiten.SetWindowTitle("Ghetty Engine")
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
-	ebiten.SetVsyncEnabled(true)
+	ebiten.SetVsyncEnabled(false)
 
 	if err := ebiten.RunGame(&Game{}); err != nil {
 		log.Fatal(err)

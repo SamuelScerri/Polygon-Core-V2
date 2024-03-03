@@ -54,7 +54,7 @@ func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 
 					r, g, b, _ := triangle.Triangle.Texture.Get(triangle.Triangle.Texture.ConvertPosition(tx, ty))
 
-					tile.Set(position, byte(r*255), byte(g*255), byte(b*255), depth)
+					tile.Set(position, r, g, b, depth)
 				}
 			}
 		}

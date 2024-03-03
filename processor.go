@@ -38,12 +38,12 @@ func Process(triangle *Triangle) ProcessedTriangle {
 
 func Clip(vertices, uvs, colors []Vertex, component int, direction float32) (clippedVertices, clippedUVs, clippedColors []Vertex) {
 	var previousVertex, previousUV, previousColor *Vertex = &vertices[len(vertices)-1], &uvs[len(uvs)-1], &colors[len(colors)-1]
-	var previousComponent float32 = direction * (*previousVertex)[component]
+	var previousComponent float32 = direction * (*previousVertex)[component] * .25
 
 	var previousInside bool = previousComponent <= (*previousVertex)[W]
 
 	for index := range vertices {
-		var currentComponent float32 = direction * vertices[index][component]
+		var currentComponent float32 = direction * vertices[index][component] * .25
 		var currentInside bool = currentComponent <= vertices[index][W]
 
 		if currentInside != previousInside {

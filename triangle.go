@@ -68,16 +68,16 @@ func (triangle *Triangle) Interpolate(w, s, t float32) (float32, float32, float3
 func (triangle *Triangle) Bounds() Vertex {
 	return Vertex{
 		float32(math.Max(float64(triangle.Vertices[0][X]),
-			math.Max(float64(triangle.Vertices[1][X]), float64(triangle.Vertices[2][X])))),
+			math.Max(float64(triangle.Vertices[1][X]), float64(triangle.Vertices[2][X])))) + 1,
 
 		float32(math.Max(float64(triangle.Vertices[0][Y]),
-			math.Max(float64(triangle.Vertices[1][Y]), float64(triangle.Vertices[2][Y])))),
+			math.Max(float64(triangle.Vertices[1][Y]), float64(triangle.Vertices[2][Y])))) + 1,
 
 		float32(math.Min(float64(triangle.Vertices[0][X]),
-			math.Min(float64(triangle.Vertices[1][X]), float64(triangle.Vertices[2][X])))),
+			math.Min(float64(triangle.Vertices[1][X]), float64(triangle.Vertices[2][X])))) - 1,
 
 		float32(math.Min(float64(triangle.Vertices[0][Y]),
-			math.Min(float64(triangle.Vertices[1][Y]), float64(triangle.Vertices[2][Y])))),
+			math.Min(float64(triangle.Vertices[1][Y]), float64(triangle.Vertices[2][Y])))) - 1,
 	}
 }
 

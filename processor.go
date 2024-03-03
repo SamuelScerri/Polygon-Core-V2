@@ -99,30 +99,40 @@ func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle
 
 		inverseUV, inverseUV1 := 1/vertices[0][W], 1/vertices[1][W]
 
+		t1 := vertices[1].Copy()
+		t1.Sub(&vertices[0])
+
 		for index := 0; index < len(vertices)-2; index++ {
 			vertices[index+2].Normalize()
 			vertices[index+2].ScreenSpace()
 
-			inverseUV2 := 1 / vertices[index+2][W]
+			t2 := vertices[index+2].Copy()
+			t2.Sub(&vertices[0])
 
-			var newTriangle Triangle = Triangle{
-				[3]Vertex{
-					{uvs[0][X] * inverseUV, uvs[0][Y] * inverseUV, inverseUV},
-					{uvs[index+1][X] * inverseUV1, uvs[index+1][Y] * inverseUV1, inverseUV1},
-					{uvs[index+2][X] * inverseUV2, uvs[index+2][Y] * inverseUV2, inverseUV2},
-				},
+			if t1.Cross(&t2)[Z] < 0 {
+				inverseUV2 := 1 / vertices[index+2][W]
 
-				[3]Vertex{vertices[0], vertices[index+1], vertices[index+2]},
-				[3]Vertex{colors[0], colors[index+1], colors[index+2]},
-				[3]Vertex{vertices[0], vertices[index+1], vertices[index+2]},
+				var newTriangle Triangle = Triangle{
+					[3]Vertex{
+						{uvs[0][X] * inverseUV, uvs[0][Y] * inverseUV, inverseUV},
+						{uvs[index+1][X] * inverseUV1, uvs[index+1][Y] * inverseUV1, inverseUV1},
+						{uvs[index+2][X] * inverseUV2, uvs[index+2][Y] * inverseUV2, inverseUV2},
+					},
 
-				triangle.Texture,
-				triangle.Shader,
+					[3]Vertex{vertices[0], vertices[index+1], vertices[index+2]},
+					[3]Vertex{colors[0], colors[index+1], colors[index+2]},
+					[3]Vertex{vertices[0], vertices[index+1], vertices[index+2]},
+
+					triangle.Texture,
+					triangle.Shader,
+				}
+
+				inverseUV1 = inverseUV2
+				t1 = t2
+
+				processedTriangles = append(processedTriangles, Process(&newTriangle))
 			}
 
-			inverseUV1 = inverseUV2
-
-			processedTriangles = append(processedTriangles, Process(&newTriangle))
 		}
 	}
 

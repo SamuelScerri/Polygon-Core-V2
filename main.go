@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"math/rand"
 	"os"
 	"strconv"
 
@@ -16,7 +15,7 @@ import (
 var Cores = 1
 
 const Width, Height, Scale = 320, 180, 4
-const FOV = 90
+const FOV = 150
 
 const Near, Far = .1, 1000
 const Aspect = float32(Width) / float32(Height)
@@ -27,8 +26,10 @@ var Tiles [][]Tile
 var Buffer []byte = make([]byte, Width*Height*4)
 var Depth []float32 = make([]float32, Width*Height)
 
-var Brick Texture = LoadTexture("images/Cobble.png")
+var Brick Texture = LoadTexture("images/Brick.png")
 var Cobble Texture = LoadTexture("images/Brick.png")
+
+var Bunny = LoadModel("models/Teapot.obj")
 
 var Triangles []Triangle
 
@@ -58,17 +59,17 @@ func (g *Game) Update() error {
 	return nil
 }
 
-var Position Vertex = Vertex{0, 0, 15, 0}
+var Position Vertex = Vertex{0, -1.5, -5, 0}
 var Projection Matrix = ProjectionMatrix()
 
 func (g *Game) Draw(screen *ebiten.Image) {
 
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		Position[X] += .125 / 2 / 2
+		Position[X] -= .125 / 2 / 2
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		Position[X] -= .125 / 2 / 2
+		Position[X] += .125 / 2 / 2
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
@@ -91,6 +92,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	matrix = matrix.Multiply(&Projection)
 
 	var trianglesPerCore int = len(Triangles) / Cores
+	var totalTrianglesRasterized int = 0
 
 	WaitGroup.Add(Cores)
 
@@ -101,6 +103,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				copiedTriangle.Transform(&matrix)
 
 				var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)
+				var counted bool = false
 
 				for index := range processedTriangles {
 					var xMin, yMin, xMax, yMax int = processedTriangles[index].TileBoundary(&Tiles)
@@ -108,6 +111,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 					for y := yMin; y < yMax; y++ {
 						for x := xMin; x < xMax; x++ {
 							Mutex.Lock()
+							if !counted {
+								totalTrianglesRasterized++
+								counted = true
+							}
+
 							Tiles[x][y].Add(&processedTriangles[index])
 							Mutex.Unlock()
 						}
@@ -138,10 +146,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	screen.WritePixels(Buffer)
 	ebitenutil.DebugPrint(screen, "FPS: "+strconv.Itoa(int(ebiten.ActualFPS())))
-}
-
-func init() {
-	fmt.Println("Loading Assets")
+	ebitenutil.DebugPrintAt(screen, "TRIANGLES RASTERIZED: "+strconv.Itoa(totalTrianglesRasterized), 0, 10)
 }
 
 func main() {
@@ -186,7 +191,7 @@ func main() {
 		}
 	}
 
-	for i := 0; i < 1000; i++ {
+	/*for i := 0; i < 1000; i++ {
 		var triangle Triangle = Triangle{
 			Vertices: [3]Vertex{
 				{0, -.25, -1, 1},
@@ -218,13 +223,15 @@ func main() {
 		var matrix Matrix = TransformationMatrix(Vertex{rand.Float32()*4 - 2, rand.Float32()*4 - 2, rand.Float32() * -30, 0}, Vertex{0, 0, 0, 0})
 		triangle.Transform(&matrix)
 		Triangles = append(Triangles, triangle)
-	}
+	}*/
+
+	Triangles = append(Triangles, Bunny...)
 
 	ebiten.SetWindowSize(Width*Scale, Height*Scale)
 	ebiten.SetWindowTitle("Ghetty Engine")
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
-	ebiten.SetVsyncEnabled(false)
+	ebiten.SetVsyncEnabled(true)
 
 	if err := ebiten.RunGame(&Game{}); err != nil {
 		log.Fatal(err)

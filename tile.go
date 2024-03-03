@@ -49,10 +49,10 @@ func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 					var uvx float32 = (w*triangle.Triangle.UV[0][X] + s*triangle.Triangle.UV[1][X] + t*triangle.Triangle.UV[2][X]) * wt
 					var uvy float32 = (w*triangle.Triangle.UV[0][Y] + s*triangle.Triangle.UV[1][Y] + t*triangle.Triangle.UV[2][Y]) * wt
 
-					var tx int = int(uvx * float32(Brick.Width))
-					var ty int = int(uvy * float32(Brick.Height))
+					var tx int = int(uvx * float32(triangle.Triangle.Texture.Width))
+					var ty int = int(uvy * float32(triangle.Triangle.Texture.Height))
 
-					r, g, b, _ := Brick.Get(Brick.ConvertPosition(tx, ty))
+					r, g, b, _ := triangle.Triangle.Texture.Get(triangle.Triangle.Texture.ConvertPosition(tx, ty))
 
 					tile.Set(position, byte(r*255), byte(g*255), byte(b*255), depth)
 				}

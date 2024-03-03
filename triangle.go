@@ -20,6 +20,8 @@ type Triangle struct {
 
 	Normals [3]Vertex
 
+	Texture *Texture
+
 	Shader Shader
 }
 
@@ -101,6 +103,7 @@ func (triangle *Triangle) Copy() (copiedTriangle Triangle) {
 		copiedTriangle.Vertices[index] = triangle.Vertices[index].Copy()
 		copiedTriangle.Color[index] = triangle.Color[index].Copy()
 		copiedTriangle.Normals[index] = triangle.Normals[index].Copy()
+		copiedTriangle.Texture = triangle.Texture
 	}
 
 	copiedTriangle.Shader = triangle.Shader

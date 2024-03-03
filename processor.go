@@ -116,6 +116,7 @@ func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle
 				[3]Vertex{colors[0], colors[index+1], colors[index+2]},
 				[3]Vertex{vertices[0], vertices[index+1], vertices[index+2]},
 
+				triangle.Texture,
 				triangle.Shader,
 			}
 

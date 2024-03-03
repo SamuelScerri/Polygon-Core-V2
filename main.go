@@ -28,6 +28,7 @@ var Buffer []byte = make([]byte, Width*Height*4)
 var Depth []float32 = make([]float32, Width*Height)
 
 var Brick Texture = LoadTexture("images/Cobble.png")
+var Cobble Texture = LoadTexture("images/Brick.png")
 
 var Triangles []Triangle
 
@@ -200,8 +201,10 @@ func main() {
 
 		if math.Round(rand.Float64()) == 0 {
 			triangle.Shader = BasicShader
+			triangle.Texture = &Brick
 		} else {
 			triangle.Shader = WhiteShader
+			triangle.Texture = &Cobble
 		}
 
 		var matrix Matrix = TransformationMatrix(Vertex{rand.Float32()*4 - 2, rand.Float32()*4 - 2, rand.Float32() * -30, 0}, Vertex{0, 0, 0, 0})

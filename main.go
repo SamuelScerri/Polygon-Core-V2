@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand"
 	"os"
 	"strconv"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-var Cores = 1
+var Cores, Scene = 1, 1
 
 const Width, Height, Scale = 320, 180, 4
 const FOV = 150
@@ -61,12 +62,12 @@ func (g *Game) Update() error {
 	return nil
 }
 
-var Position Vertex = Vertex{0, -1.5, -5, 0}
+var Position Vertex = Vertex{0, 0, 0, 0}
 var Projection Matrix = ProjectionMatrix()
 
 func (g *Game) Draw(screen *ebiten.Image) {
 
-	if ebiten.IsKeyPressed(ebiten.KeyRight) {
+	/*if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		Position[X] -= .125 / 2 / 2
 	}
 
@@ -88,12 +89,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	if ebiten.IsKeyPressed(ebiten.KeyS) {
 		Position[Z] -= .125
-	}
+	}*/
 
 	var matrix Matrix = TransformationMatrix(Position, Vertex{0, 0, 0, 1})
 	matrix = matrix.Multiply(&Projection)
 
 	var trianglesPerCore int = len(Triangles) / Cores
+	var trianglesLeft int = len(Triangles) % Cores
 	var totalTrianglesRasterized int = 0
 
 	WaitGroup.Add(Cores)
@@ -127,6 +129,31 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 			WaitGroup.Done()
 		}(trianglesPerCore * i)
+	}
+
+	for p := 11*trianglesPerCore + trianglesPerCore; p < 11*trianglesPerCore+trianglesPerCore+trianglesLeft; p++ {
+		var copiedTriangle Triangle = Triangles[p].Copy()
+		copiedTriangle.Transform(&matrix)
+
+		var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)
+		var counted bool = false
+
+		for index := range processedTriangles {
+			var xMin, yMin, xMax, yMax int = processedTriangles[index].TileBoundary(&Tiles)
+
+			for y := yMin; y < yMax; y++ {
+				for x := xMin; x < xMax; x++ {
+					Mutex.Lock()
+					if !counted {
+						totalTrianglesRasterized++
+						counted = true
+					}
+
+					Tiles[x][y].Add(&processedTriangles[index])
+					Mutex.Unlock()
+				}
+			}
+		}
 	}
 
 	WaitGroup.Wait()
@@ -196,12 +223,16 @@ func main() {
 		}
 	}
 
-	/*for i := 0; i < 1000; i++ {
+	fmt.Print("\nPlease Select Scene Number: ")
+	fmt.Scan(&Scene)
+
+	switch Scene {
+	case 1:
 		var triangle Triangle = Triangle{
 			Vertices: [3]Vertex{
-				{0, -.25, -1, 1},
-				{.25, .25, 0, 1},
-				{-.25, .5, 0, 1},
+				{0, -.5, 0, 1},
+				{.5, .5, 0, 1},
+				{-.5, .5, 0, 1},
 			},
 
 			UV: [3]Vertex{
@@ -211,26 +242,54 @@ func main() {
 			},
 
 			Color: [3]Vertex{
-				{rand.Float32(), rand.Float32(), rand.Float32()},
-				{rand.Float32(), rand.Float32(), rand.Float32()},
-				{rand.Float32(), rand.Float32(), rand.Float32()},
+				{1, 0, 0},
+				{0, 1, 0},
+				{0, 0, 1},
 			},
 		}
+		triangle.Shader = BasicShader
 
-		if math.Round(rand.Float64()) == 0 {
-			triangle.Shader = BasicShader
-			triangle.Texture = &Brick
-		} else {
-			triangle.Shader = WhiteShader
-			triangle.Texture = &Cobble
-		}
-
-		var matrix Matrix = TransformationMatrix(Vertex{rand.Float32()*4 - 2, rand.Float32()*4 - 2, rand.Float32() * -30, 0}, Vertex{0, 0, 0, 0})
+		var matrix Matrix = TransformationMatrix(Vertex{0, 0, -1}, Vertex{0, 0, 0, 0})
 		triangle.Transform(&matrix)
-		Triangles = append(Triangles, triangle)
-	}*/
 
-	Triangles = append(Triangles, Bunny...)
+		Triangles = append(Triangles, triangle)
+
+	case 2:
+		for i := 0; i < 1000; i++ {
+			var triangle Triangle = Triangle{
+				Vertices: [3]Vertex{
+					{0, -.5, 0, 1},
+					{.5, .5, 0, 1},
+					{-.5, .5, 0, 1},
+				},
+
+				UV: [3]Vertex{
+					{0.5, 1},
+					{1, 0},
+					{0, 0},
+				},
+
+				Color: [3]Vertex{
+					{rand.Float32(), rand.Float32(), rand.Float32()},
+					{rand.Float32(), rand.Float32(), rand.Float32()},
+					{rand.Float32(), rand.Float32(), rand.Float32()},
+				},
+			}
+			triangle.Shader = BasicShader
+
+			var matrix Matrix = TransformationMatrix(Vertex{rand.Float32()*16 - 8, rand.Float32()*16 - 8, -12, 0}, Vertex{0, 0, 0, 0})
+			triangle.Transform(&matrix)
+
+			Triangles = append(Triangles, triangle)
+		}
+	case 3:
+		Triangles = append(Triangles, Bunny...)
+
+		for i := range Triangles {
+			var matrix Matrix = TransformationMatrix(Vertex{0, -1.5, -5, 0}, Vertex{0, 0, 0, 0})
+			Triangles[i].Transform(&matrix)
+		}
+	}
 
 	ebiten.SetWindowSize(Width*Scale, Height*Scale)
 	ebiten.SetWindowTitle("Ghetty Engine")

@@ -31,6 +31,8 @@ var Cobble Texture = LoadTexture("images/Brick.png")
 
 var Bunny = LoadModel("models/Teapot.obj")
 
+var Log Logger
+
 var Triangles []Triangle
 
 type Game struct{}
@@ -147,6 +149,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.WritePixels(Buffer)
 	ebitenutil.DebugPrint(screen, "FPS: "+strconv.Itoa(int(ebiten.ActualFPS())))
 	ebitenutil.DebugPrintAt(screen, "TRIANGLES RASTERIZED: "+strconv.Itoa(totalTrianglesRasterized), 0, 10)
+	ebitenutil.DebugPrintAt(screen, "CORES USED: "+strconv.Itoa(Cores), 0, 20)
+
+	Log.Log(ebiten.ActualFPS())
 }
 
 func main() {
@@ -231,9 +236,13 @@ func main() {
 	ebiten.SetWindowTitle("Ghetty Engine")
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
-	ebiten.SetVsyncEnabled(true)
+	ebiten.SetVsyncEnabled(false)
+
+	Log = NewLogger("raw_data")
 
 	if err := ebiten.RunGame(&Game{}); err != nil {
 		log.Fatal(err)
 	}
+
+	Log.Close()
 }

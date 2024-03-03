@@ -73,11 +73,23 @@ func (tile *Tile) EdgeTest(triangle *ProcessedTriangle) {
 			var w0, w1, w2 float32 = triangle.Triangle.EdgeSpan(x, y)
 
 			if w0 >= 0 && w1 >= 0 && w2 >= 0 {
-				var s, t, w float32 = triangle.Barycentric(x, y)
-				var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
+				var w, s, t float32 = triangle.Barycentric(x, y)
+				var depth float32 = w*triangle.Triangle.Vertices[0][Z] + s*triangle.Triangle.Vertices[1][Z] + t*triangle.Triangle.Vertices[2][Z]
 
-				tile.Set(tile.ConvertPosition(x, y),
-					byte(r*255), byte(g*255), byte(b*255), 0)
+				if position := tile.ConvertPosition(x, y); depth < tile.Depth[position] {
+					//var r, g, b float32 = triangle.Triangle.Shader(triangle.Triangle.Interpolate(w, s, t))
+					var wt float32 = 1 / (w*triangle.Triangle.UV[0][Z] + s*triangle.Triangle.UV[1][Z] + t*triangle.Triangle.UV[2][Z])
+
+					var uvx float32 = (w*triangle.Triangle.UV[0][X] + s*triangle.Triangle.UV[1][X] + t*triangle.Triangle.UV[2][X]) * wt
+					var uvy float32 = (w*triangle.Triangle.UV[0][Y] + s*triangle.Triangle.UV[1][Y] + t*triangle.Triangle.UV[2][Y]) * wt
+
+					var tx int = int(uvx * float32(triangle.Triangle.Texture.Width))
+					var ty int = int((1 - uvy) * float32(triangle.Triangle.Texture.Height))
+
+					r, g, b, _ := triangle.Triangle.Texture.Get(triangle.Triangle.Texture.ConvertPosition(tx, ty))
+
+					tile.Set(position, r, g, b, depth)
+				}
 			}
 		}
 	}
@@ -103,7 +115,7 @@ func (tile *Tile) SweepLine(triangle *ProcessedTriangle) {
 			int(Clamp(curX2, tile.X, tile.X+TileXSize))
 
 		for x := clampedLeft; x < clampedRight; x++ {
-			var s, t, w float32 = triangle.Barycentric(x, y)
+			var w, s, t float32 = triangle.Barycentric(x, y)
 			var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
 
 			tile.Set(tile.ConvertPosition(x, y),

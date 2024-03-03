@@ -47,8 +47,8 @@ func Clip(vertices, uvs, colors []Vertex, component int, direction float32) (cli
 		var currentInside bool = currentComponent <= vertices[index][W]
 
 		if currentInside != previousInside {
-			var factor float32 = ((*previousVertex)[W] - direction*(*previousVertex)[component]) /
-				(((*previousVertex)[W] - direction*(*previousVertex)[component]) - (vertices[index][W] - currentComponent))
+			var factor float32 = ((*previousVertex)[W] - previousComponent) /
+				(((*previousVertex)[W] - previousComponent) - (vertices[index][W] - currentComponent))
 
 			var copiedVertex, copiedUV, copiedColor Vertex = previousVertex.Copy(), previousUV.Copy(), previousColor.Copy()
 			copiedVertex.Interpolate(&vertices[index], factor)
@@ -97,18 +97,29 @@ func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle
 		vertices[1].Normalize()
 		vertices[1].ScreenSpace()
 
+		inverseUV, inverseUV1 := 1/vertices[0][W], 1/vertices[1][W]
+
 		for index := 0; index < len(vertices)-2; index++ {
 			vertices[index+2].Normalize()
 			vertices[index+2].ScreenSpace()
 
+			inverseUV2 := 1 / vertices[index+2][W]
+
 			var newTriangle Triangle = Triangle{
-				[3]Vertex{uvs[0], uvs[index+1], uvs[index+2]},
+				[3]Vertex{
+					{uvs[0][X] * inverseUV, uvs[0][Y] * inverseUV, inverseUV},
+					{uvs[index+1][X] * inverseUV1, uvs[index+1][Y] * inverseUV1, inverseUV1},
+					{uvs[index+2][X] * inverseUV2, uvs[index+2][Y] * inverseUV2, inverseUV2},
+				},
+
 				[3]Vertex{vertices[0], vertices[index+1], vertices[index+2]},
 				[3]Vertex{colors[0], colors[index+1], colors[index+2]},
 				[3]Vertex{vertices[0], vertices[index+1], vertices[index+2]},
 
 				triangle.Shader,
 			}
+
+			inverseUV1 = inverseUV2
 
 			processedTriangles = append(processedTriangles, Process(&newTriangle))
 		}

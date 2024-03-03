@@ -27,6 +27,8 @@ var Tiles [][]Tile
 var Buffer []byte = make([]byte, Width*Height*4)
 var Depth []float32 = make([]float32, Width*Height)
 
+var Brick Texture = LoadTexture("images/Cobble.png")
+
 var Triangles []Triangle
 
 type Game struct{}
@@ -127,6 +129,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	screen.WritePixels(Buffer)
 	ebitenutil.DebugPrint(screen, "FPS: "+strconv.Itoa(int(ebiten.ActualFPS())))
+}
+
+func init() {
+	fmt.Println("Loading Assets")
 }
 
 func main() {

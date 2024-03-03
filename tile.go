@@ -6,12 +6,6 @@ import (
 )
 
 const (
-	R = 0
-	G = 1
-	B = 2
-)
-
-const (
 	BarycentricAlgorithm = 0
 
 	EdgeTestAlgorithm = 1
@@ -49,7 +43,17 @@ func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 				var depth float32 = w*triangle.Triangle.Vertices[0][Z] + s*triangle.Triangle.Vertices[1][Z] + t*triangle.Triangle.Vertices[2][Z]
 
 				if position := tile.ConvertPosition(x, y); depth < tile.Depth[position] {
-					var r, g, b float32 = triangle.Triangle.Shader(triangle.Triangle.Interpolate(w, s, t))
+					//var r, g, b float32 = triangle.Triangle.Shader(triangle.Triangle.Interpolate(w, s, t))
+					var wt float32 = 1 / (w*triangle.Triangle.UV[0][Z] + s*triangle.Triangle.UV[1][Z] + t*triangle.Triangle.UV[2][Z])
+
+					var uvx float32 = (w*triangle.Triangle.UV[0][X] + s*triangle.Triangle.UV[1][X] + t*triangle.Triangle.UV[2][X]) * wt
+					var uvy float32 = (w*triangle.Triangle.UV[0][Y] + s*triangle.Triangle.UV[1][Y] + t*triangle.Triangle.UV[2][Y]) * wt
+
+					var tx int = int(uvx * float32(Brick.Width))
+					var ty int = int(uvy * float32(Brick.Height))
+
+					r, g, b, _ := Brick.Get(Brick.ConvertPosition(tx, ty))
+
 					tile.Set(position, byte(r*255), byte(g*255), byte(b*255), depth)
 				}
 			}

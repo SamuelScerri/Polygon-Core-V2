@@ -8,20 +8,38 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 var Cores, Scene = 1, 1
 
-const Width, Height, Scale = 320, 180, 4
+const Width, Height, Scale = 320, 180, 2
 const FOV = 150
 
 const Near, Far = .1, 1000
 const Aspect = float32(Width) / float32(Height)
 
 var TileXSize, TileYSize = Width, Height
+var Time float32
+
+func BasicVertex(vertex *Vertex, matrices ...*Matrix) {
+	(*vertex)[X] += float32(math.Sin(float64(Time * .0125 + (*vertex)[Y] * 2))) * (*vertex)[Y] * .25
+	(*vertex)[Y] += float32(math.Sin(float64(Time * .0125 + (*vertex)[X] * 2))) * (*vertex)[X] * .25
+	(*vertex)[Z] += float32(math.Sin(float64(Time * .0125 + (*vertex)[Y] * 2))) * (*vertex)[Y] * .25
+
+	for index := range matrices {
+		vertex.Transform(matrices[index])
+	}
+}
+
+func BasicFragment (r, g, b *float32) {
+
+}
+
+var Basic Shader = Shader{
+	BasicVertex, BasicFragment,
+}
 
 var Tiles [][]Tile
 var Buffer []byte = make([]byte, Width*Height*4)
@@ -67,7 +85,7 @@ var Projection Matrix = ProjectionMatrix()
 
 func (g *Game) Draw(screen *ebiten.Image) {
 
-	/*if ebiten.IsKeyPressed(ebiten.KeyRight) {
+	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		Position[X] -= .125 / 2 / 2
 	}
 
@@ -89,14 +107,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	if ebiten.IsKeyPressed(ebiten.KeyS) {
 		Position[Z] -= .125
-	}*/
-
-	var matrix Matrix = TransformationMatrix(Position, Vertex{0, 0, 0, 1})
-	matrix = matrix.Multiply(&Projection)
+	}
 
 	var trianglesPerCore int = len(Triangles) / Cores
 	var trianglesLeft int = len(Triangles) % Cores
 	var totalTrianglesRasterized int = 0
+
+	Time += 1
+
+	var matrix Matrix = TransformationMatrix(Position, Vertex{0, 0, 0, 1})
+	matrix = matrix.Multiply(&Projection)
 
 	WaitGroup.Add(Cores)
 
@@ -104,7 +124,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		go func(offset int) {
 			for p := offset; p < offset+trianglesPerCore; p++ {
 				var copiedTriangle Triangle = Triangles[p].Copy()
-				copiedTriangle.Transform(&matrix)
+
+				for index := range copiedTriangle.Vertices {
+					copiedTriangle.Shader.Vertex(&copiedTriangle.Vertices[index], &matrix)
+				}
 
 				var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)
 				var counted bool = false
@@ -133,7 +156,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	for p := 11*trianglesPerCore + trianglesPerCore; p < 11*trianglesPerCore+trianglesPerCore+trianglesLeft; p++ {
 		var copiedTriangle Triangle = Triangles[p].Copy()
-		copiedTriangle.Transform(&matrix)
+
+		for index := range copiedTriangle.Vertices {
+			copiedTriangle.Shader.Vertex(&copiedTriangle.Vertices[index], &matrix)
+		}
 
 		var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)
 		var counted bool = false
@@ -247,10 +273,11 @@ func main() {
 				{0, 0, 1},
 			},
 		}
-		triangle.Shader = BasicShader
 
 		var matrix Matrix = TransformationMatrix(Vertex{0, 0, -1}, Vertex{0, 0, 0, 0})
 		triangle.Transform(&matrix)
+		triangle.Texture = &Brick
+		triangle.Shader = &Basic
 
 		Triangles = append(Triangles, triangle)
 
@@ -275,7 +302,6 @@ func main() {
 					{rand.Float32(), rand.Float32(), rand.Float32()},
 				},
 			}
-			triangle.Shader = BasicShader
 
 			var matrix Matrix = TransformationMatrix(Vertex{rand.Float32()*16 - 8, rand.Float32()*16 - 8, -12, 0}, Vertex{0, 0, 0, 0})
 			triangle.Transform(&matrix)
@@ -295,7 +321,7 @@ func main() {
 	ebiten.SetWindowTitle("Ghetty Engine")
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
-	ebiten.SetVsyncEnabled(false)
+	ebiten.SetVsyncEnabled(true)
 
 	Log = NewLogger("raw_data")
 

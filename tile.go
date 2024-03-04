@@ -13,8 +13,6 @@ const (
 	SweepLineAlgorithm = 2
 )
 
-type Shader func(s, t, w float32) (float32, float32, float32)
-
 type Tile struct {
 	Frame []byte
 	Depth []float32
@@ -45,8 +43,8 @@ func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 				if position := tile.ConvertPosition(x, y); depth < tile.Depth[position] {
 
 					if triangle.Triangle.Texture == nil {
-						var r, g, b float32 = triangle.Triangle.Shader(triangle.Triangle.Interpolate(w, s, t))
-						tile.Set(position, byte(r*255), byte(g*255), byte(b*255), depth)
+						//var r, g, b float32 = triangle.Triangle.Shader(triangle.Triangle.Interpolate(w, s, t))
+						//tile.Set(position, byte(r*255), byte(g*255), byte(b*255), depth)
 					} else {
 						var wt float32 = 1 / (w*triangle.Triangle.UV[0][Z] + s*triangle.Triangle.UV[1][Z] + t*triangle.Triangle.UV[2][Z])
 
@@ -84,8 +82,8 @@ func (tile *Tile) EdgeTest(triangle *ProcessedTriangle) {
 
 				if position := tile.ConvertPosition(x, y); depth < tile.Depth[position] {
 					if triangle.Triangle.Texture == nil {
-						var r, g, b float32 = triangle.Triangle.Shader(triangle.Triangle.Interpolate(w, s, t))
-						tile.Set(position, byte(r*255), byte(g*255), byte(b*255), depth)
+						//var r, g, b float32 = triangle.Triangle.Shader(triangle.Triangle.Interpolate(w, s, t))
+						//tile.Set(position, byte(r*255), byte(g*255), byte(b*255), depth)
 					} else {
 						var wt float32 = 1 / (w*triangle.Triangle.UV[0][Z] + s*triangle.Triangle.UV[1][Z] + t*triangle.Triangle.UV[2][Z])
 
@@ -125,11 +123,11 @@ func (tile *Tile) SweepLine(triangle *ProcessedTriangle) {
 			int(Clamp(curX2, tile.X, tile.X+TileXSize))
 
 		for x := clampedLeft; x < clampedRight; x++ {
-			var w, s, t float32 = triangle.Barycentric(x, y)
-			var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
+			//var w, s, t float32 = triangle.Barycentric(x, y)
+			//var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
 
-			tile.Set(tile.ConvertPosition(x, y),
-				byte(r*255), byte(g*255), byte(b*255), 0)
+			//tile.Set(tile.ConvertPosition(x, y),
+			//	byte(r*255), byte(g*255), byte(b*255), 0)
 		}
 
 		curX1 += invSlope1
@@ -150,11 +148,11 @@ func (tile *Tile) SweepLine(triangle *ProcessedTriangle) {
 			int(Clamp(curX2, tile.X, tile.X+TileXSize))
 
 		for x := clampedLeft; x < clampedRight; x++ {
-			var s, t, w float32 = triangle.Barycentric(x, y)
-			var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
+			//var s, t, w float32 = triangle.Barycentric(x, y)
+			//var r, g, b float32 = triangle.Triangle.Shader(s, t, w)
 
-			tile.Set(tile.ConvertPosition(x, y),
-				byte(r*255), byte(g*255), byte(b*255), 0)
+			//tile.Set(tile.ConvertPosition(x, y),
+			//	byte(r*255), byte(g*255), byte(b*255), 0)
 		}
 
 		curX1 -= invSlope1

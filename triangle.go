@@ -22,7 +22,7 @@ type Triangle struct {
 
 	Texture *Texture
 
-	Shader Shader
+	Shader *Shader
 }
 
 func (triangle *Triangle) Transform(m2 *Matrix) {

@@ -78,7 +78,7 @@ func LoadModel(directory string) (model Model) {
 
 			Texture: &Brick,
 
-			Shader: BasicShader,
+			Shader: &Basic,
 		}
 
 		model = append(model, tri)

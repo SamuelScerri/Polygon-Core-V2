@@ -48,15 +48,15 @@ func (tile *Tile) Barycentric(triangle *ProcessedTriangle) {
 					} else {
 						var wt float32 = 1 / (w*triangle.Triangle.UV[0][Z] + s*triangle.Triangle.UV[1][Z] + t*triangle.Triangle.UV[2][Z])
 
-						var uvx float32 = (w*triangle.Triangle.UV[0][X] + s*triangle.Triangle.UV[1][X] + t*triangle.Triangle.UV[2][X]) * wt
-						var uvy float32 = (w*triangle.Triangle.UV[0][Y] + s*triangle.Triangle.UV[1][Y] + t*triangle.Triangle.UV[2][Y]) * wt
+						var uv Vertex = Vertex{
+							(w*triangle.Triangle.UV[0][X] + s*triangle.Triangle.UV[1][X] + t*triangle.Triangle.UV[2][X]) * wt,
+							(w*triangle.Triangle.UV[0][Y] + s*triangle.Triangle.UV[1][Y] + t*triangle.Triangle.UV[2][Y]) * wt,
+						}
 
-						var tx int = int(uvx * float32(triangle.Triangle.Texture.Width))
-						var ty int = int((1 - uvy) * float32(triangle.Triangle.Texture.Height))
+						var r, g, b float32 = triangle.Triangle.Interpolate(w, s, t)
+						triangle.Triangle.Shader.Fragment(&r, &g, &b, &uv, &Brick)
 
-						r, g, b, _ := triangle.Triangle.Texture.Get(triangle.Triangle.Texture.ConvertPosition(tx, ty))
-
-						tile.Set(position, r, g, b, depth)
+						tile.Set(position, byte(r*255), byte(g*255), byte(b*255), depth)
 					}
 
 				}
@@ -85,17 +85,20 @@ func (tile *Tile) EdgeTest(triangle *ProcessedTriangle) {
 						//var r, g, b float32 = triangle.Triangle.Shader(triangle.Triangle.Interpolate(w, s, t))
 						//tile.Set(position, byte(r*255), byte(g*255), byte(b*255), depth)
 					} else {
-						var wt float32 = 1 / (w*triangle.Triangle.UV[0][Z] + s*triangle.Triangle.UV[1][Z] + t*triangle.Triangle.UV[2][Z])
+						/*var wt float32 = 1 / (w*triangle.Triangle.UV[0][Z] + s*triangle.Triangle.UV[1][Z] + t*triangle.Triangle.UV[2][Z])
 
 						var uvx float32 = (w*triangle.Triangle.UV[0][X] + s*triangle.Triangle.UV[1][X] + t*triangle.Triangle.UV[2][X]) * wt
 						var uvy float32 = (w*triangle.Triangle.UV[0][Y] + s*triangle.Triangle.UV[1][Y] + t*triangle.Triangle.UV[2][Y]) * wt
 
 						var tx int = int(uvx * float32(triangle.Triangle.Texture.Width))
-						var ty int = int((1 - uvy) * float32(triangle.Triangle.Texture.Height))
+						var ty int = int((1 - uvy) * float32(triangle.Triangle.Texture.Height))*/
 
-						r, g, b, _ := triangle.Triangle.Texture.Get(triangle.Triangle.Texture.ConvertPosition(tx, ty))
+						//r, g, b, _ := triangle.Triangle.Texture.Get(triangle.Triangle.Texture.ConvertPosition(tx, ty))
 
-						tile.Set(position, r, g, b, depth)
+						//var r, g, b float32 = triangle.Triangle.Interpolate(w, s, t)
+						//tile.Set(position, byte(r*255), byte(g*255), byte(b*255), depth)
+
+						//tile.Set(position, r, g, b, depth)
 					}
 				}
 			}

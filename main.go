@@ -28,15 +28,18 @@ func BasicVertex(vertex, uv, normal *Vertex, matrices ...*Matrix) {
 	(*vertex)[Y] += float32(math.Sin(float64(Time * .0125 + (*vertex)[X] * 2))) * (*vertex)[X] * .25
 	(*vertex)[Z] += float32(math.Sin(float64(Time * .0125 + (*vertex)[Y] * 2))) * (*vertex)[Y] * .25
 
-	(*uv)[X] -= Time
+	//(*uv)[X] -= Time
 
 	for index := range matrices {
 		vertex.Transform(matrices[index])
 	}
 }
 
-func BasicFragment (r, g, b *float32) {
-
+func BasicFragment (r, g, b *float32, uv *Vertex, textures ...*Texture) {
+	for index := range textures {
+		var tr, tg, tb, _ float32 = textures[index].Get(textures[index].ConvertPosition(uv))
+		*r, *g, *b = *r * tr, *g * tg, *b * tb
+	}
 }
 
 var Basic Shader = Shader{
@@ -235,8 +238,10 @@ func main() {
 	}
 
 	fmt.Print("\nPlease Type How Many Cores Will Be Utilized: ")
-
 	fmt.Scan(&Cores)
+
+	fmt.Print("\nPlease Select Scene Number: ")
+	fmt.Scan(&Scene)
 
 	var yTiles int = int(math.Floor(math.Sqrt(float64(Cores))))
 	var xTiles int = Cores / yTiles
@@ -256,9 +261,6 @@ func main() {
 			Tiles[x][y].Depth = Depth
 		}
 	}
-
-	fmt.Print("\nPlease Select Scene Number: ")
-	fmt.Scan(&Scene)
 
 	switch Scene {
 	case 1:
@@ -310,6 +312,9 @@ func main() {
 					{rand.Float32(), rand.Float32(), rand.Float32()},
 				},
 			}
+
+			triangle.Texture = &Brick
+			triangle.Shader = &Basic
 
 			var matrix Matrix = TransformationMatrix(Vertex{rand.Float32()*16 - 8, rand.Float32()*16 - 8, -12, 0}, Vertex{0, 0, 0, 0})
 			triangle.Transform(&matrix)

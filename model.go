@@ -76,8 +76,13 @@ func LoadModel(directory string) (model Model) {
 
 			Normals: [3]Vertex{normals[normalsIndices[i*3]-1], normals[normalsIndices[i*3+1]-1], normals[normalsIndices[i*3+2]-1]},
 
-			Texture: &Brick,
+			Color: [3]Vertex{
+				Vertex{1, 1, 1},
+				Vertex{1, 1, 1},
+				Vertex{1, 1, 1},
+			},
 
+			Texture: &Brick,
 			Shader: &Basic,
 		}
 

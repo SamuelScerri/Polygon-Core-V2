@@ -40,7 +40,6 @@ func LoadTexture(directory string) Texture {
 	for y := 0; y < texture.Height; y++ {
 		for x := 0; x < texture.Width; x++ {
 			r, g, b, a := image.At(x, y).RGBA()
-
 			texture.Data = append(texture.Data, byte(r), byte(g), byte(b), byte(a))
 		}
 	}
@@ -48,13 +47,16 @@ func LoadTexture(directory string) Texture {
 	return texture
 }
 
-func (texture *Texture) ConvertPosition(x, y int) int {
-	return int(math.Abs(float64((y*texture.Width + x) * 4))) % len(texture.Data)
+func (texture *Texture) ConvertPosition(uv *Vertex) int {
+	var tx int = int((*uv)[X] * float32(texture.Width))
+	var ty int = int((1 - (*uv)[Y]) * float32(texture.Height))
+
+	return int(math.Abs(float64((ty*texture.Width + tx) * 4))) % len(texture.Data)
 }
 
-func (texture *Texture) Get(position int) (r, g, b, a byte) {
-	return texture.Data[position+R],
-		texture.Data[position+G],
-		texture.Data[position+B],
-		texture.Data[position+A]
+func (texture *Texture) Get(position int) (r, g, b, a float32) {
+	return float32(texture.Data[position+R]) / 255,
+		float32(texture.Data[position+G]) / 255,
+		float32(texture.Data[position+B]) / 255,
+		float32(texture.Data[position+A]) / 255
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"math/rand"
 )
 
 type Model []Triangle
@@ -77,9 +78,9 @@ func LoadModel(directory string) (model Model) {
 			Normals: [3]Vertex{normals[normalsIndices[i*3]-1], normals[normalsIndices[i*3+1]-1], normals[normalsIndices[i*3+2]-1]},
 
 			Color: [3]Vertex{
-				Vertex{1, 1, 1},
-				Vertex{1, 1, 1},
-				Vertex{1, 1, 1},
+				{rand.Float32(), rand.Float32(), rand.Float32()},
+				{rand.Float32(), rand.Float32(), rand.Float32()},
+				{rand.Float32(), rand.Float32(), rand.Float32()},
 			},
 
 			Texture: &Brick,

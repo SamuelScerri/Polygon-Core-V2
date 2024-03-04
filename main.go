@@ -14,7 +14,7 @@ import (
 
 var Cores, Scene = 1, 1
 
-const Width, Height, Scale = 320, 180, 2
+const Width, Height, Scale = 160, 90, 3
 const FOV = 150
 
 const Near, Far = .1, 1000
@@ -23,12 +23,21 @@ const Aspect = float32(Width) / float32(Height)
 var TileXSize, TileYSize = Width, Height
 var Time float32
 
-func BasicVertex(vertex, uv, normal *Vertex, matrices ...*Matrix) {
-	(*vertex)[X] += float32(math.Sin(float64(Time * .0125 + (*vertex)[Y] * 2))) * (*vertex)[Y] * .25
-	(*vertex)[Y] += float32(math.Sin(float64(Time * .0125 + (*vertex)[X] * 2))) * (*vertex)[X] * .25
-	(*vertex)[Z] += float32(math.Sin(float64(Time * .0125 + (*vertex)[Y] * 2))) * (*vertex)[Y] * .25
+func BasicVertex(vertex, uv, normal, color *Vertex, matrices ...*Matrix) {
+	(*vertex)[X] += float32(math.Sin(float64(Time * .0125 + (*vertex)[Y]))) * .25
 
-	//(*uv)[X] -= Time
+	//(*uv)[X] *= 2
+	//(*uv)[Y] *= 2
+
+	(*uv)[X] += Time
+
+	//(//*color)[R] = 1
+	//(*color)[G] = 1
+	//(*color)[B] = 1
+
+	//var red Vertex = Vertex{1, 0, 0}
+
+	//color.Interpolate(&red, (*vertex)[Y] * .001)
 
 	for index := range matrices {
 		vertex.Transform(matrices[index])
@@ -125,6 +134,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	WaitGroup.Add(Cores)
 
+	//test := time.Now()
+
 	for i := 0; i < Cores; i++ {
 		go func(offset int) {
 			for p := offset; p < offset+trianglesPerCore; p++ {
@@ -134,11 +145,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 					copiedTriangle.Shader.Vertex(&copiedTriangle.Vertices[index],
 						&copiedTriangle.UV[index],
 						&copiedTriangle.Normals[index],
+						&copiedTriangle.Color[index],
 						&matrix)
 				}
 
 				var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)
-				var counted bool = false
+				//var counted bool = false
 
 				for index := range processedTriangles {
 					var xMin, yMin, xMax, yMax int = processedTriangles[index].TileBoundary(&Tiles)
@@ -146,10 +158,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 					for y := yMin; y < yMax; y++ {
 						for x := xMin; x < xMax; x++ {
 							Mutex.Lock()
-							if !counted {
-								totalTrianglesRasterized++
-								counted = true
-							}
+							//if !counted {
+							//	totalTrianglesRasterized++
+							//	counted = true
+							//}
 
 							Tiles[x][y].Add(&processedTriangles[index])
 							Mutex.Unlock()
@@ -169,11 +181,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			copiedTriangle.Shader.Vertex(&copiedTriangle.Vertices[index],
 				&copiedTriangle.UV[index],
 				&copiedTriangle.Normals[index],
+				&copiedTriangle.Color[index],
 				&matrix)
 		}
 
 		var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)
-		var counted bool = false
+		//var counted bool = false
 
 		for index := range processedTriangles {
 			var xMin, yMin, xMax, yMax int = processedTriangles[index].TileBoundary(&Tiles)
@@ -181,10 +194,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			for y := yMin; y < yMax; y++ {
 				for x := xMin; x < xMax; x++ {
 					Mutex.Lock()
-					if !counted {
-						totalTrianglesRasterized++
-						counted = true
-					}
+					//if !counted {
+					//	totalTrianglesRasterized++
+					//	counted = true
+					//}
 
 					Tiles[x][y].Add(&processedTriangles[index])
 					Mutex.Unlock()
@@ -195,7 +208,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	WaitGroup.Wait()
 
+	//duration := time.Since(test)
+	//fmt.Println(duration)
+
+	//fmt.Println("Processing Time:", duration)
+
 	WaitGroup.Add(Cores)
+
+	//test = time.Now()
 
 	for y := range Tiles[0] {
 		for x := range Tiles {
@@ -209,6 +229,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	WaitGroup.Wait()
+
+	//duration = time.Since(test)
+	//fmt.Println("Rendering Time:", duration)
 
 	screen.WritePixels(Buffer)
 	ebitenutil.DebugPrint(screen, "FPS: "+strconv.Itoa(int(ebiten.ActualFPS())))
@@ -334,7 +357,7 @@ func main() {
 	ebiten.SetWindowTitle("Ghetty Engine")
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
-	ebiten.SetVsyncEnabled(true)
+	ebiten.SetVsyncEnabled(false)
 
 	Log = NewLogger("raw_data")
 

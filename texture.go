@@ -4,6 +4,7 @@ import (
 	"image"
 	"log"
 	"os"
+	"math"
 )
 
 const (
@@ -48,7 +49,7 @@ func LoadTexture(directory string) Texture {
 }
 
 func (texture *Texture) ConvertPosition(x, y int) int {
-	return (y*texture.Width + x) * 4
+	return int(math.Abs(float64((y*texture.Width + x) * 4))) % len(texture.Data)
 }
 
 func (texture *Texture) Get(position int) (r, g, b, a byte) {

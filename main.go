@@ -23,10 +23,12 @@ const Aspect = float32(Width) / float32(Height)
 var TileXSize, TileYSize = Width, Height
 var Time float32
 
-func BasicVertex(vertex *Vertex, matrices ...*Matrix) {
+func BasicVertex(vertex, uv, normal *Vertex, matrices ...*Matrix) {
 	(*vertex)[X] += float32(math.Sin(float64(Time * .0125 + (*vertex)[Y] * 2))) * (*vertex)[Y] * .25
 	(*vertex)[Y] += float32(math.Sin(float64(Time * .0125 + (*vertex)[X] * 2))) * (*vertex)[X] * .25
 	(*vertex)[Z] += float32(math.Sin(float64(Time * .0125 + (*vertex)[Y] * 2))) * (*vertex)[Y] * .25
+
+	(*uv)[X] -= Time
 
 	for index := range matrices {
 		vertex.Transform(matrices[index])
@@ -126,7 +128,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				var copiedTriangle Triangle = Triangles[p].Copy()
 
 				for index := range copiedTriangle.Vertices {
-					copiedTriangle.Shader.Vertex(&copiedTriangle.Vertices[index], &matrix)
+					copiedTriangle.Shader.Vertex(&copiedTriangle.Vertices[index],
+						&copiedTriangle.UV[index],
+						&copiedTriangle.Normals[index],
+						&matrix)
 				}
 
 				var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)
@@ -158,7 +163,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		var copiedTriangle Triangle = Triangles[p].Copy()
 
 		for index := range copiedTriangle.Vertices {
-			copiedTriangle.Shader.Vertex(&copiedTriangle.Vertices[index], &matrix)
+			copiedTriangle.Shader.Vertex(&copiedTriangle.Vertices[index],
+				&copiedTriangle.UV[index],
+				&copiedTriangle.Normals[index],
+				&matrix)
 		}
 
 		var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)

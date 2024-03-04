@@ -75,8 +75,6 @@ func Clip(vertices, uvs, colors []Vertex, component int, direction float32) (cli
 func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle) {
 	var vertices, uvs, colors []Vertex = triangle.Vertices[:], triangle.UV[:], triangle.Color[:]
 
-	var isInside bool = false
-
 	for index := range vertices {
 		if vertices[index][X] * .25 >= -vertices[index][W] &&
 			vertices[index][X] * .25 <= vertices[index][W] &&
@@ -84,25 +82,22 @@ func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle
 			vertices[index][Y] * .25 <= vertices[index][W] {
 
 		}else {
-			isInside = true
-			break
-		}
-	}
-
-	if isInside {
-		for component := X; component <= Y; component++ {
-			if len(vertices) > 0 {
-				vertices, uvs, colors = Clip(vertices, uvs, colors, component, -1)
-	
+			for component := X; component <= Y; component++ {
 				if len(vertices) > 0 {
-					vertices, uvs, colors = Clip(vertices, uvs, colors, component, 1)
+					vertices, uvs, colors = Clip(vertices, uvs, colors, component, -1)
+	
+					if len(vertices) > 0 {
+						vertices, uvs, colors = Clip(vertices, uvs, colors, component, 1)
+					} else {
+						break
+					}
+		
 				} else {
 					break
 				}
-	
-			} else {
-				break
 			}
+
+			break
 		}
 	}
 
@@ -148,7 +143,6 @@ func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle
 
 				processedTriangles = append(processedTriangles, Process(&newTriangle))
 			}
-
 		}
 	}
 

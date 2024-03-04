@@ -150,7 +150,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				}
 
 				var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)
-				//var counted bool = false
+				var counted bool = false
 
 				for index := range processedTriangles {
 					var xMin, yMin, xMax, yMax int = processedTriangles[index].TileBoundary(&Tiles)
@@ -158,10 +158,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 					for y := yMin; y < yMax; y++ {
 						for x := xMin; x < xMax; x++ {
 							Mutex.Lock()
-							//if !counted {
-							//	totalTrianglesRasterized++
-							//	counted = true
-							//}
+							if !counted {
+								totalTrianglesRasterized++
+								counted = true
+							}
 
 							Tiles[x][y].Add(&processedTriangles[index])
 							Mutex.Unlock()
@@ -186,7 +186,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 
 		var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)
-		//var counted bool = false
+		var counted bool = false
 
 		for index := range processedTriangles {
 			var xMin, yMin, xMax, yMax int = processedTriangles[index].TileBoundary(&Tiles)
@@ -194,10 +194,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			for y := yMin; y < yMax; y++ {
 				for x := xMin; x < xMax; x++ {
 					Mutex.Lock()
-					//if !counted {
-					//	totalTrianglesRasterized++
-					//	counted = true
-					//}
+					if !counted {
+						totalTrianglesRasterized++
+						counted = true
+					}
 
 					Tiles[x][y].Add(&processedTriangles[index])
 					Mutex.Unlock()

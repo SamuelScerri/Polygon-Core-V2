@@ -72,26 +72,26 @@ func Clip(vertices, uvs, colors []Vertex, component int, direction float32) (cli
 	return
 }
 
-func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle) {
+func BuildAndProcess(triangle *Triangle, tiles *([][]Tile)) {
 	var vertices, uvs, colors []Vertex = triangle.Vertices[:], triangle.UV[:], triangle.Color[:]
 
 	for index := range vertices {
-		if vertices[index][X] * .25 >= -vertices[index][W] &&
-			vertices[index][X] * .25 <= vertices[index][W] &&
-			vertices[index][Y] * .25 >= -vertices[index][W] &&
-			vertices[index][Y] * .25 <= vertices[index][W] {
+		if vertices[index][X]*.25 >= -vertices[index][W] &&
+			vertices[index][X]*.25 <= vertices[index][W] &&
+			vertices[index][Y]*.25 >= -vertices[index][W] &&
+			vertices[index][Y]*.25 <= vertices[index][W] {
 
-		}else {
+		} else {
 			for component := X; component <= Y; component++ {
 				if len(vertices) > 0 {
 					vertices, uvs, colors = Clip(vertices, uvs, colors, component, -1)
-	
+
 					if len(vertices) > 0 {
 						vertices, uvs, colors = Clip(vertices, uvs, colors, component, 1)
 					} else {
 						break
 					}
-		
+
 				} else {
 					break
 				}
@@ -141,12 +141,20 @@ func BuildAndProcess(triangle *Triangle) (processedTriangles []ProcessedTriangle
 				inverseUV1 = inverseUV2
 				t1 = t2
 
-				processedTriangles = append(processedTriangles, Process(&newTriangle))
+				var processedTriangle ProcessedTriangle = Process(&newTriangle)
+
+				var xMin, yMin, xMax, yMax int = processedTriangle.TileBoundary(&Tiles)
+
+				for y := yMin; y < yMax; y++ {
+					for x := xMin; x < xMax; x++ {
+						Mutex.Lock()
+						(*tiles)[x][y].Add(&processedTriangle)
+						Mutex.Unlock()
+					}
+				}
 			}
 		}
 	}
-
-	return
 }
 
 func (ts *ProcessedTriangle) TileBoundary(tiles *([][]Tile)) (int, int, int, int) {

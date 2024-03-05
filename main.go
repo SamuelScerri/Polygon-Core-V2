@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
@@ -24,7 +25,7 @@ var TileXSize, TileYSize = Width, Height
 var Time float32
 
 func BasicVertex(vertex, uv, normal, color *Vertex, matrices ...*Matrix) {
-	(*vertex)[X] += float32(math.Sin(float64(Time * .0125 + (*vertex)[Y]))) * .25
+	(*vertex)[X] += float32(math.Sin(float64(Time*.0125+(*vertex)[Y]))) * .25
 
 	//(*uv)[X] *= 2
 	//(*uv)[Y] *= 2
@@ -44,10 +45,10 @@ func BasicVertex(vertex, uv, normal, color *Vertex, matrices ...*Matrix) {
 	}
 }
 
-func BasicFragment (r, g, b *float32, uv *Vertex, textures ...*Texture) {
+func BasicFragment(r, g, b *float32, uv *Vertex, textures ...*Texture) {
 	for index := range textures {
 		var tr, tg, tb, _ float32 = textures[index].Get(textures[index].ConvertPosition(uv))
-		*r, *g, *b = *r * tr, *g * tg, *b * tb
+		*r, *g, *b = *r*tr, *g*tg, *b*tb
 	}
 }
 
@@ -124,7 +125,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	var trianglesPerCore int = len(Triangles) / Cores
-	var trianglesLeft int = len(Triangles) % Cores
+	//var trianglesLeft int = len(Triangles) % Cores
 	var totalTrianglesRasterized int = 0
 
 	Time += 1
@@ -149,32 +150,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 						&matrix)
 				}
 
-				var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)
-				var counted bool = false
-
-				for index := range processedTriangles {
-					var xMin, yMin, xMax, yMax int = processedTriangles[index].TileBoundary(&Tiles)
-
-					for y := yMin; y < yMax; y++ {
-						for x := xMin; x < xMax; x++ {
-							Mutex.Lock()
-							if !counted {
-								totalTrianglesRasterized++
-								counted = true
-							}
-
-							Tiles[x][y].Add(&processedTriangles[index])
-							Mutex.Unlock()
-						}
-					}
-				}
+				BuildAndProcess(&copiedTriangle, &Tiles)
 			}
 
 			WaitGroup.Done()
 		}(trianglesPerCore * i)
 	}
 
-	for p := 11*trianglesPerCore + trianglesPerCore; p < 11*trianglesPerCore+trianglesPerCore+trianglesLeft; p++ {
+	/*for p := 11*trianglesPerCore + trianglesPerCore; p < 11*trianglesPerCore+trianglesPerCore+trianglesLeft; p++ {
 		var copiedTriangle Triangle = Triangles[p].Copy()
 
 		for index := range copiedTriangle.Vertices {
@@ -185,10 +168,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				&matrix)
 		}
 
-		var processedTriangles []ProcessedTriangle = BuildAndProcess(&copiedTriangle)
+		var processedTriangles []*ProcessedTriangle = BuildAndProcess(&copiedTriangle, &tile)
 		var counted bool = false
 
 		for index := range processedTriangles {
+			//if processedTriangles[index].Triangle == nil {
+			//	break
+			//}
+
 			var xMin, yMin, xMax, yMax int = processedTriangles[index].TileBoundary(&Tiles)
 
 			for y := yMin; y < yMax; y++ {
@@ -199,12 +186,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 						counted = true
 					}
 
-					Tiles[x][y].Add(&processedTriangles[index])
+					Tiles[x][y].Add(processedTriangles[index])
 					Mutex.Unlock()
 				}
 			}
 		}
-	}
+	}*/
 
 	WaitGroup.Wait()
 

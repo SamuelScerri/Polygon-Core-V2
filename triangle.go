@@ -50,10 +50,10 @@ func (triangle *Triangle) Sort() {
 	for i := range triangle.Vertices {
 		for j := i + 1; j < len(triangle.Vertices); j++ {
 			if triangle.Vertices[i][Y] > triangle.Vertices[j][Y] {
-
 				triangle.Vertices[i].Swap(&triangle.Vertices[j])
 				triangle.Normals[i].Swap(&triangle.Normals[j])
 				triangle.UV[i].Swap(&triangle.UV[j])
+				triangle.Color[i].Swap(&triangle.Color[j])
 			}
 		}
 	}

@@ -15,7 +15,7 @@ import (
 
 var Cores, Scene = 1, 1
 
-const Width, Height, Scale = 160, 90, 3
+const Width, Height, Scale = 160, 90, 4
 const FOV = 150
 
 const Near, Far = .1, 1000
@@ -25,16 +25,16 @@ var TileXSize, TileYSize = Width, Height
 var Time float32
 
 func BasicVertex(vertex, uv, normal, color *Vertex, matrices ...*Matrix) {
-	(*vertex)[X] += float32(math.Sin(float64(Time*.0125+(*vertex)[Y]))) * .25
+	//(*vertex)[X] += float32(math.Sin(float64(Time*.0125+(*vertex)[Y]))) * .25
 
 	//(*uv)[X] *= 2
 	//(*uv)[Y] *= 2
 
-	(*uv)[X] += Time
+	//(*uv)[X] += Time
 
-	//(//*color)[R] = 1
-	//(*color)[G] = 1
-	//(*color)[B] = 1
+	(*color)[R] = 1
+	(*color)[G] = 1
+	(*color)[B] = 1
 
 	//var red Vertex = Vertex{1, 0, 0}
 
@@ -157,47 +157,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}(trianglesPerCore * i)
 	}
 
-	/*for p := 11*trianglesPerCore + trianglesPerCore; p < 11*trianglesPerCore+trianglesPerCore+trianglesLeft; p++ {
-		var copiedTriangle Triangle = Triangles[p].Copy()
-
-		for index := range copiedTriangle.Vertices {
-			copiedTriangle.Shader.Vertex(&copiedTriangle.Vertices[index],
-				&copiedTriangle.UV[index],
-				&copiedTriangle.Normals[index],
-				&copiedTriangle.Color[index],
-				&matrix)
-		}
-
-		var processedTriangles []*ProcessedTriangle = BuildAndProcess(&copiedTriangle, &tile)
-		var counted bool = false
-
-		for index := range processedTriangles {
-			//if processedTriangles[index].Triangle == nil {
-			//	break
-			//}
-
-			var xMin, yMin, xMax, yMax int = processedTriangles[index].TileBoundary(&Tiles)
-
-			for y := yMin; y < yMax; y++ {
-				for x := xMin; x < xMax; x++ {
-					Mutex.Lock()
-					if !counted {
-						totalTrianglesRasterized++
-						counted = true
-					}
-
-					Tiles[x][y].Add(processedTriangles[index])
-					Mutex.Unlock()
-				}
-			}
-		}
-	}*/
-
 	WaitGroup.Wait()
 
 	//duration := time.Since(test)
-	//fmt.Println(duration)
-
 	//fmt.Println("Processing Time:", duration)
 
 	WaitGroup.Add(Cores)
@@ -218,7 +180,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	WaitGroup.Wait()
 
 	//duration = time.Since(test)
-	//fmt.Println("Rendering Time:", duration)
+	//f//mt.Println("Rendering Time:", duration)
 
 	screen.WritePixels(Buffer)
 	ebitenutil.DebugPrint(screen, "FPS: "+strconv.Itoa(int(ebiten.ActualFPS())))

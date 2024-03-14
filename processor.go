@@ -78,12 +78,7 @@ func BuildAndProcess(triangle *Triangle, tiles *([][]Tile)) {
 	var vertices, uvs, colors []Vertex = triangle.Vertices[:], triangle.UV[:], triangle.Color[:]
 
 	for index := range vertices {
-		if vertices[index][X]*.25 >= -vertices[index][W] &&
-			vertices[index][X]*.25 <= vertices[index][W] &&
-			vertices[index][Y]*.25 >= -vertices[index][W] &&
-			vertices[index][Y]*.25 <= vertices[index][W] {
-
-		} else {
+		if !vertices[index].InsideClipSpace() {
 			for component := X; component <= Y; component++ {
 				if len(vertices) > 0 {
 					vertices, uvs, colors = Clip(vertices, uvs, colors, component, -1)
@@ -140,9 +135,7 @@ func BuildAndProcess(triangle *Triangle, tiles *([][]Tile)) {
 					triangle.Shader,
 				}
 
-				inverseUV1 = inverseUV2
-				t1 = t2
-
+				inverseUV1, t1 = inverseUV2, t2
 				var processedTriangle ProcessedTriangle = Process(&newTriangle)
 
 				var xMin, yMin, xMax, yMax int = processedTriangle.TileBoundary(&Tiles)

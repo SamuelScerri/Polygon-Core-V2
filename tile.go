@@ -24,8 +24,6 @@ type Tile struct {
 
 var AlgorithmUsed int = SweepLineAlgorithm
 
-var Pitch int
-var BytesPerPixel int
 var WaitGroup sync.WaitGroup
 var Mutex sync.Mutex
 
@@ -197,7 +195,11 @@ func (tile *Tile) Rasterize() {
 		}
 	}
 
-	tile.Triangles = nil
+	tile.Reset()
+}
+
+func (tile *Tile) Reset() {
+	tile.Triangles = tile.Triangles[:0]
 }
 
 func (tile *Tile) Add(triangle *ProcessedTriangle) {

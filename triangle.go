@@ -27,10 +27,7 @@ type Triangle struct {
 
 func (triangle *Triangle) Transform(m2 *Matrix) {
 	for index := range triangle.Vertices {
-		var matrix Matrix = triangle.Vertices[index].Matrix()
-		matrix = matrix.Multiply(m2)
-
-		triangle.Vertices[index] = matrix.Vertex()
+		triangle.Vertices[index].Transform(m2)
 	}
 }
 
@@ -74,10 +71,10 @@ func (triangle *Triangle) Bounds() Vertex {
 			math.Max(float64(triangle.Vertices[1][Y]), float64(triangle.Vertices[2][Y])))) + 1,
 
 		float32(math.Min(float64(triangle.Vertices[0][X]),
-			math.Min(float64(triangle.Vertices[1][X]), float64(triangle.Vertices[2][X])))) - 1,
+			math.Min(float64(triangle.Vertices[1][X]), float64(triangle.Vertices[2][X])))),
 
 		float32(math.Min(float64(triangle.Vertices[0][Y]),
-			math.Min(float64(triangle.Vertices[1][Y]), float64(triangle.Vertices[2][Y])))) - 1,
+			math.Min(float64(triangle.Vertices[1][Y]), float64(triangle.Vertices[2][Y])))),
 	}
 }
 

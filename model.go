@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"io"
-	"os"
 	"math/rand"
+	"os"
 )
 
 type Model []Triangle
@@ -84,7 +84,7 @@ func LoadModel(directory string) (model Model) {
 			},
 
 			Texture: &Brick,
-			Shader: &Basic,
+			Shader:  &Basic,
 		}
 
 		model = append(model, tri)

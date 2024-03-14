@@ -3,15 +3,16 @@ package main
 import (
 	"image"
 	"log"
-	"os"
 	"math"
+	"os"
 )
 
 const (
-	R = 0
-	G = 1
-	B = 2
-	A = 3
+	R          = 0
+	G          = 1
+	B          = 2
+	A          = 3
+	RGBToFloat = 1. / 255.
 )
 
 type Texture struct {
@@ -51,12 +52,12 @@ func (texture *Texture) ConvertPosition(uv *Vertex) int {
 	var tx int = int((*uv)[X] * float32(texture.Width))
 	var ty int = int((1 - (*uv)[Y]) * float32(texture.Height))
 
-	return int(math.Abs(float64((ty*texture.Width + tx) * 4))) % len(texture.Data)
+	return int(math.Abs(float64((ty*texture.Width+tx)*4))) % len(texture.Data)
 }
 
 func (texture *Texture) Get(position int) (r, g, b, a float32) {
-	return float32(texture.Data[position+R]) / 255,
-		float32(texture.Data[position+G]) / 255,
-		float32(texture.Data[position+B]) / 255,
-		float32(texture.Data[position+A]) / 255
+	return float32(texture.Data[position+R]) * RGBToFloat,
+		float32(texture.Data[position+G]) * RGBToFloat,
+		float32(texture.Data[position+B]) * RGBToFloat,
+		float32(texture.Data[position+A]) * RGBToFloat
 }

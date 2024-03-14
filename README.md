@@ -13,6 +13,7 @@ Ensure that your PC has a proper cooling solution, since all of the CPU cores wi
 - Backface Culling
 - Matrix Multiplication
 - Wavefront OBJ Support
+- Shaders! (Vertex & Fragment)
 
 # Any Experimental Features?
 The future iteration of Ghetty will feature a Super Resolution Model that will be integrated into the renderer. The model in this case will be handled by the GPU,

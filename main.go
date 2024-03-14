@@ -27,11 +27,6 @@ var Time float32
 func BasicVertex(vertex, uv, normal, color *Vertex, matrices ...*Matrix) {
 	//(*vertex)[X] += float32(math.Sin(float64(Time*.0125+(*vertex)[Y]))) * .25
 
-	//(*uv)[X] *= 2
-	//(*uv)[Y] *= 2
-
-	//(*uv)[X] += Time
-
 	(*color)[R] = 1
 	(*color)[G] = 1
 	(*color)[B] = 1
@@ -43,6 +38,10 @@ func BasicVertex(vertex, uv, normal, color *Vertex, matrices ...*Matrix) {
 	for index := range matrices {
 		vertex.Transform(matrices[index])
 	}
+
+	//(*vertex)[X] = float32(math.Round(float64((*vertex)[X]) * 32)) / 32;
+	//(*vertex)[Y] = float32(math.Round(float64((*vertex)[Y]) * 32)) / 32;
+	//(*vertex)[Z] = float32(math.Round(float64((*vertex)[Z]) * 32)) / 32;
 }
 
 func BasicFragment(r, g, b *float32, uv *Vertex, textures ...*Texture) {

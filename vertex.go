@@ -28,9 +28,15 @@ func (v1 *Vertex) Multiply(v2 *Vertex) {
 }
 
 func (v1 *Vertex) Transform(m2 *Matrix) {
-	var matrix Matrix = v1.Matrix()
-	matrix = matrix.Multiply(m2)
-	*v1 = matrix.Vertex()
+	var result Vertex = make(Vertex, len(*v1))
+
+	for i := range *v1 {
+		for j := range *m2 {
+			result[i] += (*v1)[j] * (*m2)[j][i]
+		}
+	}
+
+	*v1 = result
 }
 
 func (v1 *Vertex) Dot(v2 *Vertex) (result float32) {

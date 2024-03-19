@@ -23,7 +23,7 @@ func Clamp(value float32, min, max int) float32 {
 }
 
 func Process(triangle *Triangle) ProcessedTriangle {
-	triangle.Sort()
+	//triangle.Sort()
 
 	var split float32 = triangle.Vertices[0][X] + ((triangle.Vertices[1][Y]-triangle.Vertices[0][Y])/
 		(triangle.Vertices[2][Y]-triangle.Vertices[0][Y]))*

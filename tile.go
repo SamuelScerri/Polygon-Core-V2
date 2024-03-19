@@ -89,35 +89,64 @@ func (tile *Tile) EdgeTest(triangle *ProcessedTriangle) {
 }
 
 func (tile *Tile) SweepLine(triangle *ProcessedTriangle) {
-	var invSlope1 float32 = (triangle.Triangle.Vertices[1][X] - triangle.Triangle.Vertices[0][X]) /
-		(triangle.Triangle.Vertices[1][Y] - triangle.Triangle.Vertices[0][Y])
+	triangle.Triangle.Sort()
 
-	var invSlope2 float32 = (triangle.Split - triangle.Triangle.Vertices[0][X]) /
-		(triangle.Triangle.Vertices[1][Y] - triangle.Triangle.Vertices[0][Y])
+	var segmentHeightTrue, segmentHeightFalse int = int(triangle.Triangle.Vertices[2][Y]) - int(triangle.Triangle.Vertices[1][Y]),
+		int(triangle.Triangle.Vertices[1][Y]) - int(triangle.Triangle.Vertices[0][Y])
 
-	var clampedUp float32 = Clamp(triangle.Triangle.Vertices[0][Y], tile.Y, tile.Y+TileYSize)
-	var clampedMiddle float32 = Clamp(triangle.Triangle.Vertices[1][Y], tile.Y, tile.Y+TileYSize)
-	var clampedDown float32 = Clamp(triangle.Triangle.Vertices[2][Y]-1, tile.Y, tile.Y+TileYSize)
+	var yMin, yMax int = int(Clamp(triangle.Bounds[YMin], tile.Y, tile.Y+TileYSize)),
+		int(Clamp(triangle.Bounds[YMax], tile.Y, tile.Y+TileYSize))
 
-	var difference float32 = clampedUp - triangle.Triangle.Vertices[0][Y]
-	var curX1, curX2 float32 = triangle.Triangle.Vertices[0][X] + invSlope1*difference,
-		triangle.Triangle.Vertices[0][X] + invSlope2*difference
+	for k := yMin; k < yMax; k++ {
+		var i int = k - int(triangle.Triangle.Vertices[0][Y])
 
-	for y := int(clampedUp); y < int(clampedMiddle); y++ {
-		var clampedLeft, clampedRight int = int(Clamp(curX1, tile.X, tile.X+TileXSize)),
-			int(Clamp(curX2, tile.X, tile.X+TileXSize))
+		var secondHalf bool = i > int(triangle.Triangle.Vertices[1][Y])-int(triangle.Triangle.Vertices[0][Y]) ||
+			int(triangle.Triangle.Vertices[1][Y]) == int(triangle.Triangle.Vertices[0][Y])
 
-		if clampedLeft > clampedRight {
-			var temp = clampedRight
-			clampedRight = clampedLeft
-			clampedLeft = temp
+		var segmentHeight, betaHalf int
+
+		if secondHalf {
+			segmentHeight = segmentHeightTrue
+			betaHalf = int(triangle.Triangle.Vertices[1][Y]) - int(triangle.Triangle.Vertices[0][Y])
+		} else {
+			segmentHeight = segmentHeightFalse
 		}
 
-		for x := clampedLeft; x < clampedRight; x++ {
-			var w, s, t float32 = triangle.Barycentric(x, y)
+		var alpha float32 = float32(i) / float32(int(triangle.Triangle.Vertices[2][Y])-int(triangle.Triangle.Vertices[0][Y]))
+		var beta float32 = float32(i-betaHalf) / float32(segmentHeight)
+
+		//This Should Be Rewritten, But It Works For Now
+		var a Vertex = Vertex{
+			float32(int(triangle.Triangle.Vertices[0][X]) + int(float32(int(triangle.Triangle.Vertices[2][X])-int(triangle.Triangle.Vertices[0][X]))*alpha)),
+			float32(int(triangle.Triangle.Vertices[0][Y]) + int(float32(int(triangle.Triangle.Vertices[2][Y])-int(triangle.Triangle.Vertices[0][Y]))*alpha)),
+		}
+
+		var b Vertex
+
+		if secondHalf {
+			b = Vertex{
+				float32(int(triangle.Triangle.Vertices[1][X]) + int(float32(int(triangle.Triangle.Vertices[2][X])-int(triangle.Triangle.Vertices[1][X]))*beta)),
+				float32(int(triangle.Triangle.Vertices[1][Y]) + int(float32(int(triangle.Triangle.Vertices[2][Y])-int(triangle.Triangle.Vertices[1][Y]))*beta)),
+			}
+		} else {
+			b = Vertex{
+				float32(int(triangle.Triangle.Vertices[0][X]) + int(float32(int(triangle.Triangle.Vertices[1][X])-int(triangle.Triangle.Vertices[0][X]))*beta)),
+				float32(int(triangle.Triangle.Vertices[0][Y]) + int(float32(int(triangle.Triangle.Vertices[1][Y])-int(triangle.Triangle.Vertices[0][Y]))*beta)),
+			}
+		}
+
+		if a[X] > b[X] {
+			a.Swap(&b)
+		}
+
+		var clampedLeft, clampedRight int = int(Clamp(a[X], tile.X, tile.X+TileXSize)),
+			int(Clamp(b[X], tile.X, tile.X+TileXSize))
+
+		for j := clampedLeft; j < clampedRight; j++ {
+			var w, s, t float32 = triangle.Barycentric(j, k)
 			var depth float32 = w*triangle.Triangle.Vertices[0][Z] + s*triangle.Triangle.Vertices[1][Z] + t*triangle.Triangle.Vertices[2][Z]
 
-			if position := tile.ConvertPosition(x, y); depth < tile.Depth[position] {
+			if position := tile.ConvertPosition(j, k); depth < tile.Depth[position] {
 				var wt float32 = 1 / (w*triangle.Triangle.UV[0][Z] + s*triangle.Triangle.UV[1][Z] + t*triangle.Triangle.UV[2][Z])
 
 				var uv Vertex = Vertex{
@@ -131,51 +160,6 @@ func (tile *Tile) SweepLine(triangle *ProcessedTriangle) {
 				tile.Set(position, byte(r*255), byte(g*255), byte(b*255), depth)
 			}
 		}
-
-		curX1 += invSlope1
-		curX2 += invSlope2
-	}
-
-	invSlope1 = (triangle.Triangle.Vertices[2][X] - triangle.Triangle.Vertices[1][X]) /
-		(triangle.Triangle.Vertices[2][Y] - triangle.Triangle.Vertices[1][Y])
-
-	invSlope2 = (triangle.Triangle.Vertices[2][X] - triangle.Split) /
-		(triangle.Triangle.Vertices[2][Y] - triangle.Triangle.Vertices[1][Y])
-
-	difference = triangle.Triangle.Vertices[2][Y] - clampedDown
-	curX1, curX2 = triangle.Triangle.Vertices[2][X]-invSlope1*difference, triangle.Triangle.Vertices[2][X]-invSlope2*difference
-
-	for y := int(clampedDown); y > int(clampedMiddle); y-- {
-		var clampedLeft, clampedRight int = int(Clamp(curX1, tile.X, tile.X+TileXSize)),
-			int(Clamp(curX2, tile.X, tile.X+TileXSize))
-
-		if clampedLeft > clampedRight {
-			var temp = clampedRight
-			clampedRight = clampedLeft
-			clampedLeft = temp
-		}
-
-		for x := clampedLeft; x < clampedRight; x++ {
-			var w, s, t float32 = triangle.Barycentric(x, y)
-			var depth float32 = w*triangle.Triangle.Vertices[0][Z] + s*triangle.Triangle.Vertices[1][Z] + t*triangle.Triangle.Vertices[2][Z]
-
-			if position := tile.ConvertPosition(x, y); depth < tile.Depth[position] {
-				var wt float32 = 1 / (w*triangle.Triangle.UV[0][Z] + s*triangle.Triangle.UV[1][Z] + t*triangle.Triangle.UV[2][Z])
-
-				var uv Vertex = Vertex{
-					(w*triangle.Triangle.UV[0][X] + s*triangle.Triangle.UV[1][X] + t*triangle.Triangle.UV[2][X]) * wt,
-					(w*triangle.Triangle.UV[0][Y] + s*triangle.Triangle.UV[1][Y] + t*triangle.Triangle.UV[2][Y]) * wt,
-				}
-
-				var r, g, b float32 = triangle.Triangle.Interpolate(w, s, t)
-				triangle.Triangle.Shader.Fragment(&r, &g, &b, &uv, &Brick)
-
-				tile.Set(position, byte(r*255), byte(g*255), byte(b*255), depth)
-			}
-		}
-
-		curX1 -= invSlope1
-		curX2 -= invSlope2
 	}
 }
 

@@ -306,6 +306,7 @@ func main() {
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetVsyncEnabled(false)
+	ebiten.SetFullscreen(true)
 
 	Log = NewLogger("raw_data")
 

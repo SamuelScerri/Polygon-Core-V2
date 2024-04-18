@@ -1,4 +1,4 @@
-package main
+package ghetty
 
 import (
 	"bufio"
@@ -23,6 +23,10 @@ const Aspect = float32(Width) / float32(Height)
 
 var TileXSize, TileYSize = Width, Height
 var Time float32
+
+type Callback func()
+
+var OnRender Callback
 
 func BasicVertex(vertex, uv, normal, color *Vertex, matrices ...*Matrix) {
 	//(*vertex)[X] += float32(math.Sin(float64(Time*.0125+(*vertex)[Y]))) * .25
@@ -98,7 +102,6 @@ var Position Vertex = Vertex{0, 0, 0, 0}
 var Projection Matrix = ProjectionMatrix()
 
 func (g *Game) Draw(screen *ebiten.Image) {
-
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		Position[X] -= .125 / 2 / 2
 	}
@@ -124,7 +127,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	var trianglesPerCore int = len(Triangles) / Cores
-	//var trianglesLeft int = len(Triangles) % Cores
 	var totalTrianglesRasterized int = 0
 
 	Time += 1
@@ -133,8 +135,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	matrix = matrix.Multiply(&Projection)
 
 	WaitGroup.Add(Cores)
-
-	//test := time.Now()
 
 	for i := 0; i < Cores; i++ {
 		go func(offset int) {
@@ -158,12 +158,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	WaitGroup.Wait()
 
-	//duration := time.Since(test)
-	//fmt.Println("Processing Time:", duration)
-
 	WaitGroup.Add(Cores)
-
-	//test = time.Now()
 
 	for y := range Tiles[0] {
 		for x := range Tiles {
@@ -178,10 +173,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	WaitGroup.Wait()
 
-	//duration = time.Since(test)
-	//f//mt.Println("Rendering Time:", duration)
+	OnRender()
 
 	screen.WritePixels(Buffer)
+
 	ebitenutil.DebugPrint(screen, "FPS: "+strconv.Itoa(int(ebiten.ActualFPS())))
 	ebitenutil.DebugPrintAt(screen, "TRIANGLES RASTERIZED: "+strconv.Itoa(totalTrianglesRasterized), 0, 10)
 	ebitenutil.DebugPrintAt(screen, "CORES USED: "+strconv.Itoa(Cores), 0, 20)
@@ -189,7 +184,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	Log.Log(ebiten.ActualFPS())
 }
 
-func main() {
+func Launch(renderCallback Callback) {
 	fmt.Println("1: Sweep-Line Algorithm")
 	fmt.Println("2: Barycentric Algorithm")
 	fmt.Println("3: Edge Test Algorithm")
@@ -306,9 +301,11 @@ func main() {
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 	ebiten.SetScreenClearedEveryFrame(false)
 	ebiten.SetVsyncEnabled(false)
-	ebiten.SetFullscreen(true)
+	ebiten.SetFullscreen(false)
 
 	Log = NewLogger("raw_data")
+
+	OnRender = renderCallback
 
 	if err := ebiten.RunGame(&Game{}); err != nil {
 		log.Fatal(err)

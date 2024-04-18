@@ -1,4 +1,4 @@
-package main
+package ghetty
 
 const (
 	X = 0

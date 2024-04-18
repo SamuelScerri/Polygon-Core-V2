@@ -1,4 +1,4 @@
-package main
+package ghetty
 
 type VertexShader func(vertex, uv, normal, color *Vertex, matrices ...*Matrix)
 type FragmentShader func(r, g, b *float32, uv *Vertex, textures ...*Texture)

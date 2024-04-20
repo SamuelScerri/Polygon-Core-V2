@@ -1,6 +1,6 @@
 module samuelscerri/ghetty
 
-go 1.21.6
+go 1.22.2
 
 require (
 	github.com/go-python/gopy v0.4.8

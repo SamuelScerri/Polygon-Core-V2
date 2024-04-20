@@ -173,7 +173,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	WaitGroup.Wait()
 
-	OnRender()
+	//OnRender()
 
 	screen.WritePixels(Buffer)
 
@@ -184,7 +184,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	Log.Log(ebiten.ActualFPS())
 }
 
-func Launch(renderCallback Callback) {
+func Launch() {
 	fmt.Println("1: Sweep-Line Algorithm")
 	fmt.Println("2: Barycentric Algorithm")
 	fmt.Println("3: Edge Test Algorithm")
@@ -305,7 +305,7 @@ func Launch(renderCallback Callback) {
 
 	Log = NewLogger("raw_data")
 
-	OnRender = renderCallback
+	//OnRender = renderCallback
 
 	if err := ebiten.RunGame(&Game{}); err != nil {
 		log.Fatal(err)

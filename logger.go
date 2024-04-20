@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	. "github.com/klauspost/cpuid/v2"
+	"github.com/klauspost/cpuid/v2"
 )
 
 type Logger struct {
@@ -18,7 +18,7 @@ type Logger struct {
 }
 
 func NewLogger(directory string) Logger {
-	var path string = directory + "/" + CPU.BrandName + "/Scene" + strconv.Itoa(Scene)
+	var path string = directory + "/" + cpuid.CPU.BrandName + "/Scene" + strconv.Itoa(Scene)
 
 	switch AlgorithmUsed {
 	case BarycentricAlgorithm:

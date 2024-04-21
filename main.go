@@ -28,7 +28,6 @@ const Aspect = float32(Width) / float32(Height)
 var TileXSize, TileYSize = Width, Height
 var Time float32
 
-// var img *image.RGBA = image.NewRGBA(image.Rect(0, 0, Width, Height))
 var EncodedImage string
 
 type Callback func()

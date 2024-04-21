@@ -198,7 +198,7 @@ func (tile *Tile) Set(position int, r, g, b byte, depth float32) {
 	var colorPosition int = position * 4
 
 	tile.Depth[position] = depth
-	tile.Frame[colorPosition+R], tile.Frame[colorPosition+G], tile.Frame[colorPosition+B] = r, g, b
+	tile.Frame[colorPosition+R], tile.Frame[colorPosition+G], tile.Frame[colorPosition+B], tile.Frame[colorPosition+A] = r, g, b, 255
 }
 
 func (tile *Tile) Clear(r, g, b byte) {

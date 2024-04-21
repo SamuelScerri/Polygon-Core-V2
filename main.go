@@ -2,11 +2,15 @@ package ghetty
 
 import (
 	"bufio"
+	"encoding/base64"
 	"fmt"
+	_ "image/jpeg"
+	_ "image/png"
 	"log"
 	"math"
 	"math/rand"
 	"os"
+	"runtime"
 	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -23,6 +27,9 @@ const Aspect = float32(Width) / float32(Height)
 
 var TileXSize, TileYSize = Width, Height
 var Time float32
+
+// var img *image.RGBA = image.NewRGBA(image.Rect(0, 0, Width, Height))
+var EncodedImage string
 
 type Callback func()
 
@@ -61,6 +68,7 @@ var Basic Shader = Shader{
 
 var Tiles [][]Tile
 var Buffer []byte = make([]byte, Width*Height*4)
+
 var Depth []float32 = make([]float32, Width*Height)
 
 var Brick Texture = LoadTexture("images/Brick.png")
@@ -102,6 +110,8 @@ var Position Vertex = Vertex{0, 0, 0, 0}
 var Projection Matrix = ProjectionMatrix()
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	runtime.LockOSThread()
+
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		Position[X] -= .125 / 2 / 2
 	}
@@ -173,7 +183,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	WaitGroup.Wait()
 
-	//OnRender()
+	EncodedImage = base64.StdEncoding.EncodeToString(Buffer)
+
+	OnRender()
 
 	screen.WritePixels(Buffer)
 
@@ -184,7 +196,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	Log.Log(ebiten.ActualFPS())
 }
 
-func Launch() {
+func Launch(renderCallback Callback) {
 	fmt.Println("1: Sweep-Line Algorithm")
 	fmt.Println("2: Barycentric Algorithm")
 	fmt.Println("3: Edge Test Algorithm")
@@ -305,7 +317,7 @@ func Launch() {
 
 	Log = NewLogger("raw_data")
 
-	//OnRender = renderCallback
+	OnRender = renderCallback
 
 	if err := ebiten.RunGame(&Game{}); err != nil {
 		log.Fatal(err)

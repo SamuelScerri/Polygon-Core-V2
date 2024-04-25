@@ -1135,6 +1135,23 @@ def Set_Triangles(value):
 	else:
 		_ghetty.ghetty_Set_Triangles(value)
 
+def UpscaledBuffer():
+	"""
+	UpscaledBuffer Gets Go Variable: ghetty.UpscaledBuffer
+	
+	"""
+	return go.Slice_byte(handle=_ghetty.ghetty_UpscaledBuffer())
+
+def Set_UpscaledBuffer(value):
+	"""
+	Set_UpscaledBuffer Sets Go Variable: ghetty.UpscaledBuffer
+	
+	"""
+	if isinstance(value, go.GoClass):
+		_ghetty.ghetty_Set_UpscaledBuffer(value.handle)
+	else:
+		_ghetty.ghetty_Set_UpscaledBuffer(value)
+
 def WaitGroup():
 	"""
 	WaitGroup Gets Go Variable: ghetty.WaitGroup
@@ -2098,27 +2115,27 @@ def LoadTexture(directory):
 
 
 # ---- Functions ---
+def BuildAndProcess(triangle, tiles, goRun=False):
+	"""BuildAndProcess(object triangle, object tiles) """
+	_ghetty.ghetty_BuildAndProcess(triangle.handle, tiles.handle, goRun)
+def Launch(renderCallback, goRun=False):
+	"""Launch(callable renderCallback) """
+	_ghetty.ghetty_Launch(renderCallback, goRun)
 def ProjectionMatrix():
 	"""ProjectionMatrix() [][]float"""
 	return Matrix(handle=_ghetty.ghetty_ProjectionMatrix())
-def TransformationMatrix(p, r):
-	"""TransformationMatrix([]float p, []float r) [][]float"""
-	return Matrix(handle=_ghetty.ghetty_TransformationMatrix(p.handle, r.handle))
 def BasicVertex(vertex, uv, normal, color, goRun=False, *args):
 	"""BasicVertex(object vertex, object uv, object normal, object color, []object matrices) """
 	matrices = Slice_Ptr_ghetty_Matrix(args)
 	_ghetty.ghetty_BasicVertex(vertex.handle, uv.handle, normal.handle, color.handle, matrices.handle, goRun)
-def BuildAndProcess(triangle, tiles, goRun=False):
-	"""BuildAndProcess(object triangle, object tiles) """
-	_ghetty.ghetty_BuildAndProcess(triangle.handle, tiles.handle, goRun)
 def Clamp(value, min, max):
 	"""Clamp(float value, int min, int max) float"""
 	return _ghetty.ghetty_Clamp(value, min, max)
-def Launch(renderCallback, goRun=False):
-	"""Launch(callable renderCallback) """
-	_ghetty.ghetty_Launch(renderCallback, goRun)
 def LoadModel(directory):
 	"""LoadModel(str directory) []object model"""
 	return Model(handle=_ghetty.ghetty_LoadModel(directory))
+def TransformationMatrix(p, r):
+	"""TransformationMatrix([]float p, []float r) [][]float"""
+	return Matrix(handle=_ghetty.ghetty_TransformationMatrix(p.handle, r.handle))
 
 

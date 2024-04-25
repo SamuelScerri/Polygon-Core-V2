@@ -28,10 +28,11 @@ if __name__ == '__main__':
 
     def on_render():
         image = numpy.frombuffer(base64.b64decode(ghetty.EncodedImage()), numpy.uint8).reshape((90, 160, 4))
-        rgb_img = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+        result = sr.upsample(cv2.cvtColor(image, cv2.COLOR_BGRA2BGR))
         
-        result = sr.upsample(rgb_img)
+        converted_image = cv2.cvtColor(result, cv2.COLOR_BGR2BGRA).flatten()
+        return base64.b64encode(converted_image)
 
-        cv2.imwrite('images/buffer.png', cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
+        #cv2.imwrite('images/buffer.png', cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
 
     ghetty.Launch(renderCallback=on_render)

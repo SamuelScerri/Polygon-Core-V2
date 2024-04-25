@@ -3620,6 +3620,37 @@ PyObject * _wrap__ghetty_ghetty_Set_Triangles(PyObject * PYBINDGEN_UNUSED(dummy)
 
 
 PyObject *
+_wrap__ghetty_ghetty_UpscaledBuffer(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
+{
+    PyObject *py_retval;
+    int64_t retval;
+
+    retval = ghetty_UpscaledBuffer();
+    py_retval = Py_BuildValue((char *) "L", retval);
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_UpscaledBuffer(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs));
+
+
+PyObject *
+_wrap__ghetty_ghetty_Set_UpscaledBuffer(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t val;
+    const char *keywords[] = {"val", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "L", (char **) keywords, &val)) {
+        return NULL;
+    }
+    ghetty_Set_UpscaledBuffer(val);
+    Py_INCREF(Py_None);
+    py_retval = Py_None;
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Set_UpscaledBuffer(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
 _wrap__ghetty_ghetty_WaitGroup(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
 {
     PyObject *py_retval;
@@ -5787,6 +5818,55 @@ PyObject * _wrap__ghetty_ghetty_LoadTexture(PyObject * PYBINDGEN_UNUSED(dummy), 
 
 
 PyObject *
+_wrap__ghetty_ghetty_BuildAndProcess(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t triangle;
+    int64_t tiles;
+    bool goRun;
+    PyObject *py_goRun;
+    const char *keywords[] = {"triangle", "tiles", "goRun", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LLO", (char **) keywords, &triangle, &tiles, &py_goRun)) {
+        return NULL;
+    }
+    goRun = (bool) PyObject_IsTrue(py_goRun);
+    ghetty_BuildAndProcess(triangle, tiles, goRun);
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+    Py_INCREF(Py_None);
+    py_retval = Py_None;
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_BuildAndProcess(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_Launch(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    PyObject *renderCallback;
+    bool goRun;
+    PyObject *py_goRun;
+    const char *keywords[] = {"renderCallback", "goRun", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "OO", (char **) keywords, &renderCallback, &py_goRun)) {
+        return NULL;
+    }
+    goRun = (bool) PyObject_IsTrue(py_goRun);
+    ghetty_Launch(renderCallback, goRun);
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+    Py_INCREF(Py_None);
+    py_retval = Py_None;
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Launch(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
 _wrap__ghetty_ghetty_ProjectionMatrix(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
 {
     PyObject *py_retval;
@@ -5800,28 +5880,6 @@ _wrap__ghetty_ghetty_ProjectionMatrix(PyObject *PYBINDGEN_UNUSED(_args), PyObjec
     return py_retval;
 }
 PyObject * _wrap__ghetty_ghetty_ProjectionMatrix(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs));
-
-
-PyObject *
-_wrap__ghetty_ghetty_TransformationMatrix(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    int64_t retval;
-    int64_t p;
-    int64_t r;
-    const char *keywords[] = {"p", "r", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LL", (char **) keywords, &p, &r)) {
-        return NULL;
-    }
-    retval = ghetty_TransformationMatrix(p, r);
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-    py_retval = Py_BuildValue((char *) "L", retval);
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_TransformationMatrix(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
 
 
 PyObject *
@@ -5853,31 +5911,6 @@ PyObject * _wrap__ghetty_ghetty_BasicVertex(PyObject * PYBINDGEN_UNUSED(dummy), 
 
 
 PyObject *
-_wrap__ghetty_ghetty_BuildAndProcess(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    int64_t triangle;
-    int64_t tiles;
-    bool goRun;
-    PyObject *py_goRun;
-    const char *keywords[] = {"triangle", "tiles", "goRun", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LLO", (char **) keywords, &triangle, &tiles, &py_goRun)) {
-        return NULL;
-    }
-    goRun = (bool) PyObject_IsTrue(py_goRun);
-    ghetty_BuildAndProcess(triangle, tiles, goRun);
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-    Py_INCREF(Py_None);
-    py_retval = Py_None;
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_BuildAndProcess(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
 _wrap__ghetty_ghetty_Clamp(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
 {
     PyObject *py_retval;
@@ -5901,30 +5934,6 @@ PyObject * _wrap__ghetty_ghetty_Clamp(PyObject * PYBINDGEN_UNUSED(dummy), PyObje
 
 
 PyObject *
-_wrap__ghetty_ghetty_Launch(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    PyObject *renderCallback;
-    bool goRun;
-    PyObject *py_goRun;
-    const char *keywords[] = {"renderCallback", "goRun", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "OO", (char **) keywords, &renderCallback, &py_goRun)) {
-        return NULL;
-    }
-    goRun = (bool) PyObject_IsTrue(py_goRun);
-    ghetty_Launch(renderCallback, goRun);
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-    Py_INCREF(Py_None);
-    py_retval = Py_None;
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_Launch(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
 _wrap__ghetty_ghetty_LoadModel(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
 {
     PyObject *py_retval;
@@ -5943,6 +5952,28 @@ _wrap__ghetty_ghetty_LoadModel(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *arg
     return py_retval;
 }
 PyObject * _wrap__ghetty_ghetty_LoadModel(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_TransformationMatrix(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t retval;
+    int64_t p;
+    int64_t r;
+    const char *keywords[] = {"p", "r", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LL", (char **) keywords, &p, &r)) {
+        return NULL;
+    }
+    retval = ghetty_TransformationMatrix(p, r);
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+    py_retval = Py_BuildValue((char *) "L", retval);
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_TransformationMatrix(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
 
 static PyMethodDef _ghetty_functions[] = {
     {(char *) "GoPyInit", (PyCFunction) _wrap__ghetty_GoPyInit, METH_NOARGS, "GoPyInit()\n\n" },
@@ -6146,6 +6177,8 @@ static PyMethodDef _ghetty_functions[] = {
     {(char *) "ghetty_Set_Time", (PyCFunction) _wrap__ghetty_ghetty_Set_Time, METH_KEYWORDS|METH_VARARGS, "ghetty_Set_Time(val)\n\ntype: val: float" },
     {(char *) "ghetty_Triangles", (PyCFunction) _wrap__ghetty_ghetty_Triangles, METH_NOARGS, "ghetty_Triangles()\n\n" },
     {(char *) "ghetty_Set_Triangles", (PyCFunction) _wrap__ghetty_ghetty_Set_Triangles, METH_KEYWORDS|METH_VARARGS, "ghetty_Set_Triangles(val)\n\ntype: val: int64_t" },
+    {(char *) "ghetty_UpscaledBuffer", (PyCFunction) _wrap__ghetty_ghetty_UpscaledBuffer, METH_NOARGS, "ghetty_UpscaledBuffer()\n\n" },
+    {(char *) "ghetty_Set_UpscaledBuffer", (PyCFunction) _wrap__ghetty_ghetty_Set_UpscaledBuffer, METH_KEYWORDS|METH_VARARGS, "ghetty_Set_UpscaledBuffer(val)\n\ntype: val: int64_t" },
     {(char *) "ghetty_WaitGroup", (PyCFunction) _wrap__ghetty_ghetty_WaitGroup, METH_NOARGS, "ghetty_WaitGroup()\n\n" },
     {(char *) "ghetty_Set_WaitGroup", (PyCFunction) _wrap__ghetty_ghetty_Set_WaitGroup, METH_KEYWORDS|METH_VARARGS, "ghetty_Set_WaitGroup(val)\n\ntype: val: int64_t" },
     {(char *) "ghetty_Logger_CTor", (PyCFunction) _wrap__ghetty_ghetty_Logger_CTor, METH_NOARGS, "ghetty_Logger_CTor()\n\n" },
@@ -6254,13 +6287,13 @@ static PyMethodDef _ghetty_functions[] = {
     {(char *) "ghetty_NewLogger", (PyCFunction) _wrap__ghetty_ghetty_NewLogger, METH_KEYWORDS|METH_VARARGS, "ghetty_NewLogger(directory)\n\ntype: directory: char *" },
     {(char *) "ghetty_Process", (PyCFunction) _wrap__ghetty_ghetty_Process, METH_KEYWORDS|METH_VARARGS, "ghetty_Process(triangle)\n\ntype: triangle: int64_t" },
     {(char *) "ghetty_LoadTexture", (PyCFunction) _wrap__ghetty_ghetty_LoadTexture, METH_KEYWORDS|METH_VARARGS, "ghetty_LoadTexture(directory)\n\ntype: directory: char *" },
-    {(char *) "ghetty_ProjectionMatrix", (PyCFunction) _wrap__ghetty_ghetty_ProjectionMatrix, METH_NOARGS, "ghetty_ProjectionMatrix()\n\n" },
-    {(char *) "ghetty_TransformationMatrix", (PyCFunction) _wrap__ghetty_ghetty_TransformationMatrix, METH_KEYWORDS|METH_VARARGS, "ghetty_TransformationMatrix(p, r)\n\ntype: p: int64_t\ntype: r: int64_t" },
-    {(char *) "ghetty_BasicVertex", (PyCFunction) _wrap__ghetty_ghetty_BasicVertex, METH_KEYWORDS|METH_VARARGS, "ghetty_BasicVertex(vertex, uv, normal, color, matrices, goRun)\n\ntype: vertex: int64_t\ntype: uv: int64_t\ntype: normal: int64_t\ntype: color: int64_t\ntype: matrices: int64_t\ntype: goRun: bool" },
     {(char *) "ghetty_BuildAndProcess", (PyCFunction) _wrap__ghetty_ghetty_BuildAndProcess, METH_KEYWORDS|METH_VARARGS, "ghetty_BuildAndProcess(triangle, tiles, goRun)\n\ntype: triangle: int64_t\ntype: tiles: int64_t\ntype: goRun: bool" },
-    {(char *) "ghetty_Clamp", (PyCFunction) _wrap__ghetty_ghetty_Clamp, METH_KEYWORDS|METH_VARARGS, "ghetty_Clamp(value, min, max)\n\ntype: value: float\ntype: min: int64_t\ntype: max: int64_t" },
     {(char *) "ghetty_Launch", (PyCFunction) _wrap__ghetty_ghetty_Launch, METH_KEYWORDS|METH_VARARGS, "ghetty_Launch(renderCallback, goRun)\n\ntype: renderCallback: PyObject *\ntype: goRun: bool" },
+    {(char *) "ghetty_ProjectionMatrix", (PyCFunction) _wrap__ghetty_ghetty_ProjectionMatrix, METH_NOARGS, "ghetty_ProjectionMatrix()\n\n" },
+    {(char *) "ghetty_BasicVertex", (PyCFunction) _wrap__ghetty_ghetty_BasicVertex, METH_KEYWORDS|METH_VARARGS, "ghetty_BasicVertex(vertex, uv, normal, color, matrices, goRun)\n\ntype: vertex: int64_t\ntype: uv: int64_t\ntype: normal: int64_t\ntype: color: int64_t\ntype: matrices: int64_t\ntype: goRun: bool" },
+    {(char *) "ghetty_Clamp", (PyCFunction) _wrap__ghetty_ghetty_Clamp, METH_KEYWORDS|METH_VARARGS, "ghetty_Clamp(value, min, max)\n\ntype: value: float\ntype: min: int64_t\ntype: max: int64_t" },
     {(char *) "ghetty_LoadModel", (PyCFunction) _wrap__ghetty_ghetty_LoadModel, METH_KEYWORDS|METH_VARARGS, "ghetty_LoadModel(directory)\n\ntype: directory: char *" },
+    {(char *) "ghetty_TransformationMatrix", (PyCFunction) _wrap__ghetty_ghetty_TransformationMatrix, METH_KEYWORDS|METH_VARARGS, "ghetty_TransformationMatrix(p, r)\n\ntype: p: int64_t\ntype: r: int64_t" },
     {NULL, NULL, 0, NULL}
 };
 #if PY_VERSION_HEX >= 0x03000000

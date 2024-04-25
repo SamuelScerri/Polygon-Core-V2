@@ -413,6 +413,8 @@ extern __declspec(dllexport) float ghetty_Time();
 extern __declspec(dllexport) void ghetty_Set_Time(float val);
 extern __declspec(dllexport) long long int ghetty_Triangles();
 extern __declspec(dllexport) void ghetty_Set_Triangles(long long int val);
+extern __declspec(dllexport) long long int ghetty_UpscaledBuffer();
+extern __declspec(dllexport) void ghetty_Set_UpscaledBuffer(long long int val);
 extern __declspec(dllexport) long long int ghetty_WaitGroup();
 extern __declspec(dllexport) void ghetty_Set_WaitGroup(long long int val);
 
@@ -551,13 +553,13 @@ extern __declspec(dllexport) long long int ghetty_Vertex_Copy(long long int _han
 extern __declspec(dllexport) long long int ghetty_NewLogger(char* directory);
 extern __declspec(dllexport) long long int ghetty_Process(long long int triangle);
 extern __declspec(dllexport) long long int ghetty_LoadTexture(char* directory);
-extern __declspec(dllexport) long long int ghetty_ProjectionMatrix();
-extern __declspec(dllexport) long long int ghetty_TransformationMatrix(long long int p, long long int r);
-extern __declspec(dllexport) void ghetty_BasicVertex(long long int vertex, long long int uv, long long int normal, long long int color, long long int matrices, char goRun);
 extern __declspec(dllexport) void ghetty_BuildAndProcess(long long int triangle, long long int tiles, char goRun);
-extern __declspec(dllexport) float ghetty_Clamp(float value, long long int min, long long int max);
 extern __declspec(dllexport) void ghetty_Launch(PyObject* renderCallback, char goRun);
+extern __declspec(dllexport) long long int ghetty_ProjectionMatrix();
+extern __declspec(dllexport) void ghetty_BasicVertex(long long int vertex, long long int uv, long long int normal, long long int color, long long int matrices, char goRun);
+extern __declspec(dllexport) float ghetty_Clamp(float value, long long int min, long long int max);
 extern __declspec(dllexport) long long int ghetty_LoadModel(char* directory);
+extern __declspec(dllexport) long long int ghetty_TransformationMatrix(long long int p, long long int r);
 
 #ifdef __cplusplus
 }

@@ -28,7 +28,7 @@ var Time float32
 
 var EncodedImage string
 
-type Callback func()
+type Callback func() string
 
 var OnRender Callback
 
@@ -65,6 +65,7 @@ var Basic Shader = Shader{
 
 var Tiles [][]Tile
 var Buffer []byte = make([]byte, Width*Height*4)
+var UpscaledBuffer []byte = make([]byte, Width*Scale*Height*Scale*4)
 
 var Depth []float32 = make([]float32, Width*Height)
 
@@ -96,7 +97,7 @@ func WhiteShader(w, s, t float32) (r, g, b float32) {
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return Width, Height
+	return Width * Scale, Height * Scale
 }
 
 func (g *Game) Update() error {
@@ -181,10 +182,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	WaitGroup.Wait()
 
 	EncodedImage = base64.StdEncoding.EncodeToString(Buffer)
+	UpscaledBuffer, _ = base64.StdEncoding.DecodeString(OnRender())
 
-	OnRender()
-
-	screen.WritePixels(Buffer)
+	screen.WritePixels(UpscaledBuffer)
 
 	ebitenutil.DebugPrint(screen, "FPS: "+strconv.Itoa(int(ebiten.ActualFPS())))
 	ebitenutil.DebugPrintAt(screen, "TRIANGLES RASTERIZED: "+strconv.Itoa(totalTrianglesRasterized), 0, 10)

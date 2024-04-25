@@ -1176,6 +1176,166 @@ def Set_WaitGroup(value):
 
 # ---- Structs ---
 
+# Python type for struct ghetty.Triangle
+class Triangle(go.GoClass):
+	""""""
+	def __init__(self, *args, **kwargs):
+		"""
+		handle=A Go-side object is always initialized with an explicit handle=arg
+		otherwise parameters can be unnamed in order of field names or named fields
+		in which case a new Go object is constructed first
+		"""
+		if len(kwargs) == 1 and 'handle' in kwargs:
+			self.handle = kwargs['handle']
+			_ghetty.IncRef(self.handle)
+		elif len(args) == 1 and isinstance(args[0], go.GoClass):
+			self.handle = args[0].handle
+			_ghetty.IncRef(self.handle)
+		else:
+			self.handle = _ghetty.ghetty_Triangle_CTor()
+			_ghetty.IncRef(self.handle)
+			if  0 < len(args):
+				self.UV = args[0]
+			if "UV" in kwargs:
+				self.UV = kwargs["UV"]
+			if  1 < len(args):
+				self.Vertices = args[1]
+			if "Vertices" in kwargs:
+				self.Vertices = kwargs["Vertices"]
+			if  2 < len(args):
+				self.Color = args[2]
+			if "Color" in kwargs:
+				self.Color = kwargs["Color"]
+			if  3 < len(args):
+				self.Normals = args[3]
+			if "Normals" in kwargs:
+				self.Normals = kwargs["Normals"]
+			if  4 < len(args):
+				self.Texture = args[4]
+			if "Texture" in kwargs:
+				self.Texture = kwargs["Texture"]
+			if  5 < len(args):
+				self.Shader = args[5]
+			if "Shader" in kwargs:
+				self.Shader = kwargs["Shader"]
+	def __del__(self):
+		_ghetty.DecRef(self.handle)
+	def __str__(self):
+		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
+		sv = 'ghetty.Triangle{'
+		first = True
+		for v in pr:
+			if callable(v[1]):
+				continue
+			if first:
+				first = False
+			else:
+				sv += ', '
+			sv += v[0] + '=' + str(v[1])
+		return sv + '}'
+	def __repr__(self):
+		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
+		sv = 'ghetty.Triangle ( '
+		for v in pr:
+			if not callable(v[1]):
+				sv += v[0] + '=' + str(v[1]) + ', '
+		return sv + ')'
+	@property
+	def UV(self):
+		return Array_3_ghetty_Vertex(handle=_ghetty.ghetty_Triangle_UV_Get(self.handle))
+	@property
+	def Vertices(self):
+		return Array_3_ghetty_Vertex(handle=_ghetty.ghetty_Triangle_Vertices_Get(self.handle))
+	@property
+	def Color(self):
+		return Array_3_ghetty_Vertex(handle=_ghetty.ghetty_Triangle_Color_Get(self.handle))
+	@property
+	def Normals(self):
+		return Array_3_ghetty_Vertex(handle=_ghetty.ghetty_Triangle_Normals_Get(self.handle))
+	@property
+	def Texture(self):
+		return Texture(handle=_ghetty.ghetty_Triangle_Texture_Get(self.handle))
+	@Texture.setter
+	def Texture(self, value):
+		if isinstance(value, go.GoClass):
+			_ghetty.ghetty_Triangle_Texture_Set(self.handle, value.handle)
+		else:
+			raise TypeError("supplied argument type {t} is not a go.GoClass".format(t=type(value)))
+	@property
+	def Shader(self):
+		return Shader(handle=_ghetty.ghetty_Triangle_Shader_Get(self.handle))
+	@Shader.setter
+	def Shader(self, value):
+		if isinstance(value, go.GoClass):
+			_ghetty.ghetty_Triangle_Shader_Set(self.handle, value.handle)
+		else:
+			raise TypeError("supplied argument type {t} is not a go.GoClass".format(t=type(value)))
+	def Transform(self, m2, goRun=False):
+		"""Transform(object m2) """
+		_ghetty.ghetty_Triangle_Transform(self.handle, m2.handle, goRun)
+	def ScreenSpace(self, goRun=False):
+		"""ScreenSpace() """
+		_ghetty.ghetty_Triangle_ScreenSpace(self.handle, goRun)
+	def Normalize(self, goRun=False):
+		"""Normalize() """
+		_ghetty.ghetty_Triangle_Normalize(self.handle, goRun)
+	def Sort(self, goRun=False):
+		"""Sort() """
+		_ghetty.ghetty_Triangle_Sort(self.handle, goRun)
+	def Bounds(self):
+		"""Bounds() []float"""
+		return Vertex(handle=_ghetty.ghetty_Triangle_Bounds(self.handle))
+	def Copy(self):
+		"""Copy() object copiedTriangle"""
+		return Triangle(handle=_ghetty.ghetty_Triangle_Copy(self.handle))
+
+# Python type for struct ghetty.Game
+class Game(go.GoClass):
+	""""""
+	def __init__(self, *args, **kwargs):
+		"""
+		handle=A Go-side object is always initialized with an explicit handle=arg
+		otherwise parameters can be unnamed in order of field names or named fields
+		in which case a new Go object is constructed first
+		"""
+		if len(kwargs) == 1 and 'handle' in kwargs:
+			self.handle = kwargs['handle']
+			_ghetty.IncRef(self.handle)
+		elif len(args) == 1 and isinstance(args[0], go.GoClass):
+			self.handle = args[0].handle
+			_ghetty.IncRef(self.handle)
+		else:
+			self.handle = _ghetty.ghetty_Game_CTor()
+			_ghetty.IncRef(self.handle)
+	def __del__(self):
+		_ghetty.DecRef(self.handle)
+	def __str__(self):
+		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
+		sv = 'ghetty.Game{'
+		first = True
+		for v in pr:
+			if callable(v[1]):
+				continue
+			if first:
+				first = False
+			else:
+				sv += ', '
+			sv += v[0] + '=' + str(v[1])
+		return sv + '}'
+	def __repr__(self):
+		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
+		sv = 'ghetty.Game ( '
+		for v in pr:
+			if not callable(v[1]):
+				sv += v[0] + '=' + str(v[1]) + ', '
+		return sv + ')'
+	def Update(self):
+		"""Update() str"""
+		return _ghetty.ghetty_Game_Update(self.handle)
+	def Draw(self, screen, goRun=False):
+		"""Draw(object screen) """
+		_ghetty.ghetty_Game_Draw(self.handle, screen.handle, goRun)
+
 # Python type for struct ghetty.Logger
 class Logger(go.GoClass):
 	""""""
@@ -1638,166 +1798,6 @@ class Tile(go.GoClass):
 		"""Clear(int r, int g, int b) """
 		_ghetty.ghetty_Tile_Clear(self.handle, r, g, b, goRun)
 
-# Python type for struct ghetty.Triangle
-class Triangle(go.GoClass):
-	""""""
-	def __init__(self, *args, **kwargs):
-		"""
-		handle=A Go-side object is always initialized with an explicit handle=arg
-		otherwise parameters can be unnamed in order of field names or named fields
-		in which case a new Go object is constructed first
-		"""
-		if len(kwargs) == 1 and 'handle' in kwargs:
-			self.handle = kwargs['handle']
-			_ghetty.IncRef(self.handle)
-		elif len(args) == 1 and isinstance(args[0], go.GoClass):
-			self.handle = args[0].handle
-			_ghetty.IncRef(self.handle)
-		else:
-			self.handle = _ghetty.ghetty_Triangle_CTor()
-			_ghetty.IncRef(self.handle)
-			if  0 < len(args):
-				self.UV = args[0]
-			if "UV" in kwargs:
-				self.UV = kwargs["UV"]
-			if  1 < len(args):
-				self.Vertices = args[1]
-			if "Vertices" in kwargs:
-				self.Vertices = kwargs["Vertices"]
-			if  2 < len(args):
-				self.Color = args[2]
-			if "Color" in kwargs:
-				self.Color = kwargs["Color"]
-			if  3 < len(args):
-				self.Normals = args[3]
-			if "Normals" in kwargs:
-				self.Normals = kwargs["Normals"]
-			if  4 < len(args):
-				self.Texture = args[4]
-			if "Texture" in kwargs:
-				self.Texture = kwargs["Texture"]
-			if  5 < len(args):
-				self.Shader = args[5]
-			if "Shader" in kwargs:
-				self.Shader = kwargs["Shader"]
-	def __del__(self):
-		_ghetty.DecRef(self.handle)
-	def __str__(self):
-		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
-		sv = 'ghetty.Triangle{'
-		first = True
-		for v in pr:
-			if callable(v[1]):
-				continue
-			if first:
-				first = False
-			else:
-				sv += ', '
-			sv += v[0] + '=' + str(v[1])
-		return sv + '}'
-	def __repr__(self):
-		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
-		sv = 'ghetty.Triangle ( '
-		for v in pr:
-			if not callable(v[1]):
-				sv += v[0] + '=' + str(v[1]) + ', '
-		return sv + ')'
-	@property
-	def UV(self):
-		return Array_3_ghetty_Vertex(handle=_ghetty.ghetty_Triangle_UV_Get(self.handle))
-	@property
-	def Vertices(self):
-		return Array_3_ghetty_Vertex(handle=_ghetty.ghetty_Triangle_Vertices_Get(self.handle))
-	@property
-	def Color(self):
-		return Array_3_ghetty_Vertex(handle=_ghetty.ghetty_Triangle_Color_Get(self.handle))
-	@property
-	def Normals(self):
-		return Array_3_ghetty_Vertex(handle=_ghetty.ghetty_Triangle_Normals_Get(self.handle))
-	@property
-	def Texture(self):
-		return Texture(handle=_ghetty.ghetty_Triangle_Texture_Get(self.handle))
-	@Texture.setter
-	def Texture(self, value):
-		if isinstance(value, go.GoClass):
-			_ghetty.ghetty_Triangle_Texture_Set(self.handle, value.handle)
-		else:
-			raise TypeError("supplied argument type {t} is not a go.GoClass".format(t=type(value)))
-	@property
-	def Shader(self):
-		return Shader(handle=_ghetty.ghetty_Triangle_Shader_Get(self.handle))
-	@Shader.setter
-	def Shader(self, value):
-		if isinstance(value, go.GoClass):
-			_ghetty.ghetty_Triangle_Shader_Set(self.handle, value.handle)
-		else:
-			raise TypeError("supplied argument type {t} is not a go.GoClass".format(t=type(value)))
-	def Transform(self, m2, goRun=False):
-		"""Transform(object m2) """
-		_ghetty.ghetty_Triangle_Transform(self.handle, m2.handle, goRun)
-	def ScreenSpace(self, goRun=False):
-		"""ScreenSpace() """
-		_ghetty.ghetty_Triangle_ScreenSpace(self.handle, goRun)
-	def Normalize(self, goRun=False):
-		"""Normalize() """
-		_ghetty.ghetty_Triangle_Normalize(self.handle, goRun)
-	def Sort(self, goRun=False):
-		"""Sort() """
-		_ghetty.ghetty_Triangle_Sort(self.handle, goRun)
-	def Bounds(self):
-		"""Bounds() []float"""
-		return Vertex(handle=_ghetty.ghetty_Triangle_Bounds(self.handle))
-	def Copy(self):
-		"""Copy() object copiedTriangle"""
-		return Triangle(handle=_ghetty.ghetty_Triangle_Copy(self.handle))
-
-# Python type for struct ghetty.Game
-class Game(go.GoClass):
-	""""""
-	def __init__(self, *args, **kwargs):
-		"""
-		handle=A Go-side object is always initialized with an explicit handle=arg
-		otherwise parameters can be unnamed in order of field names or named fields
-		in which case a new Go object is constructed first
-		"""
-		if len(kwargs) == 1 and 'handle' in kwargs:
-			self.handle = kwargs['handle']
-			_ghetty.IncRef(self.handle)
-		elif len(args) == 1 and isinstance(args[0], go.GoClass):
-			self.handle = args[0].handle
-			_ghetty.IncRef(self.handle)
-		else:
-			self.handle = _ghetty.ghetty_Game_CTor()
-			_ghetty.IncRef(self.handle)
-	def __del__(self):
-		_ghetty.DecRef(self.handle)
-	def __str__(self):
-		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
-		sv = 'ghetty.Game{'
-		first = True
-		for v in pr:
-			if callable(v[1]):
-				continue
-			if first:
-				first = False
-			else:
-				sv += ', '
-			sv += v[0] + '=' + str(v[1])
-		return sv + '}'
-	def __repr__(self):
-		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
-		sv = 'ghetty.Game ( '
-		for v in pr:
-			if not callable(v[1]):
-				sv += v[0] + '=' + str(v[1]) + ', '
-		return sv + ')'
-	def Update(self):
-		"""Update() str"""
-		return _ghetty.ghetty_Game_Update(self.handle)
-	def Draw(self, screen, goRun=False):
-		"""Draw(object screen) """
-		_ghetty.ghetty_Game_Draw(self.handle, screen.handle, goRun)
-
 
 # ---- Slices ---
 
@@ -2115,12 +2115,21 @@ def LoadTexture(directory):
 
 
 # ---- Functions ---
-def BuildAndProcess(triangle, tiles, goRun=False):
-	"""BuildAndProcess(object triangle, object tiles) """
-	_ghetty.ghetty_BuildAndProcess(triangle.handle, tiles.handle, goRun)
 def Launch(renderCallback, goRun=False):
 	"""Launch(callable renderCallback) """
 	_ghetty.ghetty_Launch(renderCallback, goRun)
+def LoadModel(directory):
+	"""LoadModel(str directory) []object model"""
+	return Model(handle=_ghetty.ghetty_LoadModel(directory))
+def TransformationMatrix(p, r):
+	"""TransformationMatrix([]float p, []float r) [][]float"""
+	return Matrix(handle=_ghetty.ghetty_TransformationMatrix(p.handle, r.handle))
+def Clamp(value, min, max):
+	"""Clamp(float value, int min, int max) float"""
+	return _ghetty.ghetty_Clamp(value, min, max)
+def BuildAndProcess(triangle, tiles, goRun=False):
+	"""BuildAndProcess(object triangle, object tiles) """
+	_ghetty.ghetty_BuildAndProcess(triangle.handle, tiles.handle, goRun)
 def ProjectionMatrix():
 	"""ProjectionMatrix() [][]float"""
 	return Matrix(handle=_ghetty.ghetty_ProjectionMatrix())
@@ -2128,14 +2137,5 @@ def BasicVertex(vertex, uv, normal, color, goRun=False, *args):
 	"""BasicVertex(object vertex, object uv, object normal, object color, []object matrices) """
 	matrices = Slice_Ptr_ghetty_Matrix(args)
 	_ghetty.ghetty_BasicVertex(vertex.handle, uv.handle, normal.handle, color.handle, matrices.handle, goRun)
-def Clamp(value, min, max):
-	"""Clamp(float value, int min, int max) float"""
-	return _ghetty.ghetty_Clamp(value, min, max)
-def LoadModel(directory):
-	"""LoadModel(str directory) []object model"""
-	return Model(handle=_ghetty.ghetty_LoadModel(directory))
-def TransformationMatrix(p, r):
-	"""TransformationMatrix([]float p, []float r) [][]float"""
-	return Matrix(handle=_ghetty.ghetty_TransformationMatrix(p.handle, r.handle))
 
 

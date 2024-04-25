@@ -418,6 +418,30 @@ extern __declspec(dllexport) void ghetty_Set_UpscaledBuffer(long long int val);
 extern __declspec(dllexport) long long int ghetty_WaitGroup();
 extern __declspec(dllexport) void ghetty_Set_WaitGroup(long long int val);
 
+// --- wrapping struct: ghetty.Triangle ---
+//
+extern __declspec(dllexport) long long int ghetty_Triangle_CTor();
+extern __declspec(dllexport) long long int ghetty_Triangle_UV_Get(long long int handle);
+extern __declspec(dllexport) long long int ghetty_Triangle_Vertices_Get(long long int handle);
+extern __declspec(dllexport) long long int ghetty_Triangle_Color_Get(long long int handle);
+extern __declspec(dllexport) long long int ghetty_Triangle_Normals_Get(long long int handle);
+extern __declspec(dllexport) long long int ghetty_Triangle_Texture_Get(long long int handle);
+extern __declspec(dllexport) void ghetty_Triangle_Texture_Set(long long int handle, long long int val);
+extern __declspec(dllexport) long long int ghetty_Triangle_Shader_Get(long long int handle);
+extern __declspec(dllexport) void ghetty_Triangle_Shader_Set(long long int handle, long long int val);
+extern __declspec(dllexport) void ghetty_Triangle_Transform(long long int _handle, long long int m2, char goRun);
+extern __declspec(dllexport) void ghetty_Triangle_ScreenSpace(long long int _handle, char goRun);
+extern __declspec(dllexport) void ghetty_Triangle_Normalize(long long int _handle, char goRun);
+extern __declspec(dllexport) void ghetty_Triangle_Sort(long long int _handle, char goRun);
+extern __declspec(dllexport) long long int ghetty_Triangle_Bounds(long long int _handle);
+extern __declspec(dllexport) long long int ghetty_Triangle_Copy(long long int _handle);
+
+// --- wrapping struct: ghetty.Game ---
+//
+extern __declspec(dllexport) long long int ghetty_Game_CTor();
+extern __declspec(dllexport) char* ghetty_Game_Update(long long int _handle);
+extern __declspec(dllexport) void ghetty_Game_Draw(long long int _handle, long long int screen, char goRun);
+
 // --- wrapping struct: ghetty.Logger ---
 //
 extern __declspec(dllexport) long long int ghetty_Logger_CTor();
@@ -484,30 +508,6 @@ extern __declspec(dllexport) long long int ghetty_Tile_ConvertPosition(long long
 extern __declspec(dllexport) void ghetty_Tile_Set(long long int _handle, long long int position, char r, char g, char b, float depth, char goRun);
 extern __declspec(dllexport) void ghetty_Tile_Clear(long long int _handle, char r, char g, char b, char goRun);
 
-// --- wrapping struct: ghetty.Triangle ---
-//
-extern __declspec(dllexport) long long int ghetty_Triangle_CTor();
-extern __declspec(dllexport) long long int ghetty_Triangle_UV_Get(long long int handle);
-extern __declspec(dllexport) long long int ghetty_Triangle_Vertices_Get(long long int handle);
-extern __declspec(dllexport) long long int ghetty_Triangle_Color_Get(long long int handle);
-extern __declspec(dllexport) long long int ghetty_Triangle_Normals_Get(long long int handle);
-extern __declspec(dllexport) long long int ghetty_Triangle_Texture_Get(long long int handle);
-extern __declspec(dllexport) void ghetty_Triangle_Texture_Set(long long int handle, long long int val);
-extern __declspec(dllexport) long long int ghetty_Triangle_Shader_Get(long long int handle);
-extern __declspec(dllexport) void ghetty_Triangle_Shader_Set(long long int handle, long long int val);
-extern __declspec(dllexport) void ghetty_Triangle_Transform(long long int _handle, long long int m2, char goRun);
-extern __declspec(dllexport) void ghetty_Triangle_ScreenSpace(long long int _handle, char goRun);
-extern __declspec(dllexport) void ghetty_Triangle_Normalize(long long int _handle, char goRun);
-extern __declspec(dllexport) void ghetty_Triangle_Sort(long long int _handle, char goRun);
-extern __declspec(dllexport) long long int ghetty_Triangle_Bounds(long long int _handle);
-extern __declspec(dllexport) long long int ghetty_Triangle_Copy(long long int _handle);
-
-// --- wrapping struct: ghetty.Game ---
-//
-extern __declspec(dllexport) long long int ghetty_Game_CTor();
-extern __declspec(dllexport) char* ghetty_Game_Update(long long int _handle);
-extern __declspec(dllexport) void ghetty_Game_Draw(long long int _handle, long long int screen, char goRun);
-
 // --- wrapping slice: ghetty.Matrix ---
 //
 extern __declspec(dllexport) long long int ghetty_Matrix_CTor();
@@ -553,13 +553,13 @@ extern __declspec(dllexport) long long int ghetty_Vertex_Copy(long long int _han
 extern __declspec(dllexport) long long int ghetty_NewLogger(char* directory);
 extern __declspec(dllexport) long long int ghetty_Process(long long int triangle);
 extern __declspec(dllexport) long long int ghetty_LoadTexture(char* directory);
-extern __declspec(dllexport) void ghetty_BuildAndProcess(long long int triangle, long long int tiles, char goRun);
 extern __declspec(dllexport) void ghetty_Launch(PyObject* renderCallback, char goRun);
-extern __declspec(dllexport) long long int ghetty_ProjectionMatrix();
-extern __declspec(dllexport) void ghetty_BasicVertex(long long int vertex, long long int uv, long long int normal, long long int color, long long int matrices, char goRun);
-extern __declspec(dllexport) float ghetty_Clamp(float value, long long int min, long long int max);
 extern __declspec(dllexport) long long int ghetty_LoadModel(char* directory);
 extern __declspec(dllexport) long long int ghetty_TransformationMatrix(long long int p, long long int r);
+extern __declspec(dllexport) float ghetty_Clamp(float value, long long int min, long long int max);
+extern __declspec(dllexport) void ghetty_BuildAndProcess(long long int triangle, long long int tiles, char goRun);
+extern __declspec(dllexport) long long int ghetty_ProjectionMatrix();
+extern __declspec(dllexport) void ghetty_BasicVertex(long long int vertex, long long int uv, long long int normal, long long int color, long long int matrices, char goRun);
 
 #ifdef __cplusplus
 }

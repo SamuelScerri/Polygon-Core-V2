@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"encoding/base64"
 	"fmt"
-	_ "image/jpeg"
-	_ "image/png"
 	"log"
 	"math"
 	"math/rand"

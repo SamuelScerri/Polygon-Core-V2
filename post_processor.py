@@ -4,10 +4,12 @@ import base64
 import cv2
 
 if __name__ == '__main__':
+    #Load Model
     sr = cv2.dnn_superres.DnnSuperResImpl_create()
-    sr.readModel('models/ESPCN_x4.pb')
+    sr.readModel('models/cnn_models/ESPCN_x4.pb')
     sr.setModel('espcn', 4)
 
+    #Set Backend To OpenCL (Enables Hardware Acceleration, Note To Self: Should Try Vulkan Backend But Requires Re-Compilation Of OpenCV)
     sr.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
     sr.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL)
 
@@ -26,10 +28,19 @@ if __name__ == '__main__':
 
         return slices
 
+    #Callback To When The Engine Renders A Scene, This Returns An Encoded Image
     def on_render():
-        image = numpy.frombuffer(base64.b64decode(ghetty.EncodedImage()), numpy.uint8).reshape((ghetty.Height, ghetty.Width, 4))
+
+        #Convert To Numpy Array As OpenCV Requires That Format
+        image = numpy.frombuffer(base64.b64decode(ghetty.EncodedImage()), dtype=numpy.uint8).reshape((ghetty.Height, ghetty.Width, 4))
+
+        #Use Loaded Model To Upscale
         result = sr.upsample(cv2.cvtColor(image, cv2.COLOR_BGRA2BGR))
+
+        #Traditional Upscaling
+        #result = cv2.resize(image, (ghetty.Width * ghetty.Scale, ghetty.Height * ghetty.Scale), interpolation=cv2.INTER_LINEAR)
         
+        #Flatten And Re-Encode The Image
         converted_image = cv2.cvtColor(result, cv2.COLOR_BGR2BGRA).flatten()
         return base64.b64encode(converted_image)
 

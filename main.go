@@ -16,8 +16,10 @@ import (
 )
 
 var Cores, Scene = 1, 1
+var Upscaler = "fsrcnn"
+var Scale = 1
 
-const Width, Height, Scale = 160, 90, 4
+const Width, Height = 160, 90
 const FOV = 150
 
 const Near, Far = .1, 1000
@@ -29,6 +31,7 @@ var Time float32
 var EncodedImage string
 
 type Callback func() string
+type CallbackNull func()
 
 var OnRender Callback
 
@@ -65,7 +68,7 @@ var Basic Shader = Shader{
 
 var Tiles [][]Tile
 var Buffer []byte = make([]byte, Width*Height*4)
-var UpscaledBuffer []byte = make([]byte, Width*Scale*Height*Scale*4)
+var UpscaledBuffer []byte
 
 var Depth []float32 = make([]float32, Width*Height)
 
@@ -218,6 +221,14 @@ func Launch(renderCallback Callback) {
 	fmt.Print("\nPlease Select Scene Number: ")
 	fmt.Scan(&Scene)
 
+	fmt.Print("\nPlease Type Upscaler: ")
+	fmt.Scan(&Upscaler)
+
+	fmt.Print("\nPlease Type Scale: ")
+	fmt.Scan(&Scale)
+
+	UpscaledBuffer = make([]byte, Width*Scale*Height*Scale*4)
+
 	var yTiles int = int(math.Floor(math.Sqrt(float64(Cores))))
 	var xTiles int = Cores / yTiles
 
@@ -312,9 +323,11 @@ func Launch(renderCallback Callback) {
 	ebiten.SetVsyncEnabled(false)
 	ebiten.SetFullscreen(false)
 
-	Log = NewLogger("raw_data")
+	//Log = NewLogger("raw_data")
+	Log = NewLoggerCNN("raw_data")
 
 	OnRender = renderCallback
+	//initializeCallback()
 
 	if err := ebiten.RunGame(&Game{}); err != nil {
 		log.Fatal(err)

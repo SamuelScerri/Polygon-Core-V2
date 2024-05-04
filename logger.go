@@ -43,6 +43,23 @@ func NewLogger(directory string) Logger {
 	return Logger{file, 0, false}
 }
 
+func NewLoggerCNN(directory string) Logger {
+	var path string = directory + "/cnn_version/" + cpuid.CPU.BrandName + "/" + Upscaler
+
+	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+		panic(err)
+	}
+
+	path += "/" + strconv.Itoa(Scale) + ".txt"
+
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		panic(err)
+	}
+
+	return Logger{file, 0, false}
+}
+
 func (logger *Logger) Log(framerate float64) {
 	if math.Floor(framerate) > 0 {
 		if logger.CurrentFPS != framerate {

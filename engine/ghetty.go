@@ -2500,6 +2500,16 @@ func ghetty_Set_Projection(val CGoHandle) {
 	ghetty.Projection = deptrFromHandle_ghetty_Matrix(val)
 }
 
+//export ghetty_Scale
+func ghetty_Scale() C.longlong {
+	return C.longlong(ghetty.Scale)
+}
+
+//export ghetty_Set_Scale
+func ghetty_Set_Scale(val C.longlong) {
+	ghetty.Scale = int(val)
+}
+
 //export ghetty_Scene
 func ghetty_Scene() C.longlong {
 	return C.longlong(ghetty.Scene)
@@ -2570,6 +2580,16 @@ func ghetty_Set_UpscaledBuffer(val CGoHandle) {
 	ghetty.UpscaledBuffer = deptrFromHandle_Slice_byte(val)
 }
 
+//export ghetty_Upscaler
+func ghetty_Upscaler() *C.char {
+	return C.CString(ghetty.Upscaler)
+}
+
+//export ghetty_Set_Upscaler
+func ghetty_Set_Upscaler(val *C.char) {
+	ghetty.Upscaler = C.GoString(val)
+}
+
 //export ghetty_WaitGroup
 func ghetty_WaitGroup() CGoHandle {
 	return handleFromPtr_sync_WaitGroup(&ghetty.WaitGroup)
@@ -2583,119 +2603,6 @@ func ghetty_Set_WaitGroup(val CGoHandle) {
 // ---- Interfaces ---
 
 // ---- Structs ---
-
-// --- wrapping struct: ghetty.Game ---
-//
-//export ghetty_Game_CTor
-func ghetty_Game_CTor() CGoHandle {
-	return CGoHandle(handleFromPtr_ghetty_Game(&ghetty.Game{}))
-}
-
-//export ghetty_Game_Update
-func ghetty_Game_Update(_handle CGoHandle) *C.char {
-	_saved_thread := C.PyEval_SaveThread()
-	vifc, __err := gopyh.VarFromHandleTry((gopyh.CGoHandle)(_handle), "*ghetty.Game")
-	if __err != nil {
-		return errorGoToPy(nil)
-	}
-	__err = gopyh.Embed(vifc, reflect.TypeOf(ghetty.Game{})).(*ghetty.Game).Update()
-
-	C.PyEval_RestoreThread(_saved_thread)
-	if __err != nil {
-		estr := C.CString(__err.Error())
-		C.PyErr_SetString(C.PyExc_RuntimeError, estr)
-		return estr
-	}
-	return C.CString("")
-}
-
-//export ghetty_Game_Draw
-func ghetty_Game_Draw(_handle CGoHandle, screen CGoHandle, goRun C.char) {
-	_saved_thread := C.PyEval_SaveThread()
-	defer C.PyEval_RestoreThread(_saved_thread)
-	vifc, __err := gopyh.VarFromHandleTry((gopyh.CGoHandle)(_handle), "*ghetty.Game")
-	if __err != nil {
-		return
-	}
-	if boolPyToGo(goRun) {
-		go gopyh.Embed(vifc, reflect.TypeOf(ghetty.Game{})).(*ghetty.Game).Draw(ptrFromHandle_Ptr_ebiten_Image(screen))
-	} else {
-		gopyh.Embed(vifc, reflect.TypeOf(ghetty.Game{})).(*ghetty.Game).Draw(ptrFromHandle_Ptr_ebiten_Image(screen))
-	}
-}
-
-// --- wrapping struct: ghetty.Logger ---
-//
-//export ghetty_Logger_CTor
-func ghetty_Logger_CTor() CGoHandle {
-	return CGoHandle(handleFromPtr_ghetty_Logger(&ghetty.Logger{}))
-}
-
-//export ghetty_Logger_File_Get
-func ghetty_Logger_File_Get(handle CGoHandle) CGoHandle {
-	op := ptrFromHandle_ghetty_Logger(handle)
-	return handleFromPtr_Ptr_os_File(op.File)
-}
-
-//export ghetty_Logger_File_Set
-func ghetty_Logger_File_Set(handle CGoHandle, val CGoHandle) {
-	op := ptrFromHandle_ghetty_Logger(handle)
-	op.File = ptrFromHandle_Ptr_os_File(val)
-}
-
-//export ghetty_Logger_CurrentFPS_Get
-func ghetty_Logger_CurrentFPS_Get(handle CGoHandle) C.double {
-	op := ptrFromHandle_ghetty_Logger(handle)
-	return C.double(op.CurrentFPS)
-}
-
-//export ghetty_Logger_CurrentFPS_Set
-func ghetty_Logger_CurrentFPS_Set(handle CGoHandle, val C.double) {
-	op := ptrFromHandle_ghetty_Logger(handle)
-	op.CurrentFPS = float64(val)
-}
-
-//export ghetty_Logger_ShouldWrite_Get
-func ghetty_Logger_ShouldWrite_Get(handle CGoHandle) C.char {
-	op := ptrFromHandle_ghetty_Logger(handle)
-	return boolGoToPy(op.ShouldWrite)
-}
-
-//export ghetty_Logger_ShouldWrite_Set
-func ghetty_Logger_ShouldWrite_Set(handle CGoHandle, val C.char) {
-	op := ptrFromHandle_ghetty_Logger(handle)
-	op.ShouldWrite = boolPyToGo(val)
-}
-
-//export ghetty_Logger_Log
-func ghetty_Logger_Log(_handle CGoHandle, framerate C.double, goRun C.char) {
-	_saved_thread := C.PyEval_SaveThread()
-	defer C.PyEval_RestoreThread(_saved_thread)
-	vifc, __err := gopyh.VarFromHandleTry((gopyh.CGoHandle)(_handle), "*ghetty.Logger")
-	if __err != nil {
-		return
-	}
-	if boolPyToGo(goRun) {
-		go gopyh.Embed(vifc, reflect.TypeOf(ghetty.Logger{})).(*ghetty.Logger).Log(float64(framerate))
-	} else {
-		gopyh.Embed(vifc, reflect.TypeOf(ghetty.Logger{})).(*ghetty.Logger).Log(float64(framerate))
-	}
-}
-
-//export ghetty_Logger_Close
-func ghetty_Logger_Close(_handle CGoHandle, goRun C.char) {
-	_saved_thread := C.PyEval_SaveThread()
-	defer C.PyEval_RestoreThread(_saved_thread)
-	vifc, __err := gopyh.VarFromHandleTry((gopyh.CGoHandle)(_handle), "*ghetty.Logger")
-	if __err != nil {
-		return
-	}
-	if boolPyToGo(goRun) {
-		go gopyh.Embed(vifc, reflect.TypeOf(ghetty.Logger{})).(*ghetty.Logger).Close()
-	} else {
-		gopyh.Embed(vifc, reflect.TypeOf(ghetty.Logger{})).(*ghetty.Logger).Close()
-	}
-}
 
 // --- wrapping struct: ghetty.ProcessedTriangle ---
 //
@@ -3178,6 +3085,119 @@ func ghetty_Triangle_Copy(_handle CGoHandle) CGoHandle {
 	return handleFromPtr_ghetty_Triangle(&cret)
 }
 
+// --- wrapping struct: ghetty.Game ---
+//
+//export ghetty_Game_CTor
+func ghetty_Game_CTor() CGoHandle {
+	return CGoHandle(handleFromPtr_ghetty_Game(&ghetty.Game{}))
+}
+
+//export ghetty_Game_Update
+func ghetty_Game_Update(_handle CGoHandle) *C.char {
+	_saved_thread := C.PyEval_SaveThread()
+	vifc, __err := gopyh.VarFromHandleTry((gopyh.CGoHandle)(_handle), "*ghetty.Game")
+	if __err != nil {
+		return errorGoToPy(nil)
+	}
+	__err = gopyh.Embed(vifc, reflect.TypeOf(ghetty.Game{})).(*ghetty.Game).Update()
+
+	C.PyEval_RestoreThread(_saved_thread)
+	if __err != nil {
+		estr := C.CString(__err.Error())
+		C.PyErr_SetString(C.PyExc_RuntimeError, estr)
+		return estr
+	}
+	return C.CString("")
+}
+
+//export ghetty_Game_Draw
+func ghetty_Game_Draw(_handle CGoHandle, screen CGoHandle, goRun C.char) {
+	_saved_thread := C.PyEval_SaveThread()
+	defer C.PyEval_RestoreThread(_saved_thread)
+	vifc, __err := gopyh.VarFromHandleTry((gopyh.CGoHandle)(_handle), "*ghetty.Game")
+	if __err != nil {
+		return
+	}
+	if boolPyToGo(goRun) {
+		go gopyh.Embed(vifc, reflect.TypeOf(ghetty.Game{})).(*ghetty.Game).Draw(ptrFromHandle_Ptr_ebiten_Image(screen))
+	} else {
+		gopyh.Embed(vifc, reflect.TypeOf(ghetty.Game{})).(*ghetty.Game).Draw(ptrFromHandle_Ptr_ebiten_Image(screen))
+	}
+}
+
+// --- wrapping struct: ghetty.Logger ---
+//
+//export ghetty_Logger_CTor
+func ghetty_Logger_CTor() CGoHandle {
+	return CGoHandle(handleFromPtr_ghetty_Logger(&ghetty.Logger{}))
+}
+
+//export ghetty_Logger_File_Get
+func ghetty_Logger_File_Get(handle CGoHandle) CGoHandle {
+	op := ptrFromHandle_ghetty_Logger(handle)
+	return handleFromPtr_Ptr_os_File(op.File)
+}
+
+//export ghetty_Logger_File_Set
+func ghetty_Logger_File_Set(handle CGoHandle, val CGoHandle) {
+	op := ptrFromHandle_ghetty_Logger(handle)
+	op.File = ptrFromHandle_Ptr_os_File(val)
+}
+
+//export ghetty_Logger_CurrentFPS_Get
+func ghetty_Logger_CurrentFPS_Get(handle CGoHandle) C.double {
+	op := ptrFromHandle_ghetty_Logger(handle)
+	return C.double(op.CurrentFPS)
+}
+
+//export ghetty_Logger_CurrentFPS_Set
+func ghetty_Logger_CurrentFPS_Set(handle CGoHandle, val C.double) {
+	op := ptrFromHandle_ghetty_Logger(handle)
+	op.CurrentFPS = float64(val)
+}
+
+//export ghetty_Logger_ShouldWrite_Get
+func ghetty_Logger_ShouldWrite_Get(handle CGoHandle) C.char {
+	op := ptrFromHandle_ghetty_Logger(handle)
+	return boolGoToPy(op.ShouldWrite)
+}
+
+//export ghetty_Logger_ShouldWrite_Set
+func ghetty_Logger_ShouldWrite_Set(handle CGoHandle, val C.char) {
+	op := ptrFromHandle_ghetty_Logger(handle)
+	op.ShouldWrite = boolPyToGo(val)
+}
+
+//export ghetty_Logger_Log
+func ghetty_Logger_Log(_handle CGoHandle, framerate C.double, goRun C.char) {
+	_saved_thread := C.PyEval_SaveThread()
+	defer C.PyEval_RestoreThread(_saved_thread)
+	vifc, __err := gopyh.VarFromHandleTry((gopyh.CGoHandle)(_handle), "*ghetty.Logger")
+	if __err != nil {
+		return
+	}
+	if boolPyToGo(goRun) {
+		go gopyh.Embed(vifc, reflect.TypeOf(ghetty.Logger{})).(*ghetty.Logger).Log(float64(framerate))
+	} else {
+		gopyh.Embed(vifc, reflect.TypeOf(ghetty.Logger{})).(*ghetty.Logger).Log(float64(framerate))
+	}
+}
+
+//export ghetty_Logger_Close
+func ghetty_Logger_Close(_handle CGoHandle, goRun C.char) {
+	_saved_thread := C.PyEval_SaveThread()
+	defer C.PyEval_RestoreThread(_saved_thread)
+	vifc, __err := gopyh.VarFromHandleTry((gopyh.CGoHandle)(_handle), "*ghetty.Logger")
+	if __err != nil {
+		return
+	}
+	if boolPyToGo(goRun) {
+		go gopyh.Embed(vifc, reflect.TypeOf(ghetty.Logger{})).(*ghetty.Logger).Close()
+	} else {
+		gopyh.Embed(vifc, reflect.TypeOf(ghetty.Logger{})).(*ghetty.Logger).Close()
+	}
+}
+
 // ---- Slices ---
 
 // --- wrapping slice: ghetty.Matrix ---
@@ -3516,15 +3536,6 @@ func ghetty_Vertex_Copy(_handle CGoHandle) CGoHandle {
 
 // ---- Constructors ---
 
-//export ghetty_NewLogger
-func ghetty_NewLogger(directory *C.char) CGoHandle {
-	_saved_thread := C.PyEval_SaveThread()
-	defer C.PyEval_RestoreThread(_saved_thread)
-	cret := ghetty.NewLogger(C.GoString(directory))
-
-	return handleFromPtr_ghetty_Logger(&cret)
-}
-
 //export ghetty_Process
 func ghetty_Process(triangle CGoHandle) CGoHandle {
 	_saved_thread := C.PyEval_SaveThread()
@@ -3543,18 +3554,25 @@ func ghetty_LoadTexture(directory *C.char) CGoHandle {
 	return handleFromPtr_ghetty_Texture(&cret)
 }
 
-// ---- Functions ---
-
-//export ghetty_BuildAndProcess
-func ghetty_BuildAndProcess(triangle CGoHandle, tiles CGoHandle, goRun C.char) {
+//export ghetty_NewLogger
+func ghetty_NewLogger(directory *C.char) CGoHandle {
 	_saved_thread := C.PyEval_SaveThread()
 	defer C.PyEval_RestoreThread(_saved_thread)
-	if boolPyToGo(goRun) {
-		go ghetty.BuildAndProcess(ptrFromHandle_Ptr_ghetty_Triangle(triangle), ptrFromHandle_Ptr_Slice_Slice_ghetty_Tile(tiles))
-	} else {
-		ghetty.BuildAndProcess(ptrFromHandle_Ptr_ghetty_Triangle(triangle), ptrFromHandle_Ptr_Slice_Slice_ghetty_Tile(tiles))
-	}
+	cret := ghetty.NewLogger(C.GoString(directory))
+
+	return handleFromPtr_ghetty_Logger(&cret)
 }
+
+//export ghetty_NewLoggerCNN
+func ghetty_NewLoggerCNN(directory *C.char) CGoHandle {
+	_saved_thread := C.PyEval_SaveThread()
+	defer C.PyEval_RestoreThread(_saved_thread)
+	cret := ghetty.NewLoggerCNN(C.GoString(directory))
+
+	return handleFromPtr_ghetty_Logger(&cret)
+}
+
+// ---- Functions ---
 
 //export ghetty_Clamp
 func ghetty_Clamp(value C.float, min C.longlong, max C.longlong) C.float {
@@ -3594,23 +3612,14 @@ func ghetty_Launch(renderCallback *C.PyObject, goRun C.char) {
 	}
 }
 
-//export ghetty_TransformationMatrix
-func ghetty_TransformationMatrix(p CGoHandle, r CGoHandle) CGoHandle {
-	_saved_thread := C.PyEval_SaveThread()
-	defer C.PyEval_RestoreThread(_saved_thread)
-	cret := ghetty.TransformationMatrix(deptrFromHandle_ghetty_Vertex(p), deptrFromHandle_ghetty_Vertex(r))
-
-	return handleFromPtr_ghetty_Matrix(&cret)
-}
-
-//export ghetty_BasicVertex
-func ghetty_BasicVertex(vertex CGoHandle, uv CGoHandle, normal CGoHandle, color CGoHandle, matrices CGoHandle, goRun C.char) {
+//export ghetty_BuildAndProcess
+func ghetty_BuildAndProcess(triangle CGoHandle, tiles CGoHandle, goRun C.char) {
 	_saved_thread := C.PyEval_SaveThread()
 	defer C.PyEval_RestoreThread(_saved_thread)
 	if boolPyToGo(goRun) {
-		go ghetty.BasicVertex(ptrFromHandle_Ptr_ghetty_Vertex(vertex), ptrFromHandle_Ptr_ghetty_Vertex(uv), ptrFromHandle_Ptr_ghetty_Vertex(normal), ptrFromHandle_Ptr_ghetty_Vertex(color), deptrFromHandle_Slice_Ptr_ghetty_Matrix(matrices)...)
+		go ghetty.BuildAndProcess(ptrFromHandle_Ptr_ghetty_Triangle(triangle), ptrFromHandle_Ptr_Slice_Slice_ghetty_Tile(tiles))
 	} else {
-		ghetty.BasicVertex(ptrFromHandle_Ptr_ghetty_Vertex(vertex), ptrFromHandle_Ptr_ghetty_Vertex(uv), ptrFromHandle_Ptr_ghetty_Vertex(normal), ptrFromHandle_Ptr_ghetty_Vertex(color), deptrFromHandle_Slice_Ptr_ghetty_Matrix(matrices)...)
+		ghetty.BuildAndProcess(ptrFromHandle_Ptr_ghetty_Triangle(triangle), ptrFromHandle_Ptr_Slice_Slice_ghetty_Tile(tiles))
 	}
 }
 
@@ -3630,4 +3639,24 @@ func ghetty_ProjectionMatrix() CGoHandle {
 	cret := ghetty.ProjectionMatrix()
 
 	return handleFromPtr_ghetty_Matrix(&cret)
+}
+
+//export ghetty_TransformationMatrix
+func ghetty_TransformationMatrix(p CGoHandle, r CGoHandle) CGoHandle {
+	_saved_thread := C.PyEval_SaveThread()
+	defer C.PyEval_RestoreThread(_saved_thread)
+	cret := ghetty.TransformationMatrix(deptrFromHandle_ghetty_Vertex(p), deptrFromHandle_ghetty_Vertex(r))
+
+	return handleFromPtr_ghetty_Matrix(&cret)
+}
+
+//export ghetty_BasicVertex
+func ghetty_BasicVertex(vertex CGoHandle, uv CGoHandle, normal CGoHandle, color CGoHandle, matrices CGoHandle, goRun C.char) {
+	_saved_thread := C.PyEval_SaveThread()
+	defer C.PyEval_RestoreThread(_saved_thread)
+	if boolPyToGo(goRun) {
+		go ghetty.BasicVertex(ptrFromHandle_Ptr_ghetty_Vertex(vertex), ptrFromHandle_Ptr_ghetty_Vertex(uv), ptrFromHandle_Ptr_ghetty_Vertex(normal), ptrFromHandle_Ptr_ghetty_Vertex(color), deptrFromHandle_Slice_Ptr_ghetty_Matrix(matrices)...)
+	} else {
+		ghetty.BasicVertex(ptrFromHandle_Ptr_ghetty_Vertex(vertex), ptrFromHandle_Ptr_ghetty_Vertex(uv), ptrFromHandle_Ptr_ghetty_Vertex(normal), ptrFromHandle_Ptr_ghetty_Vertex(color), deptrFromHandle_Slice_Ptr_ghetty_Matrix(matrices)...)
+	}
 }

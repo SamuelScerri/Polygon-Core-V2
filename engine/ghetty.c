@@ -3434,6 +3434,37 @@ PyObject * _wrap__ghetty_ghetty_Set_Projection(PyObject * PYBINDGEN_UNUSED(dummy
 
 
 PyObject *
+_wrap__ghetty_ghetty_Scale(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
+{
+    PyObject *py_retval;
+    int64_t retval;
+
+    retval = ghetty_Scale();
+    py_retval = Py_BuildValue((char *) "L", retval);
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Scale(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs));
+
+
+PyObject *
+_wrap__ghetty_ghetty_Set_Scale(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t val;
+    const char *keywords[] = {"val", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "L", (char **) keywords, &val)) {
+        return NULL;
+    }
+    ghetty_Set_Scale(val);
+    Py_INCREF(Py_None);
+    py_retval = Py_None;
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Set_Scale(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
 _wrap__ghetty_ghetty_Scene(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
 {
     PyObject *py_retval;
@@ -3651,6 +3682,37 @@ PyObject * _wrap__ghetty_ghetty_Set_UpscaledBuffer(PyObject * PYBINDGEN_UNUSED(d
 
 
 PyObject *
+_wrap__ghetty_ghetty_Upscaler(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
+{
+    PyObject *py_retval;
+    char *retval;
+
+    retval = ghetty_Upscaler();
+    py_retval = Py_BuildValue((char *) "s", retval);
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Upscaler(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs));
+
+
+PyObject *
+_wrap__ghetty_ghetty_Set_Upscaler(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    char *val;
+    const char *keywords[] = {"val", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "s", (char **) keywords, &val)) {
+        return NULL;
+    }
+    ghetty_Set_Upscaler(val);
+    Py_INCREF(Py_None);
+    py_retval = Py_None;
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Set_Upscaler(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
 _wrap__ghetty_ghetty_WaitGroup(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
 {
     PyObject *py_retval;
@@ -3679,240 +3741,6 @@ _wrap__ghetty_ghetty_Set_WaitGroup(PyObject * PYBINDGEN_UNUSED(dummy), PyObject 
     return py_retval;
 }
 PyObject * _wrap__ghetty_ghetty_Set_WaitGroup(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
-_wrap__ghetty_ghetty_Game_CTor(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
-{
-    PyObject *py_retval;
-    int64_t retval;
-
-    retval = ghetty_Game_CTor();
-    py_retval = Py_BuildValue((char *) "L", retval);
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_Game_CTor(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs));
-
-
-PyObject *
-_wrap__ghetty_ghetty_Game_Update(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    char *retval;
-    int64_t _handle;
-    const char *keywords[] = {"_handle", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "L", (char **) keywords, &_handle)) {
-        return NULL;
-    }
-    retval = ghetty_Game_Update(_handle);
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-    py_retval = Py_BuildValue((char *) "s", retval);
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_Game_Update(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
-_wrap__ghetty_ghetty_Game_Draw(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    int64_t _handle;
-    int64_t screen;
-    bool goRun;
-    PyObject *py_goRun;
-    const char *keywords[] = {"_handle", "screen", "goRun", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LLO", (char **) keywords, &_handle, &screen, &py_goRun)) {
-        return NULL;
-    }
-    goRun = (bool) PyObject_IsTrue(py_goRun);
-    ghetty_Game_Draw(_handle, screen, goRun);
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-    Py_INCREF(Py_None);
-    py_retval = Py_None;
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_Game_Draw(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
-_wrap__ghetty_ghetty_Logger_CTor(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
-{
-    PyObject *py_retval;
-    int64_t retval;
-
-    retval = ghetty_Logger_CTor();
-    py_retval = Py_BuildValue((char *) "L", retval);
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_Logger_CTor(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs));
-
-
-PyObject *
-_wrap__ghetty_ghetty_Logger_File_Get(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    int64_t retval;
-    int64_t handle;
-    const char *keywords[] = {"handle", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "L", (char **) keywords, &handle)) {
-        return NULL;
-    }
-    retval = ghetty_Logger_File_Get(handle);
-    py_retval = Py_BuildValue((char *) "L", retval);
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_Logger_File_Get(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
-_wrap__ghetty_ghetty_Logger_File_Set(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    int64_t handle;
-    int64_t val;
-    const char *keywords[] = {"handle", "val", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LL", (char **) keywords, &handle, &val)) {
-        return NULL;
-    }
-    ghetty_Logger_File_Set(handle, val);
-    Py_INCREF(Py_None);
-    py_retval = Py_None;
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_Logger_File_Set(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
-_wrap__ghetty_ghetty_Logger_CurrentFPS_Get(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    double retval;
-    int64_t handle;
-    const char *keywords[] = {"handle", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "L", (char **) keywords, &handle)) {
-        return NULL;
-    }
-    retval = ghetty_Logger_CurrentFPS_Get(handle);
-    py_retval = Py_BuildValue((char *) "d", retval);
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_Logger_CurrentFPS_Get(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
-_wrap__ghetty_ghetty_Logger_CurrentFPS_Set(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    int64_t handle;
-    double val;
-    const char *keywords[] = {"handle", "val", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "Ld", (char **) keywords, &handle, &val)) {
-        return NULL;
-    }
-    ghetty_Logger_CurrentFPS_Set(handle, val);
-    Py_INCREF(Py_None);
-    py_retval = Py_None;
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_Logger_CurrentFPS_Set(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
-_wrap__ghetty_ghetty_Logger_ShouldWrite_Get(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    bool retval;
-    int64_t handle;
-    const char *keywords[] = {"handle", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "L", (char **) keywords, &handle)) {
-        return NULL;
-    }
-    retval = ghetty_Logger_ShouldWrite_Get(handle);
-    py_retval = Py_BuildValue((char *) "N", PyBool_FromLong(retval));
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_Logger_ShouldWrite_Get(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
-_wrap__ghetty_ghetty_Logger_ShouldWrite_Set(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    int64_t handle;
-    bool val;
-    PyObject *py_val;
-    const char *keywords[] = {"handle", "val", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LO", (char **) keywords, &handle, &py_val)) {
-        return NULL;
-    }
-    val = (bool) PyObject_IsTrue(py_val);
-    ghetty_Logger_ShouldWrite_Set(handle, val);
-    Py_INCREF(Py_None);
-    py_retval = Py_None;
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_Logger_ShouldWrite_Set(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
-_wrap__ghetty_ghetty_Logger_Log(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    int64_t _handle;
-    double framerate;
-    bool goRun;
-    PyObject *py_goRun;
-    const char *keywords[] = {"_handle", "framerate", "goRun", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LdO", (char **) keywords, &_handle, &framerate, &py_goRun)) {
-        return NULL;
-    }
-    goRun = (bool) PyObject_IsTrue(py_goRun);
-    ghetty_Logger_Log(_handle, framerate, goRun);
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-    Py_INCREF(Py_None);
-    py_retval = Py_None;
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_Logger_Log(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
-_wrap__ghetty_ghetty_Logger_Close(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    int64_t _handle;
-    bool goRun;
-    PyObject *py_goRun;
-    const char *keywords[] = {"_handle", "goRun", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LO", (char **) keywords, &_handle, &py_goRun)) {
-        return NULL;
-    }
-    goRun = (bool) PyObject_IsTrue(py_goRun);
-    ghetty_Logger_Close(_handle, goRun);
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-    Py_INCREF(Py_None);
-    py_retval = Py_None;
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_Logger_Close(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
 
 
 PyObject *
@@ -5057,6 +4885,240 @@ PyObject * _wrap__ghetty_ghetty_Triangle_Copy(PyObject * PYBINDGEN_UNUSED(dummy)
 
 
 PyObject *
+_wrap__ghetty_ghetty_Game_CTor(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
+{
+    PyObject *py_retval;
+    int64_t retval;
+
+    retval = ghetty_Game_CTor();
+    py_retval = Py_BuildValue((char *) "L", retval);
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Game_CTor(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs));
+
+
+PyObject *
+_wrap__ghetty_ghetty_Game_Update(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    char *retval;
+    int64_t _handle;
+    const char *keywords[] = {"_handle", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "L", (char **) keywords, &_handle)) {
+        return NULL;
+    }
+    retval = ghetty_Game_Update(_handle);
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+    py_retval = Py_BuildValue((char *) "s", retval);
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Game_Update(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_Game_Draw(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t _handle;
+    int64_t screen;
+    bool goRun;
+    PyObject *py_goRun;
+    const char *keywords[] = {"_handle", "screen", "goRun", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LLO", (char **) keywords, &_handle, &screen, &py_goRun)) {
+        return NULL;
+    }
+    goRun = (bool) PyObject_IsTrue(py_goRun);
+    ghetty_Game_Draw(_handle, screen, goRun);
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+    Py_INCREF(Py_None);
+    py_retval = Py_None;
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Game_Draw(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_Logger_CTor(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
+{
+    PyObject *py_retval;
+    int64_t retval;
+
+    retval = ghetty_Logger_CTor();
+    py_retval = Py_BuildValue((char *) "L", retval);
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Logger_CTor(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs));
+
+
+PyObject *
+_wrap__ghetty_ghetty_Logger_File_Get(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t retval;
+    int64_t handle;
+    const char *keywords[] = {"handle", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "L", (char **) keywords, &handle)) {
+        return NULL;
+    }
+    retval = ghetty_Logger_File_Get(handle);
+    py_retval = Py_BuildValue((char *) "L", retval);
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Logger_File_Get(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_Logger_File_Set(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t handle;
+    int64_t val;
+    const char *keywords[] = {"handle", "val", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LL", (char **) keywords, &handle, &val)) {
+        return NULL;
+    }
+    ghetty_Logger_File_Set(handle, val);
+    Py_INCREF(Py_None);
+    py_retval = Py_None;
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Logger_File_Set(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_Logger_CurrentFPS_Get(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    double retval;
+    int64_t handle;
+    const char *keywords[] = {"handle", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "L", (char **) keywords, &handle)) {
+        return NULL;
+    }
+    retval = ghetty_Logger_CurrentFPS_Get(handle);
+    py_retval = Py_BuildValue((char *) "d", retval);
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Logger_CurrentFPS_Get(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_Logger_CurrentFPS_Set(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t handle;
+    double val;
+    const char *keywords[] = {"handle", "val", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "Ld", (char **) keywords, &handle, &val)) {
+        return NULL;
+    }
+    ghetty_Logger_CurrentFPS_Set(handle, val);
+    Py_INCREF(Py_None);
+    py_retval = Py_None;
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Logger_CurrentFPS_Set(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_Logger_ShouldWrite_Get(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    bool retval;
+    int64_t handle;
+    const char *keywords[] = {"handle", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "L", (char **) keywords, &handle)) {
+        return NULL;
+    }
+    retval = ghetty_Logger_ShouldWrite_Get(handle);
+    py_retval = Py_BuildValue((char *) "N", PyBool_FromLong(retval));
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Logger_ShouldWrite_Get(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_Logger_ShouldWrite_Set(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t handle;
+    bool val;
+    PyObject *py_val;
+    const char *keywords[] = {"handle", "val", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LO", (char **) keywords, &handle, &py_val)) {
+        return NULL;
+    }
+    val = (bool) PyObject_IsTrue(py_val);
+    ghetty_Logger_ShouldWrite_Set(handle, val);
+    Py_INCREF(Py_None);
+    py_retval = Py_None;
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Logger_ShouldWrite_Set(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_Logger_Log(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t _handle;
+    double framerate;
+    bool goRun;
+    PyObject *py_goRun;
+    const char *keywords[] = {"_handle", "framerate", "goRun", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LdO", (char **) keywords, &_handle, &framerate, &py_goRun)) {
+        return NULL;
+    }
+    goRun = (bool) PyObject_IsTrue(py_goRun);
+    ghetty_Logger_Log(_handle, framerate, goRun);
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+    Py_INCREF(Py_None);
+    py_retval = Py_None;
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Logger_Log(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_Logger_Close(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t _handle;
+    bool goRun;
+    PyObject *py_goRun;
+    const char *keywords[] = {"_handle", "goRun", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LO", (char **) keywords, &_handle, &py_goRun)) {
+        return NULL;
+    }
+    goRun = (bool) PyObject_IsTrue(py_goRun);
+    ghetty_Logger_Close(_handle, goRun);
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+    Py_INCREF(Py_None);
+    py_retval = Py_None;
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_Logger_Close(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
 _wrap__ghetty_ghetty_Matrix_CTor(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
 {
     PyObject *py_retval;
@@ -5755,27 +5817,6 @@ PyObject * _wrap__ghetty_ghetty_Vertex_Copy(PyObject * PYBINDGEN_UNUSED(dummy), 
 
 
 PyObject *
-_wrap__ghetty_ghetty_NewLogger(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    int64_t retval;
-    char *directory;
-    const char *keywords[] = {"directory", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "s", (char **) keywords, &directory)) {
-        return NULL;
-    }
-    retval = ghetty_NewLogger(directory);
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-    py_retval = Py_BuildValue((char *) "L", retval);
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_NewLogger(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
 _wrap__ghetty_ghetty_Process(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
 {
     PyObject *py_retval;
@@ -5818,28 +5859,45 @@ PyObject * _wrap__ghetty_ghetty_LoadTexture(PyObject * PYBINDGEN_UNUSED(dummy), 
 
 
 PyObject *
-_wrap__ghetty_ghetty_BuildAndProcess(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+_wrap__ghetty_ghetty_NewLogger(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
 {
     PyObject *py_retval;
-    int64_t triangle;
-    int64_t tiles;
-    bool goRun;
-    PyObject *py_goRun;
-    const char *keywords[] = {"triangle", "tiles", "goRun", NULL};
+    int64_t retval;
+    char *directory;
+    const char *keywords[] = {"directory", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LLO", (char **) keywords, &triangle, &tiles, &py_goRun)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "s", (char **) keywords, &directory)) {
         return NULL;
     }
-    goRun = (bool) PyObject_IsTrue(py_goRun);
-    ghetty_BuildAndProcess(triangle, tiles, goRun);
+    retval = ghetty_NewLogger(directory);
     if (PyErr_Occurred()) {
         return NULL;
     }
-    Py_INCREF(Py_None);
-    py_retval = Py_None;
+    py_retval = Py_BuildValue((char *) "L", retval);
     return py_retval;
 }
-PyObject * _wrap__ghetty_ghetty_BuildAndProcess(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+PyObject * _wrap__ghetty_ghetty_NewLogger(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_NewLoggerCNN(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t retval;
+    char *directory;
+    const char *keywords[] = {"directory", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "s", (char **) keywords, &directory)) {
+        return NULL;
+    }
+    retval = ghetty_NewLoggerCNN(directory);
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+    py_retval = Py_BuildValue((char *) "L", retval);
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_NewLoggerCNN(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
 
 
 PyObject *
@@ -5890,6 +5948,68 @@ PyObject * _wrap__ghetty_ghetty_Launch(PyObject * PYBINDGEN_UNUSED(dummy), PyObj
 
 
 PyObject *
+_wrap__ghetty_ghetty_BuildAndProcess(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t triangle;
+    int64_t tiles;
+    bool goRun;
+    PyObject *py_goRun;
+    const char *keywords[] = {"triangle", "tiles", "goRun", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "LLO", (char **) keywords, &triangle, &tiles, &py_goRun)) {
+        return NULL;
+    }
+    goRun = (bool) PyObject_IsTrue(py_goRun);
+    ghetty_BuildAndProcess(triangle, tiles, goRun);
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+    Py_INCREF(Py_None);
+    py_retval = Py_None;
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_BuildAndProcess(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_LoadModel(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
+{
+    PyObject *py_retval;
+    int64_t retval;
+    char *directory;
+    const char *keywords[] = {"directory", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "s", (char **) keywords, &directory)) {
+        return NULL;
+    }
+    retval = ghetty_LoadModel(directory);
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+    py_retval = Py_BuildValue((char *) "L", retval);
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_LoadModel(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
+
+
+PyObject *
+_wrap__ghetty_ghetty_ProjectionMatrix(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
+{
+    PyObject *py_retval;
+    int64_t retval;
+
+    retval = ghetty_ProjectionMatrix();
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+    py_retval = Py_BuildValue((char *) "L", retval);
+    return py_retval;
+}
+PyObject * _wrap__ghetty_ghetty_ProjectionMatrix(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs));
+
+
+PyObject *
 _wrap__ghetty_ghetty_TransformationMatrix(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
 {
     PyObject *py_retval;
@@ -5937,43 +6057,6 @@ _wrap__ghetty_ghetty_BasicVertex(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *a
     return py_retval;
 }
 PyObject * _wrap__ghetty_ghetty_BasicVertex(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
-_wrap__ghetty_ghetty_LoadModel(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs)
-{
-    PyObject *py_retval;
-    int64_t retval;
-    char *directory;
-    const char *keywords[] = {"directory", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, (char *) "s", (char **) keywords, &directory)) {
-        return NULL;
-    }
-    retval = ghetty_LoadModel(directory);
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-    py_retval = Py_BuildValue((char *) "L", retval);
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_LoadModel(PyObject * PYBINDGEN_UNUSED(dummy), PyObject *args, PyObject *kwargs);
-
-
-PyObject *
-_wrap__ghetty_ghetty_ProjectionMatrix(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs))
-{
-    PyObject *py_retval;
-    int64_t retval;
-
-    retval = ghetty_ProjectionMatrix();
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-    py_retval = Py_BuildValue((char *) "L", retval);
-    return py_retval;
-}
-PyObject * _wrap__ghetty_ghetty_ProjectionMatrix(PyObject *PYBINDGEN_UNUSED(_args), PyObject *PYBINDGEN_UNUSED(_kwargs));
 
 static PyMethodDef _ghetty_functions[] = {
     {(char *) "GoPyInit", (PyCFunction) _wrap__ghetty_GoPyInit, METH_NOARGS, "GoPyInit()\n\n" },
@@ -6165,6 +6248,8 @@ static PyMethodDef _ghetty_functions[] = {
     {(char *) "ghetty_Set_Position", (PyCFunction) _wrap__ghetty_ghetty_Set_Position, METH_KEYWORDS|METH_VARARGS, "ghetty_Set_Position(val)\n\ntype: val: int64_t" },
     {(char *) "ghetty_Projection", (PyCFunction) _wrap__ghetty_ghetty_Projection, METH_NOARGS, "ghetty_Projection()\n\n" },
     {(char *) "ghetty_Set_Projection", (PyCFunction) _wrap__ghetty_ghetty_Set_Projection, METH_KEYWORDS|METH_VARARGS, "ghetty_Set_Projection(val)\n\ntype: val: int64_t" },
+    {(char *) "ghetty_Scale", (PyCFunction) _wrap__ghetty_ghetty_Scale, METH_NOARGS, "ghetty_Scale()\n\n" },
+    {(char *) "ghetty_Set_Scale", (PyCFunction) _wrap__ghetty_ghetty_Set_Scale, METH_KEYWORDS|METH_VARARGS, "ghetty_Set_Scale(val)\n\ntype: val: int64_t" },
     {(char *) "ghetty_Scene", (PyCFunction) _wrap__ghetty_ghetty_Scene, METH_NOARGS, "ghetty_Scene()\n\n" },
     {(char *) "ghetty_Set_Scene", (PyCFunction) _wrap__ghetty_ghetty_Set_Scene, METH_KEYWORDS|METH_VARARGS, "ghetty_Set_Scene(val)\n\ntype: val: int64_t" },
     {(char *) "ghetty_TileXSize", (PyCFunction) _wrap__ghetty_ghetty_TileXSize, METH_NOARGS, "ghetty_TileXSize()\n\n" },
@@ -6179,20 +6264,10 @@ static PyMethodDef _ghetty_functions[] = {
     {(char *) "ghetty_Set_Triangles", (PyCFunction) _wrap__ghetty_ghetty_Set_Triangles, METH_KEYWORDS|METH_VARARGS, "ghetty_Set_Triangles(val)\n\ntype: val: int64_t" },
     {(char *) "ghetty_UpscaledBuffer", (PyCFunction) _wrap__ghetty_ghetty_UpscaledBuffer, METH_NOARGS, "ghetty_UpscaledBuffer()\n\n" },
     {(char *) "ghetty_Set_UpscaledBuffer", (PyCFunction) _wrap__ghetty_ghetty_Set_UpscaledBuffer, METH_KEYWORDS|METH_VARARGS, "ghetty_Set_UpscaledBuffer(val)\n\ntype: val: int64_t" },
+    {(char *) "ghetty_Upscaler", (PyCFunction) _wrap__ghetty_ghetty_Upscaler, METH_NOARGS, "ghetty_Upscaler()\n\n" },
+    {(char *) "ghetty_Set_Upscaler", (PyCFunction) _wrap__ghetty_ghetty_Set_Upscaler, METH_KEYWORDS|METH_VARARGS, "ghetty_Set_Upscaler(val)\n\ntype: val: char *" },
     {(char *) "ghetty_WaitGroup", (PyCFunction) _wrap__ghetty_ghetty_WaitGroup, METH_NOARGS, "ghetty_WaitGroup()\n\n" },
     {(char *) "ghetty_Set_WaitGroup", (PyCFunction) _wrap__ghetty_ghetty_Set_WaitGroup, METH_KEYWORDS|METH_VARARGS, "ghetty_Set_WaitGroup(val)\n\ntype: val: int64_t" },
-    {(char *) "ghetty_Game_CTor", (PyCFunction) _wrap__ghetty_ghetty_Game_CTor, METH_NOARGS, "ghetty_Game_CTor()\n\n" },
-    {(char *) "ghetty_Game_Update", (PyCFunction) _wrap__ghetty_ghetty_Game_Update, METH_KEYWORDS|METH_VARARGS, "ghetty_Game_Update(_handle)\n\ntype: _handle: int64_t" },
-    {(char *) "ghetty_Game_Draw", (PyCFunction) _wrap__ghetty_ghetty_Game_Draw, METH_KEYWORDS|METH_VARARGS, "ghetty_Game_Draw(_handle, screen, goRun)\n\ntype: _handle: int64_t\ntype: screen: int64_t\ntype: goRun: bool" },
-    {(char *) "ghetty_Logger_CTor", (PyCFunction) _wrap__ghetty_ghetty_Logger_CTor, METH_NOARGS, "ghetty_Logger_CTor()\n\n" },
-    {(char *) "ghetty_Logger_File_Get", (PyCFunction) _wrap__ghetty_ghetty_Logger_File_Get, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_File_Get(handle)\n\ntype: handle: int64_t" },
-    {(char *) "ghetty_Logger_File_Set", (PyCFunction) _wrap__ghetty_ghetty_Logger_File_Set, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_File_Set(handle, val)\n\ntype: handle: int64_t\ntype: val: int64_t" },
-    {(char *) "ghetty_Logger_CurrentFPS_Get", (PyCFunction) _wrap__ghetty_ghetty_Logger_CurrentFPS_Get, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_CurrentFPS_Get(handle)\n\ntype: handle: int64_t" },
-    {(char *) "ghetty_Logger_CurrentFPS_Set", (PyCFunction) _wrap__ghetty_ghetty_Logger_CurrentFPS_Set, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_CurrentFPS_Set(handle, val)\n\ntype: handle: int64_t\ntype: val: double" },
-    {(char *) "ghetty_Logger_ShouldWrite_Get", (PyCFunction) _wrap__ghetty_ghetty_Logger_ShouldWrite_Get, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_ShouldWrite_Get(handle)\n\ntype: handle: int64_t" },
-    {(char *) "ghetty_Logger_ShouldWrite_Set", (PyCFunction) _wrap__ghetty_ghetty_Logger_ShouldWrite_Set, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_ShouldWrite_Set(handle, val)\n\ntype: handle: int64_t\ntype: val: bool" },
-    {(char *) "ghetty_Logger_Log", (PyCFunction) _wrap__ghetty_ghetty_Logger_Log, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_Log(_handle, framerate, goRun)\n\ntype: _handle: int64_t\ntype: framerate: double\ntype: goRun: bool" },
-    {(char *) "ghetty_Logger_Close", (PyCFunction) _wrap__ghetty_ghetty_Logger_Close, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_Close(_handle, goRun)\n\ntype: _handle: int64_t\ntype: goRun: bool" },
     {(char *) "ghetty_ProcessedTriangle_CTor", (PyCFunction) _wrap__ghetty_ghetty_ProcessedTriangle_CTor, METH_NOARGS, "ghetty_ProcessedTriangle_CTor()\n\n" },
     {(char *) "ghetty_ProcessedTriangle_Triangle_Get", (PyCFunction) _wrap__ghetty_ghetty_ProcessedTriangle_Triangle_Get, METH_KEYWORDS|METH_VARARGS, "ghetty_ProcessedTriangle_Triangle_Get(handle)\n\ntype: handle: int64_t" },
     {(char *) "ghetty_ProcessedTriangle_Triangle_Set", (PyCFunction) _wrap__ghetty_ghetty_ProcessedTriangle_Triangle_Set, METH_KEYWORDS|METH_VARARGS, "ghetty_ProcessedTriangle_Triangle_Set(handle, val)\n\ntype: handle: int64_t\ntype: val: int64_t" },
@@ -6250,6 +6325,18 @@ static PyMethodDef _ghetty_functions[] = {
     {(char *) "ghetty_Triangle_Sort", (PyCFunction) _wrap__ghetty_ghetty_Triangle_Sort, METH_KEYWORDS|METH_VARARGS, "ghetty_Triangle_Sort(_handle, goRun)\n\ntype: _handle: int64_t\ntype: goRun: bool" },
     {(char *) "ghetty_Triangle_Bounds", (PyCFunction) _wrap__ghetty_ghetty_Triangle_Bounds, METH_KEYWORDS|METH_VARARGS, "ghetty_Triangle_Bounds(_handle)\n\ntype: _handle: int64_t" },
     {(char *) "ghetty_Triangle_Copy", (PyCFunction) _wrap__ghetty_ghetty_Triangle_Copy, METH_KEYWORDS|METH_VARARGS, "ghetty_Triangle_Copy(_handle)\n\ntype: _handle: int64_t" },
+    {(char *) "ghetty_Game_CTor", (PyCFunction) _wrap__ghetty_ghetty_Game_CTor, METH_NOARGS, "ghetty_Game_CTor()\n\n" },
+    {(char *) "ghetty_Game_Update", (PyCFunction) _wrap__ghetty_ghetty_Game_Update, METH_KEYWORDS|METH_VARARGS, "ghetty_Game_Update(_handle)\n\ntype: _handle: int64_t" },
+    {(char *) "ghetty_Game_Draw", (PyCFunction) _wrap__ghetty_ghetty_Game_Draw, METH_KEYWORDS|METH_VARARGS, "ghetty_Game_Draw(_handle, screen, goRun)\n\ntype: _handle: int64_t\ntype: screen: int64_t\ntype: goRun: bool" },
+    {(char *) "ghetty_Logger_CTor", (PyCFunction) _wrap__ghetty_ghetty_Logger_CTor, METH_NOARGS, "ghetty_Logger_CTor()\n\n" },
+    {(char *) "ghetty_Logger_File_Get", (PyCFunction) _wrap__ghetty_ghetty_Logger_File_Get, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_File_Get(handle)\n\ntype: handle: int64_t" },
+    {(char *) "ghetty_Logger_File_Set", (PyCFunction) _wrap__ghetty_ghetty_Logger_File_Set, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_File_Set(handle, val)\n\ntype: handle: int64_t\ntype: val: int64_t" },
+    {(char *) "ghetty_Logger_CurrentFPS_Get", (PyCFunction) _wrap__ghetty_ghetty_Logger_CurrentFPS_Get, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_CurrentFPS_Get(handle)\n\ntype: handle: int64_t" },
+    {(char *) "ghetty_Logger_CurrentFPS_Set", (PyCFunction) _wrap__ghetty_ghetty_Logger_CurrentFPS_Set, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_CurrentFPS_Set(handle, val)\n\ntype: handle: int64_t\ntype: val: double" },
+    {(char *) "ghetty_Logger_ShouldWrite_Get", (PyCFunction) _wrap__ghetty_ghetty_Logger_ShouldWrite_Get, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_ShouldWrite_Get(handle)\n\ntype: handle: int64_t" },
+    {(char *) "ghetty_Logger_ShouldWrite_Set", (PyCFunction) _wrap__ghetty_ghetty_Logger_ShouldWrite_Set, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_ShouldWrite_Set(handle, val)\n\ntype: handle: int64_t\ntype: val: bool" },
+    {(char *) "ghetty_Logger_Log", (PyCFunction) _wrap__ghetty_ghetty_Logger_Log, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_Log(_handle, framerate, goRun)\n\ntype: _handle: int64_t\ntype: framerate: double\ntype: goRun: bool" },
+    {(char *) "ghetty_Logger_Close", (PyCFunction) _wrap__ghetty_ghetty_Logger_Close, METH_KEYWORDS|METH_VARARGS, "ghetty_Logger_Close(_handle, goRun)\n\ntype: _handle: int64_t\ntype: goRun: bool" },
     {(char *) "ghetty_Matrix_CTor", (PyCFunction) _wrap__ghetty_ghetty_Matrix_CTor, METH_NOARGS, "ghetty_Matrix_CTor()\n\n" },
     {(char *) "ghetty_Matrix_len", (PyCFunction) _wrap__ghetty_ghetty_Matrix_len, METH_KEYWORDS|METH_VARARGS, "ghetty_Matrix_len(handle)\n\ntype: handle: int64_t" },
     {(char *) "ghetty_Matrix_elem", (PyCFunction) _wrap__ghetty_ghetty_Matrix_elem, METH_KEYWORDS|METH_VARARGS, "ghetty_Matrix_elem(handle, idx)\n\ntype: handle: int64_t\ntype: idx: int" },
@@ -6284,16 +6371,17 @@ static PyMethodDef _ghetty_functions[] = {
     {(char *) "ghetty_Vertex_Matrix", (PyCFunction) _wrap__ghetty_ghetty_Vertex_Matrix, METH_KEYWORDS|METH_VARARGS, "ghetty_Vertex_Matrix(_handle)\n\ntype: _handle: int64_t" },
     {(char *) "ghetty_Vertex_Swap", (PyCFunction) _wrap__ghetty_ghetty_Vertex_Swap, METH_KEYWORDS|METH_VARARGS, "ghetty_Vertex_Swap(_handle, v2, goRun)\n\ntype: _handle: int64_t\ntype: v2: int64_t\ntype: goRun: bool" },
     {(char *) "ghetty_Vertex_Copy", (PyCFunction) _wrap__ghetty_ghetty_Vertex_Copy, METH_KEYWORDS|METH_VARARGS, "ghetty_Vertex_Copy(_handle)\n\ntype: _handle: int64_t" },
-    {(char *) "ghetty_NewLogger", (PyCFunction) _wrap__ghetty_ghetty_NewLogger, METH_KEYWORDS|METH_VARARGS, "ghetty_NewLogger(directory)\n\ntype: directory: char *" },
     {(char *) "ghetty_Process", (PyCFunction) _wrap__ghetty_ghetty_Process, METH_KEYWORDS|METH_VARARGS, "ghetty_Process(triangle)\n\ntype: triangle: int64_t" },
     {(char *) "ghetty_LoadTexture", (PyCFunction) _wrap__ghetty_ghetty_LoadTexture, METH_KEYWORDS|METH_VARARGS, "ghetty_LoadTexture(directory)\n\ntype: directory: char *" },
-    {(char *) "ghetty_BuildAndProcess", (PyCFunction) _wrap__ghetty_ghetty_BuildAndProcess, METH_KEYWORDS|METH_VARARGS, "ghetty_BuildAndProcess(triangle, tiles, goRun)\n\ntype: triangle: int64_t\ntype: tiles: int64_t\ntype: goRun: bool" },
+    {(char *) "ghetty_NewLogger", (PyCFunction) _wrap__ghetty_ghetty_NewLogger, METH_KEYWORDS|METH_VARARGS, "ghetty_NewLogger(directory)\n\ntype: directory: char *" },
+    {(char *) "ghetty_NewLoggerCNN", (PyCFunction) _wrap__ghetty_ghetty_NewLoggerCNN, METH_KEYWORDS|METH_VARARGS, "ghetty_NewLoggerCNN(directory)\n\ntype: directory: char *" },
     {(char *) "ghetty_Clamp", (PyCFunction) _wrap__ghetty_ghetty_Clamp, METH_KEYWORDS|METH_VARARGS, "ghetty_Clamp(value, min, max)\n\ntype: value: float\ntype: min: int64_t\ntype: max: int64_t" },
     {(char *) "ghetty_Launch", (PyCFunction) _wrap__ghetty_ghetty_Launch, METH_KEYWORDS|METH_VARARGS, "ghetty_Launch(renderCallback, goRun)\n\ntype: renderCallback: PyObject *\ntype: goRun: bool" },
-    {(char *) "ghetty_TransformationMatrix", (PyCFunction) _wrap__ghetty_ghetty_TransformationMatrix, METH_KEYWORDS|METH_VARARGS, "ghetty_TransformationMatrix(p, r)\n\ntype: p: int64_t\ntype: r: int64_t" },
-    {(char *) "ghetty_BasicVertex", (PyCFunction) _wrap__ghetty_ghetty_BasicVertex, METH_KEYWORDS|METH_VARARGS, "ghetty_BasicVertex(vertex, uv, normal, color, matrices, goRun)\n\ntype: vertex: int64_t\ntype: uv: int64_t\ntype: normal: int64_t\ntype: color: int64_t\ntype: matrices: int64_t\ntype: goRun: bool" },
+    {(char *) "ghetty_BuildAndProcess", (PyCFunction) _wrap__ghetty_ghetty_BuildAndProcess, METH_KEYWORDS|METH_VARARGS, "ghetty_BuildAndProcess(triangle, tiles, goRun)\n\ntype: triangle: int64_t\ntype: tiles: int64_t\ntype: goRun: bool" },
     {(char *) "ghetty_LoadModel", (PyCFunction) _wrap__ghetty_ghetty_LoadModel, METH_KEYWORDS|METH_VARARGS, "ghetty_LoadModel(directory)\n\ntype: directory: char *" },
     {(char *) "ghetty_ProjectionMatrix", (PyCFunction) _wrap__ghetty_ghetty_ProjectionMatrix, METH_NOARGS, "ghetty_ProjectionMatrix()\n\n" },
+    {(char *) "ghetty_TransformationMatrix", (PyCFunction) _wrap__ghetty_ghetty_TransformationMatrix, METH_KEYWORDS|METH_VARARGS, "ghetty_TransformationMatrix(p, r)\n\ntype: p: int64_t\ntype: r: int64_t" },
+    {(char *) "ghetty_BasicVertex", (PyCFunction) _wrap__ghetty_ghetty_BasicVertex, METH_KEYWORDS|METH_VARARGS, "ghetty_BasicVertex(vertex, uv, normal, color, matrices, goRun)\n\ntype: vertex: int64_t\ntype: uv: int64_t\ntype: normal: int64_t\ntype: color: int64_t\ntype: matrices: int64_t\ntype: goRun: bool" },
     {NULL, NULL, 0, NULL}
 };
 #if PY_VERSION_HEX >= 0x03000000

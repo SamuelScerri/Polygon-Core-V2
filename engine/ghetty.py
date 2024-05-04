@@ -798,7 +798,6 @@ Height = 90
 Near = 0.1
 R = 0
 RGBToFloat = 0.00392157
-Scale = 4
 SweepLineAlgorithm = 2
 W = 3
 Width = 160
@@ -1033,6 +1032,23 @@ def Set_Projection(value):
 	else:
 		_ghetty.ghetty_Set_Projection(value)
 
+def Scale():
+	"""
+	Scale Gets Go Variable: ghetty.Scale
+	
+	"""
+	return _ghetty.ghetty_Scale()
+
+def Set_Scale(value):
+	"""
+	Set_Scale Sets Go Variable: ghetty.Scale
+	
+	"""
+	if isinstance(value, go.GoClass):
+		_ghetty.ghetty_Set_Scale(value.handle)
+	else:
+		_ghetty.ghetty_Set_Scale(value)
+
 def Scene():
 	"""
 	Scene Gets Go Variable: ghetty.Scene
@@ -1152,6 +1168,23 @@ def Set_UpscaledBuffer(value):
 	else:
 		_ghetty.ghetty_Set_UpscaledBuffer(value)
 
+def Upscaler():
+	"""
+	Upscaler Gets Go Variable: ghetty.Upscaler
+	
+	"""
+	return _ghetty.ghetty_Upscaler()
+
+def Set_Upscaler(value):
+	"""
+	Set_Upscaler Sets Go Variable: ghetty.Upscaler
+	
+	"""
+	if isinstance(value, go.GoClass):
+		_ghetty.ghetty_Set_Upscaler(value.handle)
+	else:
+		_ghetty.ghetty_Set_Upscaler(value)
+
 def WaitGroup():
 	"""
 	WaitGroup Gets Go Variable: ghetty.WaitGroup
@@ -1175,139 +1208,6 @@ def Set_WaitGroup(value):
 
 
 # ---- Structs ---
-
-# Python type for struct ghetty.Game
-class Game(go.GoClass):
-	""""""
-	def __init__(self, *args, **kwargs):
-		"""
-		handle=A Go-side object is always initialized with an explicit handle=arg
-		otherwise parameters can be unnamed in order of field names or named fields
-		in which case a new Go object is constructed first
-		"""
-		if len(kwargs) == 1 and 'handle' in kwargs:
-			self.handle = kwargs['handle']
-			_ghetty.IncRef(self.handle)
-		elif len(args) == 1 and isinstance(args[0], go.GoClass):
-			self.handle = args[0].handle
-			_ghetty.IncRef(self.handle)
-		else:
-			self.handle = _ghetty.ghetty_Game_CTor()
-			_ghetty.IncRef(self.handle)
-	def __del__(self):
-		_ghetty.DecRef(self.handle)
-	def __str__(self):
-		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
-		sv = 'ghetty.Game{'
-		first = True
-		for v in pr:
-			if callable(v[1]):
-				continue
-			if first:
-				first = False
-			else:
-				sv += ', '
-			sv += v[0] + '=' + str(v[1])
-		return sv + '}'
-	def __repr__(self):
-		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
-		sv = 'ghetty.Game ( '
-		for v in pr:
-			if not callable(v[1]):
-				sv += v[0] + '=' + str(v[1]) + ', '
-		return sv + ')'
-	def Update(self):
-		"""Update() str"""
-		return _ghetty.ghetty_Game_Update(self.handle)
-	def Draw(self, screen, goRun=False):
-		"""Draw(object screen) """
-		_ghetty.ghetty_Game_Draw(self.handle, screen.handle, goRun)
-
-# Python type for struct ghetty.Logger
-class Logger(go.GoClass):
-	""""""
-	def __init__(self, *args, **kwargs):
-		"""
-		handle=A Go-side object is always initialized with an explicit handle=arg
-		otherwise parameters can be unnamed in order of field names or named fields
-		in which case a new Go object is constructed first
-		"""
-		if len(kwargs) == 1 and 'handle' in kwargs:
-			self.handle = kwargs['handle']
-			_ghetty.IncRef(self.handle)
-		elif len(args) == 1 and isinstance(args[0], go.GoClass):
-			self.handle = args[0].handle
-			_ghetty.IncRef(self.handle)
-		else:
-			self.handle = _ghetty.ghetty_Logger_CTor()
-			_ghetty.IncRef(self.handle)
-			if  0 < len(args):
-				self.File = args[0]
-			if "File" in kwargs:
-				self.File = kwargs["File"]
-			if  1 < len(args):
-				self.CurrentFPS = args[1]
-			if "CurrentFPS" in kwargs:
-				self.CurrentFPS = kwargs["CurrentFPS"]
-			if  2 < len(args):
-				self.ShouldWrite = args[2]
-			if "ShouldWrite" in kwargs:
-				self.ShouldWrite = kwargs["ShouldWrite"]
-	def __del__(self):
-		_ghetty.DecRef(self.handle)
-	def __str__(self):
-		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
-		sv = 'ghetty.Logger{'
-		first = True
-		for v in pr:
-			if callable(v[1]):
-				continue
-			if first:
-				first = False
-			else:
-				sv += ', '
-			sv += v[0] + '=' + str(v[1])
-		return sv + '}'
-	def __repr__(self):
-		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
-		sv = 'ghetty.Logger ( '
-		for v in pr:
-			if not callable(v[1]):
-				sv += v[0] + '=' + str(v[1]) + ', '
-		return sv + ')'
-	@property
-	def File(self):
-		return go.Ptr_os_File(handle=_ghetty.ghetty_Logger_File_Get(self.handle))
-	@File.setter
-	def File(self, value):
-		if isinstance(value, go.GoClass):
-			_ghetty.ghetty_Logger_File_Set(self.handle, value.handle)
-		else:
-			raise TypeError("supplied argument type {t} is not a go.GoClass".format(t=type(value)))
-	@property
-	def CurrentFPS(self):
-		return _ghetty.ghetty_Logger_CurrentFPS_Get(self.handle)
-	@CurrentFPS.setter
-	def CurrentFPS(self, value):
-		if isinstance(value, go.GoClass):
-			_ghetty.ghetty_Logger_CurrentFPS_Set(self.handle, value.handle)
-		else:
-			_ghetty.ghetty_Logger_CurrentFPS_Set(self.handle, value)
-	@property
-	def ShouldWrite(self):
-		return _ghetty.ghetty_Logger_ShouldWrite_Get(self.handle)
-	@ShouldWrite.setter
-	def ShouldWrite(self, value):
-		if isinstance(value, go.GoClass):
-			_ghetty.ghetty_Logger_ShouldWrite_Set(self.handle, value.handle)
-		else:
-			_ghetty.ghetty_Logger_ShouldWrite_Set(self.handle, value)
-	def Log(self, framerate, goRun=False):
-		"""Log(float framerate) """
-		_ghetty.ghetty_Logger_Log(self.handle, framerate, goRun)
-	def Close(self, goRun=False):
-		"""Close() """
-		_ghetty.ghetty_Logger_Close(self.handle, goRun)
 
 # Python type for struct ghetty.ProcessedTriangle
 class ProcessedTriangle(go.GoClass):
@@ -1798,6 +1698,139 @@ class Triangle(go.GoClass):
 		"""Copy() object copiedTriangle"""
 		return Triangle(handle=_ghetty.ghetty_Triangle_Copy(self.handle))
 
+# Python type for struct ghetty.Game
+class Game(go.GoClass):
+	""""""
+	def __init__(self, *args, **kwargs):
+		"""
+		handle=A Go-side object is always initialized with an explicit handle=arg
+		otherwise parameters can be unnamed in order of field names or named fields
+		in which case a new Go object is constructed first
+		"""
+		if len(kwargs) == 1 and 'handle' in kwargs:
+			self.handle = kwargs['handle']
+			_ghetty.IncRef(self.handle)
+		elif len(args) == 1 and isinstance(args[0], go.GoClass):
+			self.handle = args[0].handle
+			_ghetty.IncRef(self.handle)
+		else:
+			self.handle = _ghetty.ghetty_Game_CTor()
+			_ghetty.IncRef(self.handle)
+	def __del__(self):
+		_ghetty.DecRef(self.handle)
+	def __str__(self):
+		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
+		sv = 'ghetty.Game{'
+		first = True
+		for v in pr:
+			if callable(v[1]):
+				continue
+			if first:
+				first = False
+			else:
+				sv += ', '
+			sv += v[0] + '=' + str(v[1])
+		return sv + '}'
+	def __repr__(self):
+		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
+		sv = 'ghetty.Game ( '
+		for v in pr:
+			if not callable(v[1]):
+				sv += v[0] + '=' + str(v[1]) + ', '
+		return sv + ')'
+	def Update(self):
+		"""Update() str"""
+		return _ghetty.ghetty_Game_Update(self.handle)
+	def Draw(self, screen, goRun=False):
+		"""Draw(object screen) """
+		_ghetty.ghetty_Game_Draw(self.handle, screen.handle, goRun)
+
+# Python type for struct ghetty.Logger
+class Logger(go.GoClass):
+	""""""
+	def __init__(self, *args, **kwargs):
+		"""
+		handle=A Go-side object is always initialized with an explicit handle=arg
+		otherwise parameters can be unnamed in order of field names or named fields
+		in which case a new Go object is constructed first
+		"""
+		if len(kwargs) == 1 and 'handle' in kwargs:
+			self.handle = kwargs['handle']
+			_ghetty.IncRef(self.handle)
+		elif len(args) == 1 and isinstance(args[0], go.GoClass):
+			self.handle = args[0].handle
+			_ghetty.IncRef(self.handle)
+		else:
+			self.handle = _ghetty.ghetty_Logger_CTor()
+			_ghetty.IncRef(self.handle)
+			if  0 < len(args):
+				self.File = args[0]
+			if "File" in kwargs:
+				self.File = kwargs["File"]
+			if  1 < len(args):
+				self.CurrentFPS = args[1]
+			if "CurrentFPS" in kwargs:
+				self.CurrentFPS = kwargs["CurrentFPS"]
+			if  2 < len(args):
+				self.ShouldWrite = args[2]
+			if "ShouldWrite" in kwargs:
+				self.ShouldWrite = kwargs["ShouldWrite"]
+	def __del__(self):
+		_ghetty.DecRef(self.handle)
+	def __str__(self):
+		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
+		sv = 'ghetty.Logger{'
+		first = True
+		for v in pr:
+			if callable(v[1]):
+				continue
+			if first:
+				first = False
+			else:
+				sv += ', '
+			sv += v[0] + '=' + str(v[1])
+		return sv + '}'
+	def __repr__(self):
+		pr = [(p, getattr(self, p)) for p in dir(self) if not p.startswith('__')]
+		sv = 'ghetty.Logger ( '
+		for v in pr:
+			if not callable(v[1]):
+				sv += v[0] + '=' + str(v[1]) + ', '
+		return sv + ')'
+	@property
+	def File(self):
+		return go.Ptr_os_File(handle=_ghetty.ghetty_Logger_File_Get(self.handle))
+	@File.setter
+	def File(self, value):
+		if isinstance(value, go.GoClass):
+			_ghetty.ghetty_Logger_File_Set(self.handle, value.handle)
+		else:
+			raise TypeError("supplied argument type {t} is not a go.GoClass".format(t=type(value)))
+	@property
+	def CurrentFPS(self):
+		return _ghetty.ghetty_Logger_CurrentFPS_Get(self.handle)
+	@CurrentFPS.setter
+	def CurrentFPS(self, value):
+		if isinstance(value, go.GoClass):
+			_ghetty.ghetty_Logger_CurrentFPS_Set(self.handle, value.handle)
+		else:
+			_ghetty.ghetty_Logger_CurrentFPS_Set(self.handle, value)
+	@property
+	def ShouldWrite(self):
+		return _ghetty.ghetty_Logger_ShouldWrite_Get(self.handle)
+	@ShouldWrite.setter
+	def ShouldWrite(self, value):
+		if isinstance(value, go.GoClass):
+			_ghetty.ghetty_Logger_ShouldWrite_Set(self.handle, value.handle)
+		else:
+			_ghetty.ghetty_Logger_ShouldWrite_Set(self.handle, value)
+	def Log(self, framerate, goRun=False):
+		"""Log(float framerate) """
+		_ghetty.ghetty_Logger_Log(self.handle, framerate, goRun)
+	def Close(self, goRun=False):
+		"""Close() """
+		_ghetty.ghetty_Logger_Close(self.handle, goRun)
+
 
 # ---- Slices ---
 
@@ -2103,27 +2136,36 @@ class Vertex(go.GoClass):
 
 
 # ---- Constructors ---
-def NewLogger(directory):
-	"""NewLogger(str directory) object"""
-	return Logger(handle=_ghetty.ghetty_NewLogger(directory))
 def Process(triangle):
 	"""Process(object triangle) object"""
 	return ProcessedTriangle(handle=_ghetty.ghetty_Process(triangle.handle))
 def LoadTexture(directory):
 	"""LoadTexture(str directory) object"""
 	return Texture(handle=_ghetty.ghetty_LoadTexture(directory))
+def NewLogger(directory):
+	"""NewLogger(str directory) object"""
+	return Logger(handle=_ghetty.ghetty_NewLogger(directory))
+def NewLoggerCNN(directory):
+	"""NewLoggerCNN(str directory) object"""
+	return Logger(handle=_ghetty.ghetty_NewLoggerCNN(directory))
 
 
 # ---- Functions ---
-def BuildAndProcess(triangle, tiles, goRun=False):
-	"""BuildAndProcess(object triangle, object tiles) """
-	_ghetty.ghetty_BuildAndProcess(triangle.handle, tiles.handle, goRun)
 def Clamp(value, min, max):
 	"""Clamp(float value, int min, int max) float"""
 	return _ghetty.ghetty_Clamp(value, min, max)
 def Launch(renderCallback, goRun=False):
 	"""Launch(callable renderCallback) """
 	_ghetty.ghetty_Launch(renderCallback, goRun)
+def BuildAndProcess(triangle, tiles, goRun=False):
+	"""BuildAndProcess(object triangle, object tiles) """
+	_ghetty.ghetty_BuildAndProcess(triangle.handle, tiles.handle, goRun)
+def LoadModel(directory):
+	"""LoadModel(str directory) []object model"""
+	return Model(handle=_ghetty.ghetty_LoadModel(directory))
+def ProjectionMatrix():
+	"""ProjectionMatrix() [][]float"""
+	return Matrix(handle=_ghetty.ghetty_ProjectionMatrix())
 def TransformationMatrix(p, r):
 	"""TransformationMatrix([]float p, []float r) [][]float"""
 	return Matrix(handle=_ghetty.ghetty_TransformationMatrix(p.handle, r.handle))
@@ -2131,11 +2173,5 @@ def BasicVertex(vertex, uv, normal, color, goRun=False, *args):
 	"""BasicVertex(object vertex, object uv, object normal, object color, []object matrices) """
 	matrices = Slice_Ptr_ghetty_Matrix(args)
 	_ghetty.ghetty_BasicVertex(vertex.handle, uv.handle, normal.handle, color.handle, matrices.handle, goRun)
-def LoadModel(directory):
-	"""LoadModel(str directory) []object model"""
-	return Model(handle=_ghetty.ghetty_LoadModel(directory))
-def ProjectionMatrix():
-	"""ProjectionMatrix() [][]float"""
-	return Matrix(handle=_ghetty.ghetty_ProjectionMatrix())
 
 

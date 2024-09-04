@@ -1,25 +1,20 @@
-package ghetty
+package main
 
 import (
-	"bufio"
-	"encoding/base64"
 	"fmt"
+	"runtime"
 	"log"
 	"math"
 	"math/rand"
-	"os"
-	"runtime"
 	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-var Cores, Scene = 1, 1
-var Upscaler = "fsrcnn"
-var Scale = 1
+var Cores, Scene = runtime.NumCPU(), 1
 
-const Width, Height = 160, 90
+const Width, Height, Scale = 320, 180, 4
 const FOV = 150
 
 const Near, Far = .1, 1000
@@ -28,19 +23,10 @@ const Aspect = float32(Width) / float32(Height)
 var TileXSize, TileYSize = Width, Height
 var Time float32
 
-var EncodedImage string
-
-type Callback func() string
-type CallbackNull func()
-
-var OnRender Callback
-
 func BasicVertex(vertex, uv, normal, color *Vertex, matrices ...*Matrix) {
-	//(*vertex)[X] += float32(math.Sin(float64(Time*.0125+(*vertex)[Y]))) * .25
+	(*vertex)[X] += float32(math.Sin(float64(Time*.0125+(*vertex)[Y]))) * .25
 
-	(*color)[R] = 1
-	(*color)[G] = 1
-	(*color)[B] = 1
+	(*color)[R], (*color)[G], (*color)[B] = 1, 1, 1
 
 	//var red Vertex = Vertex{1, 0, 0}
 
@@ -68,16 +54,12 @@ var Basic Shader = Shader{
 
 var Tiles [][]Tile
 var Buffer []byte = make([]byte, Width*Height*4)
-var UpscaledBuffer []byte
-
 var Depth []float32 = make([]float32, Width*Height)
 
 var Brick Texture = LoadTexture("images/Brick.png")
 var Cobble Texture = LoadTexture("images/Brick.png")
 
 var Bunny = LoadModel("models/Teapot.obj")
-
-var Log Logger
 
 var Triangles []Triangle
 
@@ -100,7 +82,7 @@ func WhiteShader(w, s, t float32) (r, g, b float32) {
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return Width * Scale, Height * Scale
+	return Width, Height
 }
 
 func (g *Game) Update() error {
@@ -111,7 +93,6 @@ var Position Vertex = Vertex{0, 0, 0, 0}
 var Projection Matrix = ProjectionMatrix()
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	runtime.LockOSThread()
 
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		Position[X] -= .125 / 2 / 2
@@ -138,6 +119,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	var trianglesPerCore int = len(Triangles) / Cores
+	//var trianglesLeft int = len(Triangles) % Cores
 	var totalTrianglesRasterized int = 0
 
 	Time += 1
@@ -184,50 +166,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	WaitGroup.Wait()
 
-	EncodedImage = base64.StdEncoding.EncodeToString(Buffer)
-	UpscaledBuffer, _ = base64.StdEncoding.DecodeString(OnRender())
-
-	screen.WritePixels(UpscaledBuffer)
+	screen.WritePixels(Buffer)
 
 	ebitenutil.DebugPrint(screen, "FPS: "+strconv.Itoa(int(ebiten.ActualFPS())))
 	ebitenutil.DebugPrintAt(screen, "TRIANGLES RASTERIZED: "+strconv.Itoa(totalTrianglesRasterized), 0, 10)
 	ebitenutil.DebugPrintAt(screen, "CORES USED: "+strconv.Itoa(Cores), 0, 20)
-
-	Log.Log(ebiten.ActualFPS())
 }
 
-func Launch(renderCallback Callback) {
-	fmt.Println("1: Sweep-Line Algorithm")
-	fmt.Println("2: Barycentric Algorithm")
-	fmt.Println("3: Edge Test Algorithm")
-
-	fmt.Print("\nPlease Select Triangle Rasterization Algorithm: ")
-
-	reader := bufio.NewReader(os.Stdin)
-	algorithm, _, _ := reader.ReadRune()
-
-	switch algorithm {
-	case '1':
-		AlgorithmUsed = SweepLineAlgorithm
-	case '2':
-		AlgorithmUsed = BarycentricAlgorithm
-	case '3':
-		AlgorithmUsed = EdgeTestAlgorithm
-	}
-
-	fmt.Print("\nPlease Type How Many Cores Will Be Utilized: ")
-	fmt.Scan(&Cores)
+func main() {
+	//fmt.Println()
+	//fmt.Print("\nPlease Type How Many Cores Will Be Utilized: ")
+	//fmt.Scan(&Cores)
 
 	fmt.Print("\nPlease Select Scene Number: ")
 	fmt.Scan(&Scene)
-
-	fmt.Print("\nPlease Type Upscaler: ")
-	fmt.Scan(&Upscaler)
-
-	fmt.Print("\nPlease Type Scale: ")
-	fmt.Scan(&Scale)
-
-	UpscaledBuffer = make([]byte, Width*Scale*Height*Scale*4)
 
 	var yTiles int = int(math.Floor(math.Sqrt(float64(Cores))))
 	var xTiles int = Cores / yTiles
@@ -323,15 +275,7 @@ func Launch(renderCallback Callback) {
 	ebiten.SetVsyncEnabled(false)
 	ebiten.SetFullscreen(false)
 
-	//Log = NewLogger("raw_data")
-	Log = NewLoggerCNN("raw_data")
-
-	OnRender = renderCallback
-	//initializeCallback()
-
 	if err := ebiten.RunGame(&Game{}); err != nil {
 		log.Fatal(err)
 	}
-
-	Log.Close()
 }

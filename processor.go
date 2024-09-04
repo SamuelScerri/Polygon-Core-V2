@@ -1,4 +1,4 @@
-package ghetty
+package main
 
 import (
 	"math"
@@ -9,7 +9,7 @@ type ProcessedTriangle struct {
 
 	Bounds, VS1, VS2 Vertex
 
-	Span, Split float32
+	Span float32
 }
 
 func Clamp(value float32, min, max int) float32 {
@@ -23,18 +23,12 @@ func Clamp(value float32, min, max int) float32 {
 }
 
 func Process(triangle *Triangle) ProcessedTriangle {
-	//triangle.Sort()
-
-	var split float32 = triangle.Vertices[0][X] + ((triangle.Vertices[1][Y]-triangle.Vertices[0][Y])/
-		(triangle.Vertices[2][Y]-triangle.Vertices[0][Y]))*
-		(triangle.Vertices[2][X]-triangle.Vertices[0][X])
-
 	var vs1, vs2 Vertex = triangle.Span()
 
 	return ProcessedTriangle{
 		triangle,
 		triangle.Bounds(), vs1, vs2,
-		1 / vs1.CrossProduct(&vs2), split,
+		1 / vs1.CrossProduct(&vs2),
 	}
 }
 

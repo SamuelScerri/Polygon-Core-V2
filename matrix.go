@@ -1,4 +1,4 @@
-package ghetty
+package main
 
 import (
 	"math"

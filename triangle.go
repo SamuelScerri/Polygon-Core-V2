@@ -1,14 +1,14 @@
-package ghetty
+package main
 
 import (
 	"math"
 )
 
 const (
-	XMax = 0
-	YMax = 1
-	XMin = 2
-	YMin = 3
+	XMax = iota
+	YMax
+	XMin
+	YMin
 )
 
 type Triangle struct {
@@ -76,17 +76,6 @@ func (triangle *Triangle) Bounds() Vertex {
 		float32(math.Min(float64(triangle.Vertices[0][Y]),
 			math.Min(float64(triangle.Vertices[1][Y]), float64(triangle.Vertices[2][Y])))),
 	}
-}
-
-func (triangle *Triangle) EdgeSpan(x, y int) (float32, float32, float32) {
-	return (triangle.Vertices[2][Y]-triangle.Vertices[1][Y])*(float32(x)-triangle.Vertices[1][X]) -
-			(triangle.Vertices[2][X]-triangle.Vertices[1][X])*(float32(y)-triangle.Vertices[1][Y]),
-
-		(triangle.Vertices[0][Y]-triangle.Vertices[2][Y])*(float32(x)-triangle.Vertices[2][X]) -
-			(triangle.Vertices[0][X]-triangle.Vertices[2][X])*(float32(y)-triangle.Vertices[2][Y]),
-
-		(triangle.Vertices[1][Y]-triangle.Vertices[0][Y])*(float32(x)-triangle.Vertices[0][X]) -
-			(triangle.Vertices[1][X]-triangle.Vertices[0][X])*(float32(y)-triangle.Vertices[0][Y])
 }
 
 func (triangle *Triangle) Span() (Vertex, Vertex) {
